@@ -1,0 +1,143 @@
+<!-- 1. ALERT DIALOG -->
+@if (dialogService.alertState(); as alert) {
+  <div class="dialog-backdrop" (click)="alert.resolve()">
+    <div class="dialog-card alert-card" [ngClass]="alert.config.variant || 'info'" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <div class="dialog-icon-badge" [ngClass]="alert.config.variant || 'info'">
+          @switch (alert.config.variant) {
+            @case ('destructive') { ⚠ }
+            @case ('warning') { ⚡ }
+            @case ('success') { ✓ }
+            @default { ℹ }
+          }
+        </div>
+        <h3>{{ alert.config.title }}</h3>
+      </div>
+      <div class="dialog-body">
+        <p>{{ alert.config.message }}</p>
+      </div>
+      <div class="dialog-footer">
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="alert.resolve()">
+          {{ alert.config.okText || 'OK' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- 2. CONFIRM / ARE YOU SURE DIALOG -->
+@if (dialogService.confirmState(); as confirm) {
+  <div class="dialog-backdrop" (click)="confirm.resolve(false)">
+    <div class="dialog-card confirm-card" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <div class="dialog-icon-badge" [ngClass]="confirm.config.variant || 'primary'">
+          @if (confirm.config.variant === 'destructive') {
+            ⚠
+          } @else {
+            ?
+          }
+        </div>
+        <h3>{{ confirm.config.title }}</h3>
+      </div>
+      <div class="dialog-body">
+        <p>{{ confirm.config.message }}</p>
+        @if (confirm.config.requireKeyword) {
+          <div class="keyword-verification">
+            <label>Type <strong>{{ confirm.config.requireKeyword }}</strong> to confirm:</label>
+            <input
+              type="text"
+              [(ngModel)]="confirmKeywordInput"
+              placeholder="{{ confirm.config.requireKeyword }}"
+              class="form-control"
+            />
+          </div>
+        }
+      </div>
+      <div class="dialog-footer">
+        <button
+          type="button"
+          class="btn btn-ghost"
+          (click)="onConfirmCancel(confirm)">
+          {{ confirm.config.cancelText || 'Cancel' }}
+        </button>
+        <button
+          type="button"
+          class="btn"
+          [ngClass]="confirm.config.variant === 'destructive' ? 'btn-danger' : 'btn-primary'"
+          [disabled]="confirm.config.requireKeyword ? confirmKeywordInput !== confirm.config.requireKeyword : false"
+          (click)="onConfirmProceed(confirm)">
+          {{ confirm.config.confirmText || 'Confirm' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- 3. PROMPT DIALOG -->
+@if (dialogService.promptState(); as prompt) {
+  <div class="dialog-backdrop" (click)="prompt.resolve(null)">
+    <div class="dialog-card prompt-card" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <div class="dialog-icon-badge info">✎</div>
+        <h3>{{ prompt.config.title }}</h3>
+      </div>
+      <div class="dialog-body">
+        @if (prompt.config.message) {
+          <p>{{ prompt.config.message }}</p>
+        }
+        <div class="form-group">
+          <label>{{ prompt.config.inputLabel }}</label>
+          <textarea
+            rows="3"
+            [(ngModel)]="promptInput"
+            [placeholder]="prompt.config.placeholder || ''"
+            class="form-control"
+            required>
+          </textarea>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button
+          type="button"
+          class="btn btn-ghost"
+          (click)="onPromptCancel(prompt)">
+          {{ prompt.config.cancelText || 'Cancel' }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="prompt.config.required && !promptInput.trim()"
+          (click)="onPromptProceed(prompt)">
+          {{ prompt.config.confirmText || 'Save' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- 4. FLOATING SNACKBAR / TOAST CONTAINER -->
+<div class="toast-container" aria-live="polite">
+  @for (toast of dialogService.toasts(); track toast.id) {
+    <div class="toast-item" [ngClass]="toast.type">
+      <div class="toast-icon">
+        @switch (toast.type) {
+          @case ('success') { ✓ }
+          @case ('error') { ✕ }
+          @case ('warning') { ⚡ }
+          @default { ℹ }
+        }
+      </div>
+      <div class="toast-message">{{ toast.message }}</div>
+      <button
+        type="button"
+        class="toast-close"
+        (click)="dialogService.removeToast(toast.id)"
+        aria-label="Close">
+        ✕
+      </button>
+    </div>
+  }
+</div>

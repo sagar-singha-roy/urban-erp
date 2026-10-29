@@ -1,0 +1,98 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: urban-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: urban_erp
+      POSTGRES_USER: urban_admin
+      POSTGRES_PASSWORD: urban_password123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U urban_admin -d urban_erp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: urban-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.5
+    container_name: urban-keycloak
+    restart: always
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/urban_erp
+      KC_DB_USERNAME: urban_admin
+      KC_DB_PASSWORD: urban_password123
+      KC_DB_SCHEMA: keycloak
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+    command:
+      - "start-dev"
+      - "--import-realm"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  core-service:
+    build:
+      context: ./backend/services/core_service
+      dockerfile: Dockerfile
+    container_name: urban-core-service
+    restart: always
+    environment:
+      ENVIRONMENT: development
+      PORT: 8000
+      DATABASE_URL: postgresql+asyncpg://urban_admin:urban_password123@postgres:5432/urban_erp
+      WRITE_DATABASE_URL: postgresql+asyncpg://urban_admin:urban_password123@postgres:5432/urban_erp
+      READ_DATABASE_URL: postgresql+asyncpg://urban_admin:urban_password123@postgres:5432/urban_erp
+      REDIS_URL: redis://redis:6379/0
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: urban
+      KEYCLOAK_CLIENT_ID: urban-web
+      DEFAULT_TENANT_ID: GWMC
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  urban-console:
+    build:
+      context: ./frontend/urban-console
+      dockerfile: Dockerfile
+    container_name: urban-console-ui
+    restart: always
+    ports:
+      - "4200:80"
+    depends_on:
+      - core-service
+
+volumes:
+  postgres_data:
+  redis_data:

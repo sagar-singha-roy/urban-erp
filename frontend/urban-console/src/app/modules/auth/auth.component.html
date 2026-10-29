@@ -1,0 +1,178 @@
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <!-- Brand / Header -->
+    <div class="auth-header">
+      <div class="auth-logo">
+        <app-icon name="parcels" [size]="34"></app-icon>
+      </div>
+      <h2>URBAN MUNICIPAL ERP</h2>
+      <p class="subtitle">Unified SaaS Enterprise Resource Planning</p>
+    </div>
+
+    <!-- Mode Selector Tabs -->
+    <div class="auth-tabs">
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="!isSignUp()"
+        (click)="toggleMode(false)">
+        Sign In
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="isSignUp()"
+        (click)="toggleMode(true)">
+        New User Registration
+      </button>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="alert alert-error">
+        <span class="alert-icon">⚠</span>
+        <span class="alert-text">{{ errorMessage() }}</span>
+      </div>
+    }
+
+    @if (successMessage()) {
+      <div class="alert alert-success">
+        <span class="alert-icon">✓</span>
+        <span class="alert-text">{{ successMessage() }}</span>
+      </div>
+    }
+
+    <!-- Sign In Form -->
+    @if (!isSignUp()) {
+      <form (submit)="onSignIn(); $event.preventDefault()" class="auth-form">
+        <div class="form-group">
+          <label>Official Email or Username</label>
+          <input
+            type="text"
+            [(ngModel)]="signInData.username_or_email"
+            name="username"
+            placeholder="name@domain.gov.in or username"
+            class="form-control"
+            autocomplete="username"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <div class="label-row">
+            <label>Password</label>
+          </div>
+          <input
+            type="password"
+            [(ngModel)]="signInData.password"
+            name="password"
+            placeholder="Enter your security credential"
+            class="form-control"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn btn-submit" [disabled]="isLoading()">
+          {{ isLoading() ? 'Verifying Identity...' : 'Sign In to Workspace' }}
+        </button>
+      </form>
+    }
+
+    <!-- Sign Up Form -->
+    @if (isSignUp()) {
+      <form (submit)="onSignUp(); $event.preventDefault()" class="auth-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input
+              type="text"
+              [(ngModel)]="signUpData.full_name"
+              name="full_name"
+              placeholder="Full Legal Name"
+              class="form-control"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Username</label>
+            <input
+              type="text"
+              [(ngModel)]="signUpData.username"
+              name="username"
+              placeholder="Username identifier"
+              class="form-control"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Official Email Address</label>
+            <input
+              type="email"
+              [(ngModel)]="signUpData.email"
+              name="email"
+              placeholder="officer@municipality.gov.in"
+              class="form-control"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input
+              type="password"
+              [(ngModel)]="signUpData.password"
+              name="password"
+              placeholder="Minimum 8 characters"
+              class="form-control"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Designation / Operational Role</label>
+          <select [(ngModel)]="signUpData.role" name="role" class="form-control">
+            <option value="citizen">Citizen / Resident / Property Owner</option>
+            <option value="revenue_officer">Revenue & Tax Officer</option>
+            <option value="town_planner">Town Planning Officer</option>
+            <option value="engineering_officer">Engineering Works Officer</option>
+            <option value="super_admin">Platform Administrator</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Assigned Zone (Optional)</label>
+            <input
+              type="text"
+              [(ngModel)]="signUpData.assigned_zone"
+              name="zone"
+              placeholder="e.g. Central Zone"
+              class="form-control"
+            />
+          </div>
+          <div class="form-group">
+            <label>Assigned Ward (Optional)</label>
+            <input
+              type="text"
+              [(ngModel)]="signUpData.assigned_ward"
+              name="ward"
+              placeholder="e.g. Ward 14"
+              class="form-control"
+            />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-submit" [disabled]="isLoading()">
+          {{ isLoading() ? 'Creating User Account...' : 'Register Account' }}
+        </button>
+      </form>
+    }
+
+    <div class="auth-footer">
+      <span>Urban Integrated Municipal ERP · Enterprise SaaS Platform</span>
+    </div>
+  </div>
+</div>

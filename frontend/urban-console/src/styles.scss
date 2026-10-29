@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+Bengali:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&family=Noto+Sans+Telugu:wght@400;600&display=swap');
+
+:root {
+  /* Hake Technologies Official Color Palette (TIDC Deck October 2026) */
+  --hake-navy: #0E3A52;
+  --hake-teal: #1B8C77;
+  --hake-saffron: #D98A2B;
+  --hake-green: #3D8D51;
+  --hake-red: #B23A2E;
+  --hake-logo-navy: #032065;
+  --hake-sidebar: #071532;
+  --hake-mist: #80A0AF;
+  --hake-cream: #F7F5F1;
+
+  /* Card Tints & Neutrals */
+  --tint-sand: #CBBEA3;
+  --tint-peach: #F0D0AA;
+  --tint-mint: #8CE9D8;
+  --tint-sky: #9FC7E4;
+  --tint-grey: #D9D9D9;
+  --tint-rose: #E7AEA5;
+  --panel-green: #E9F0E6;
+  --panel-beige: #E5DFD2;
+
+  /* Header Gradient */
+  --hake-gradient: linear-gradient(90deg, #0E3A52 0%, #82683C 20%, #D98A2B 40%, #808B4F 60%, #278C72 80%, #17635B 100%);
+
+  /* UI System Aliases */
+  --bg-app: #F7F5F1;
+  --bg-surface: #071532;
+  --bg-card: #ffffff;
+  --text-main: #0E3A52;
+  --text-muted: #80A0AF;
+  --primary-btn: #D98A2B;
+  --secondary-btn: #1B8C77;
+  --border-color: #E5DFD2;
+
+  /* Fonts */
+  --font-sans: 'Noto Sans', Calibri, Arial, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: var(--font-sans);
+  color: var(--hake-navy);
+  background-color: var(--hake-cream);
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.font-bold {
+  font-weight: 600;
+}
+
+.text-muted {
+  color: var(--hake-mist);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(14, 58, 82, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--hake-teal);
+  border-radius: 3px;
+}

@@ -1,0 +1,110 @@
+{
+  "id": "urban",
+  "realm": "urban",
+  "displayName": "Urban Integrated Municipal ERP",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "super_admin",
+        "description": "State & Municipal Super Administrator"
+      },
+      {
+        "name": "revenue_officer",
+        "description": "Municipal Revenue Officer & Assessor"
+      },
+      {
+        "name": "revenue_inspector",
+        "description": "Ward Field Inspector"
+      },
+      {
+        "name": "citizen",
+        "description": "Citizen / Property Owner"
+      }
+    ]
+  },
+  "groups": [],
+  "clients": [
+    {
+      "clientId": "urban-web",
+      "name": "Urban Web Console & Portal",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "rootUrl": "http://localhost:4200",
+      "baseUrl": "/",
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "http://localhost:4200"
+      ],
+      "webOrigins": [
+        "http://localhost:4200",
+        "+"
+      ],
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "urban-api",
+      "name": "Urban Backend Microservices",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "officer@gwmc.gov.in",
+      "enabled": true,
+      "email": "officer@gwmc.gov.in",
+      "firstName": "Ramesh",
+      "lastName": "Reddy",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Officer@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "revenue_officer"
+      ],
+      "attributes": {
+        "tenant_id": ["GWMC"],
+        "assigned_zone": ["Zone-1"],
+        "assigned_ward": ["Ward-14"]
+      }
+    },
+    {
+      "username": "admin@urban.gov.in",
+      "enabled": true,
+      "email": "admin@urban.gov.in",
+      "firstName": "Suresh",
+      "lastName": "Kumar",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Admin@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "super_admin"
+      ],
+      "attributes": {
+        "tenant_id": ["GWMC"]
+      }
+    }
+  ]
+}

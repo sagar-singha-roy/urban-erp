@@ -1,0 +1,128 @@
+<div class="app-switcher-wrapper">
+  <!-- Gmail-Style 9-Dot Launcher Button -->
+  <button
+    class="waffle-btn"
+    [class.active]="isOpen()"
+    (click)="toggleDropdown()"
+    title="Urban Integrated Suite (19 Modules)"
+  >
+    <div class="waffle-grid">
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+  </button>
+
+  <!-- Google Style Floating App Grid Popover -->
+  @if (isOpen()) {
+    <div class="waffle-backdrop" (click)="closeDropdown()"></div>
+    <div class="waffle-popover">
+      <div class="popover-header">
+        <div class="header-main">
+          <div class="title-row">
+            <span class="suite-title">URBAN MUNICIPAL APPS</span>
+            <span class="role-pill">{{ authService.userProfile().role }}</span>
+          </div>
+          <span class="suite-desc">SSO enabled across all 19 ERP modules</span>
+        </div>
+
+        <div class="search-bar">
+          <span class="search-icon"><app-icon name="search" [size]="14"></app-icon></span>
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            placeholder="Search 19 municipal modules..."
+          />
+        </div>
+
+        <div class="domain-filters">
+          <button
+            class="domain-chip"
+            [class.active]="selectedDomain === 'ALL'"
+            (click)="selectedDomain = 'ALL'"
+          >
+            All (19)
+          </button>
+          <button
+            class="domain-chip"
+            [class.active]="selectedDomain === 'Revenue'"
+            (click)="selectedDomain = 'Revenue'"
+          >
+            Revenue & Billing
+          </button>
+          <button
+            class="domain-chip"
+            [class.active]="selectedDomain === 'Infrastructure'"
+            (click)="selectedDomain = 'Infrastructure'"
+          >
+            Infrastructure
+          </button>
+          <button
+            class="domain-chip"
+            [class.active]="selectedDomain === 'Planning'"
+            (click)="selectedDomain = 'Planning'"
+          >
+            Planning & Reg
+          </button>
+          <button
+            class="domain-chip"
+            [class.active]="selectedDomain === 'Finance'"
+            (click)="selectedDomain = 'Finance'"
+          >
+            Finance & Admin
+          </button>
+        </div>
+      </div>
+
+      <div class="modules-grid-container">
+        <div class="modules-grid">
+          @for (mod of filteredModules; track mod.code) {
+            <div
+              class="module-card"
+              [class.active-module]="authService.activeModule().code === mod.code"
+              [class.locked]="!(mod.hasAccess ?? mod.has_access)"
+              (click)="selectModule(mod)"
+            >
+              <div class="module-icon-wrap" [ngClass]="'icon-' + mod.code.toLowerCase()">
+                <app-icon [name]="mod.icon" [size]="20"></app-icon>
+                @if (!(mod.hasAccess ?? mod.has_access)) {
+                  <span class="lock-badge" title="Access Restricted">
+                    <app-icon name="lock" [size]="10"></app-icon>
+                  </span>
+                }
+              </div>
+
+              <div class="module-text">
+                <div class="code-row">
+                  <span class="mod-code">{{ mod.code }}</span>
+                  <span class="phase-tag">P{{ mod.phase }}</span>
+                </div>
+                <div class="mod-name" [title]="mod.name">{{ mod.name }}</div>
+                <div class="mod-domain">{{ mod.domain }}</div>
+              </div>
+
+              @if (authService.activeModule().code === mod.code) {
+                <div class="active-badge">Active</div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="popover-footer">
+        <div class="footer-note">
+          <span
+            >Logged in as <strong>{{ authService.userProfile().username }}</strong></span
+          >
+        </div>
+        <button class="close-link" (click)="closeDropdown()">Close</button>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,518 @@
+<div class="dashboard-container">
+  <!-- Top Stat Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">TOTAL PARCELS (ULPIN)</span>
+        <div class="kpi-icon parcels-icon">
+          <app-icon name="parcels" [size]="20"></app-icon>
+        </div>
+      </div>
+      <div class="kpi-value">{{ stats()?.totalParcels ?? stats()?.total_parcels ?? 0 }}</div>
+      <div class="kpi-subtext">Registered in Master GIS Layer</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">TOTAL ASSESSMENT UNITS</span>
+        <div class="kpi-icon units-icon">
+          <app-icon name="units" [size]="20"></app-icon>
+        </div>
+      </div>
+      <div class="kpi-value">{{ stats()?.totalUnits ?? stats()?.total_units ?? 0 }}</div>
+      <div class="kpi-subtext">
+        <span class="badge res"
+          >{{ stats()?.residentialCount ?? stats()?.residential_count ?? 0 }} Residential</span
+        >
+        <span class="badge comm"
+          >{{ stats()?.commercialCount ?? stats()?.commercial_count ?? 0 }} Commercial</span
+        >
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">TOTAL PROPERTY TAX DEMAND</span>
+        <div class="kpi-icon demand-icon">
+          <app-icon name="demand" [size]="20"></app-icon>
+        </div>
+      </div>
+      <div class="kpi-value">
+        ₹{{ stats()?.totalDemand ?? stats()?.total_demand ?? 0 | number: '1.0-0' }}
+      </div>
+      <div class="kpi-subtext">FY 2026-27 Half-Yearly Cycle</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-header">
+        <span class="kpi-title">COLLECTION EFFICIENCY</span>
+        <div class="kpi-icon efficiency-icon">
+          <app-icon name="efficiency" [size]="20"></app-icon>
+        </div>
+      </div>
+      <div class="kpi-value">76.4%</div>
+      <div class="kpi-progress">
+        <div class="progress-bar" style="width: 76.4%"></div>
+      </div>
+      <div class="kpi-subtext">
+        Collected: ₹{{ stats()?.totalCollected ?? stats()?.total_collected ?? 0 | number: '1.0-0' }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Action Toolbar -->
+  <div class="toolbar-card">
+    <div class="search-box">
+      <span class="search-icon"><app-icon name="search" [size]="15"></app-icon></span>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (keyup.enter)="onSearch()"
+        placeholder="Search by ULPIN, PTIN, Survey No, or Address..."
+      />
+      <button class="btn btn-primary" (click)="onSearch()">Search</button>
+    </div>
+
+    <div class="filter-group">
+      <select
+        [(ngModel)]="selectedWardId"
+        (change)="onFilterWard(selectedWardId)"
+        class="select-control"
+      >
+        <option value="">All Wards (66 Wards)</option>
+        @for (ward of wards(); track ward.id) {
+          <option [value]="ward.id">Ward {{ ward.ward_number }} - {{ ward.ward_name }}</option>
+        }
+      </select>
+
+      <div class="status-chips">
+        <button class="chip" [class.active]="selectedStatus === ''" (click)="onFilterStatus('')">
+          All
+        </button>
+        <button
+          class="chip chip-paid"
+          [class.active]="selectedStatus === 'PAID'"
+          (click)="onFilterStatus('PAID')"
+        >
+          PAID
+        </button>
+        <button
+          class="chip chip-due"
+          [class.active]="selectedStatus === 'DUE'"
+          (click)="onFilterStatus('DUE')"
+        >
+          DUE
+        </button>
+        <button
+          class="chip chip-arrears"
+          [class.active]="selectedStatus === 'ARREARS'"
+          (click)="onFilterStatus('ARREARS')"
+        >
+          ARREARS
+        </button>
+      </div>
+
+      @if (authService.hasRole('revenue_officer') || authService.hasRole('super_admin')) {
+        <button class="btn btn-accent" (click)="openRegisterModal()">
+          + Register ULPIN Property
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Property Registry Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <div class="table-title">
+        <h3>Municipal Property Registry</h3>
+        <span class="count-badge">{{ properties().length }} Properties Found</span>
+      </div>
+      <div class="table-actions">
+        <button class="btn btn-sm btn-outline" (click)="loadProperties()">
+          <app-icon name="refresh" [size]="12"></app-icon> Refresh
+        </button>
+      </div>
+    </div>
+
+    @if (isLoading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading ULPIN property records from Core Service...</p>
+      </div>
+    } @else if (properties().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon"><app-icon name="dms" [size]="36"></app-icon></div>
+        <h4>No Property Records Found</h4>
+        <p>Try clearing filters or search criteria.</p>
+      </div>
+    } @else {
+      <!-- Desktop & Tablet Table -->
+      <div class="table-responsive desktop-only">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ULPIN</th>
+              <th>PTIN</th>
+              <th>Owner Name</th>
+              <th>Ward & Locality</th>
+              <th>Category</th>
+              <th>Demand Amount</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (prop of properties(); track prop.id) {
+              <tr>
+                <td class="font-mono bold">
+                  <span class="ulpin-pill">{{ prop.ulpin }}</span>
+                </td>
+                <td class="font-mono text-muted">{{ prop.ptin || 'N/A' }}</td>
+                <td>
+                  <div class="owner-cell">
+                    <strong>{{ prop.ownerName || prop.owner_name }}</strong>
+                    <span class="sub-address">{{ prop.address }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="ward-pill">Ward {{ prop.wardNumber ?? prop.ward_number }}</span>
+                  <div class="locality-text">{{ prop.wardName || prop.ward_name }}</div>
+                </td>
+                <td>
+                  <span
+                    class="badge"
+                    [ngClass]="
+                      (prop.usageCategory || prop.usage_category) === 'Commercial' ? 'comm' : 'res'
+                    "
+                  >
+                    {{ prop.usageCategory || prop.usage_category }}
+                  </span>
+                </td>
+                <td class="font-bold">
+                  ₹{{
+                    prop.currentDemandAmount ?? prop.current_demand_amount ?? 0 | number: '1.0-0'
+                  }}
+                </td>
+                <td>
+                  <span
+                    class="status-pill"
+                    [ngClass]="(prop.taxStatus || prop.tax_status || 'PAID').toLowerCase()"
+                  >
+                    {{ prop.taxStatus || prop.tax_status }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline" (click)="viewDetails(prop.ulpin)">
+                    Inspect Hierarchy
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Native Card View (< 768px) -->
+      <div class="mobile-property-list mobile-only">
+        @for (prop of properties(); track prop.id) {
+          <div class="mobile-prop-card">
+            <div class="card-top">
+              <span class="ulpin-pill">{{ prop.ulpin }}</span>
+              <span
+                class="status-pill"
+                [ngClass]="(prop.taxStatus || prop.tax_status || 'PAID').toLowerCase()"
+              >
+                {{ prop.taxStatus || prop.tax_status }}
+              </span>
+            </div>
+
+            <div class="card-owner">
+              <strong>{{ prop.ownerName || prop.owner_name }}</strong>
+              <span class="card-address">{{ prop.address }}</span>
+            </div>
+
+            <div class="card-grid">
+              <div class="grid-item">
+                <span class="item-label">PTIN</span>
+                <span class="item-val font-mono">{{ prop.ptin || 'N/A' }}</span>
+              </div>
+              <div class="grid-item">
+                <span class="item-label">Ward</span>
+                <span class="item-val">Ward {{ prop.wardNumber ?? prop.ward_number }}</span>
+              </div>
+              <div class="grid-item">
+                <span class="item-label">Usage</span>
+                <span
+                  class="badge"
+                  [ngClass]="
+                    (prop.usageCategory || prop.usage_category) === 'Commercial' ? 'comm' : 'res'
+                  "
+                >
+                  {{ prop.usageCategory || prop.usage_category }}
+                </span>
+              </div>
+              <div class="grid-item">
+                <span class="item-label">Current Demand</span>
+                <span class="item-val font-bold"
+                  >₹{{
+                    prop.currentDemandAmount ?? prop.current_demand_amount ?? 0 | number: '1.0-0'
+                  }}</span
+                >
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <button class="btn btn-sm btn-outline full-width" (click)="viewDetails(prop.ulpin)">
+                Inspect Hierarchy & Units
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Property Hierarchy Slide-Over Drawer -->
+  @if (showDetailDrawer && selectedProperty()) {
+    <div class="drawer-overlay" (click)="closeDrawer()">
+      <div class="drawer-content" (click)="$event.stopPropagation()">
+        <div class="drawer-header">
+          <div>
+            <div class="tag">PARCEL REGISTRY DETAILS</div>
+            <h2>{{ selectedProperty()?.ulpin }}</h2>
+          </div>
+          <button class="close-btn" (click)="closeDrawer()">✕</button>
+        </div>
+
+        <div class="drawer-body">
+          <div class="section-box">
+            <h4>Geographical & Parcel Details</h4>
+            <div class="meta-grid">
+              <div>
+                <span class="label">Survey Number:</span>
+                <span class="val">{{ selectedProperty()?.survey_number }}</span>
+              </div>
+              <div>
+                <span class="label">Plot Number:</span>
+                <span class="val">{{ selectedProperty()?.plot_number || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="label">Total Plot Area:</span>
+                <span class="val">{{ selectedProperty()?.total_area_sqyd }} sq yd</span>
+              </div>
+              <div>
+                <span class="label">Jurisdiction Ward:</span>
+                <span class="val"
+                  >Ward {{ selectedProperty()?.ward_number }} ({{
+                    selectedProperty()?.ward_name
+                  }})</span
+                >
+              </div>
+              <div>
+                <span class="label">GPS Coordinates:</span>
+                <span class="val font-mono"
+                  >{{ selectedProperty()?.latitude }}, {{ selectedProperty()?.longitude }}</span
+                >
+              </div>
+              <div>
+                <span class="label">Registered Address:</span>
+                <span class="val">{{ selectedProperty()?.address }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Buildings & Units Tree -->
+          <div class="section-box">
+            <h4>Building & Units Hierarchy (ULPIN Tree)</h4>
+            @for (bldg of selectedProperty()?.buildings; track bldg.id) {
+              <div class="bldg-card">
+                <div class="bldg-header">
+                  <app-icon name="building" [size]="16"></app-icon>
+                  <strong>{{ bldg.building_name || 'Main Building' }}</strong>
+                  <span class="badge">{{ bldg.building_type }}</span>
+                  <span class="text-muted">Floors: {{ bldg.total_floors }}</span>
+                </div>
+                <div class="bldg-perm">
+                  Permission: {{ bldg.building_permission_no || 'Approved' }}
+                </div>
+
+                <div class="units-list">
+                  <h5>Assessment Units</h5>
+                  @for (unit of bldg.units; track unit.id) {
+                    <div class="unit-item">
+                      <div class="unit-main">
+                        <span class="unit-number"
+                          >Unit {{ unit.unitNumber || unit.unit_number }} (PTIN:
+                          {{ unit.ptin }})</span
+                        >
+                        <span
+                          class="status-pill"
+                          [ngClass]="(unit.taxStatus || unit.tax_status || 'PAID').toLowerCase()"
+                          >{{ unit.taxStatus || unit.tax_status }}</span
+                        >
+                      </div>
+                      <div class="unit-details">
+                        <span>Carpet: {{ unit.carpetAreaSqft ?? unit.carpet_area_sqft }} sqft</span>
+                        <span
+                          >Built-up:
+                          {{ unit.builtUpAreaSqft ?? unit.built_up_area_sqft }} sqft</span
+                        >
+                        <span
+                          >Demand: ₹{{
+                            unit.currentDemandAmount ?? unit.current_demand_amount ?? 0
+                              | number: '1.0-0'
+                          }}</span
+                        >
+                      </div>
+                      @if (unit.owners && unit.owners.length > 0) {
+                        <div class="unit-owners">
+                          <app-icon name="user" [size]="13"></app-icon>
+                          <span
+                            >Owner: {{ unit.owners[0].fullName || unit.owners[0].full_name }} ({{
+                              unit.owners[0].mobileNumber || unit.owners[0].mobile_number
+                            }})</span
+                          >
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <button class="btn btn-outline" (click)="closeDrawer()">Close</button>
+          <button class="btn btn-primary" (click)="closeDrawer()">Download Master Card</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Register Property Modal -->
+  @if (showRegisterModal) {
+    <div class="modal-overlay" (click)="closeRegisterModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Register New ULPIN Property</h3>
+          <button class="close-btn" (click)="closeRegisterModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Unique Land Parcel ID (ULPIN)</label>
+              <input type="text" [(ngModel)]="newProperty.ulpin" class="form-control" />
+            </div>
+            <div class="form-group">
+              <label>Survey Number</label>
+              <input
+                type="text"
+                [(ngModel)]="newProperty.survey_number"
+                placeholder="e.g. 154/A"
+                class="form-control"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Ward Selection</label>
+              <select [(ngModel)]="newProperty.ward_id" class="form-control">
+                @for (ward of wards(); track ward.id) {
+                  <option [value]="ward.id">
+                    Ward {{ ward.ward_number }} - {{ ward.ward_name }}
+                  </option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Total Plot Area (sq yd)</label>
+              <input type="number" [(ngModel)]="newProperty.total_area_sqyd" class="form-control" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Full Property Address</label>
+            <input
+              type="text"
+              [(ngModel)]="newProperty.address"
+              placeholder="Door No, Street, Locality"
+              class="form-control"
+            />
+          </div>
+
+          <hr class="divider" />
+          <h5 class="subhead">Building & Unit Information</h5>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Building Type</label>
+              <select [(ngModel)]="newProperty.building.building_type" class="form-control">
+                <option value="Residential">Residential</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Industrial">Industrial</option>
+                <option value="Mixed">Mixed Usage</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>PTIN (10-Digit ID)</label>
+              <input type="text" [(ngModel)]="newProperty.unit.ptin" class="form-control" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Carpet Area (sqft)</label>
+              <input
+                type="number"
+                [(ngModel)]="newProperty.unit.carpet_area_sqft"
+                class="form-control"
+              />
+            </div>
+            <div class="form-group">
+              <label>Annual Demand (₹)</label>
+              <input
+                type="number"
+                [(ngModel)]="newProperty.unit.current_demand_amount"
+                class="form-control"
+              />
+            </div>
+          </div>
+
+          <hr class="divider" />
+          <h5 class="subhead">Primary Owner Details</h5>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Owner Full Name</label>
+              <input
+                type="text"
+                [(ngModel)]="newProperty.owner.full_name"
+                placeholder="Full name as per Aadhaar/Title"
+                class="form-control"
+              />
+            </div>
+            <div class="form-group">
+              <label>Mobile Number</label>
+              <input
+                type="text"
+                [(ngModel)]="newProperty.owner.mobile_number"
+                placeholder="10-digit mobile"
+                class="form-control"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="closeRegisterModal()">Cancel</button>
+          <button class="btn btn-accent" [disabled]="isSubmitting()" (click)="submitNewProperty()">
+            {{ isSubmitting() ? 'Saving to Registry...' : 'Save & Generate ULPIN Record' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
