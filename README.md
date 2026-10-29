@@ -46,8 +46,13 @@ Urban provides a unified Single Sign-On (SSO) session. Users switch between any 
 ```
 urban/
 ├── docker-compose.yml               # Orchestrates Postgres, Redis, Keycloak, FastAPI, and Angular
-├── .gitignore                       # Git ignore rules for Python, Angular, Node, and Docker
-├── README.md                        # Documentation & setup guide
+├── README.md                        # Project overview & architectural vision
+├── docs/
+│   ├── SETUP_GUIDE.md               # Complete developer onboarding & setup guide
+│   ├── TYPOGRAPHY_AND_DESIGN_SYSTEM.md # Hake Technologies design tokens & rules
+│   ├── MODULE_COMPONENTS_CATALOGUE.md # 19 modules and 415 processes catalogue
+│   ├── TECHNICAL_ARCHITECTURE_DOCUMENT.md # Full architecture specifications
+│   └── DATABASE_SCHEMA_DOCUMENT.md  # Multi-tenant PostgreSQL PostGIS ERD
 ├── docker/
 │   └── keycloak/
 │       └── realm-export.json        # Pre-configured 'urban' realm, clients, and roles
