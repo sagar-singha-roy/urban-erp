@@ -9,5 +9,6 @@ export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
   { path: 'admin', component: AdminDashboardComponent },
   { path: 'admin/:section', component: AdminDashboardComponent },
+  { path: 'admin/:section/:sub', component: AdminDashboardComponent },
   { path: '**', redirectTo: 'dashboard' }
 ];

@@ -1,6 +1,7 @@
 {
-  "name": "urban-console",
-  "version": "0.0.0",
+  "name": "suvidha-console",
+  "version": "1.0.0",
+  "versionCode": 100,
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

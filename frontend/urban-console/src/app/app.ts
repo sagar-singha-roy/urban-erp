@@ -7,6 +7,7 @@ import { PropertyService } from './core/services/property.service';
 import { AppSwitcherComponent } from './shared/components/app-switcher/app-switcher.component';
 import { IconComponent } from './shared/components/icon/icon.component';
 import { GlobalDialogsComponent } from './shared/components/dialogs/global-dialogs.component';
+import { GlobalLoaderComponent } from './shared/components/global-loader/global-loader.component';
 import { SuperAdminSidebarComponent } from './shared/components/super-admin-sidebar/super-admin-sidebar.component';
 import { TenantInfo } from './core/models/property.model';
 
@@ -19,6 +20,7 @@ import { TenantInfo } from './core/models/property.model';
     AppSwitcherComponent,
     IconComponent,
     GlobalDialogsComponent,
+    GlobalLoaderComponent,
     SuperAdminSidebarComponent,
   ],
   selector: 'app-root',
@@ -31,10 +33,47 @@ export class App {
   public router = inject(Router);
 
   public isMobileSidebarOpen = signal<boolean>(false);
+  public isSidebarCollapsed = signal<boolean>(false);
   public isTenantDropdownOpen = signal<boolean>(false);
+  public isProfileMenuOpen = signal<boolean>(false);
+  public isNotificationMenuOpen = signal<boolean>(false);
+  public unreadNotificationCount = signal<number>(3);
   public showNewTenantModal = signal<boolean>(false);
   public isSubmittingTenant = signal<boolean>(false);
   public isSuperAdminView = signal<boolean>(false);
+
+  toggleSidebarCollapse(): void {
+    this.isSidebarCollapsed.update((v) => !v);
+  }
+
+  constructor() {
+    if (
+      this.authService.isSuperAdmin() &&
+      (window.location.pathname === '/' || window.location.pathname === '/dashboard')
+    ) {
+      this.router.navigate(['/admin']);
+    }
+  }
+
+  toggleNotificationMenu(): void {
+    this.isNotificationMenuOpen.update((v) => !v);
+  }
+
+  closeNotificationMenu(): void {
+    this.isNotificationMenuOpen.set(false);
+  }
+
+  clearNotifications(): void {
+    this.unreadNotificationCount.set(0);
+  }
+
+  toggleProfileMenu(): void {
+    this.isProfileMenuOpen.update((v) => !v);
+  }
+
+  closeProfileMenu(): void {
+    this.isProfileMenuOpen.set(false);
+  }
 
   toggleSuperAdminView(): void {
     const next = !this.isSuperAdminView();

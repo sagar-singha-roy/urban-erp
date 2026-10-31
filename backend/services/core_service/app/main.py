@@ -57,10 +57,18 @@ app.add_middleware(
 )
 
 from app.api.v1.admin import router as admin_router
+from app.api.v1.ulbs import router as ulbs_router
+from app.api.v1.modules import router as modules_router
+from app.api.v1.iam import router as iam_router
+from app.api.v1.security import router as security_router
 
 # Include Routers
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(tenants_router, prefix=settings.API_V1_STR)
+app.include_router(ulbs_router, prefix=settings.API_V1_STR)
+app.include_router(modules_router, prefix=settings.API_V1_STR)
+app.include_router(iam_router, prefix=settings.API_V1_STR)
+app.include_router(security_router, prefix=settings.API_V1_STR)
 app.include_router(properties_router, prefix=settings.API_V1_STR)
 app.include_router(boundaries_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)
