@@ -54,6 +54,16 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         icon: 'ri-book-read-line',
         description: 'Track central grants, state and ULB allocations, expenditure, balances, and consolidated financial reporting',
       },
+      {
+        id: 'EXEC-04',
+        code: 'ADM-A04',
+        title: 'Spatial GIS Multi-City Viewer',
+        route: '/admin/executive/gis',
+        badge: 'GIS',
+        count: 'PostGIS',
+        icon: 'ri-map-2-line',
+        description: 'View parcels, utilities, administrative boundaries, zones and roads across multiple states and ULBs',
+      },
     ],
   },
   {

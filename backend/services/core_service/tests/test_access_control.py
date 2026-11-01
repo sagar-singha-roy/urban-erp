@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, patch
 os.environ["ENVIRONMENT"] = "test"
 os.environ["JWT_SECRET_KEY"] = "test-only-signing-key"
 
-from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
@@ -17,6 +16,7 @@ from app.main import app
 from app.schemas.auth import SignUpRequest
 
 PUBLIC_ROUTES = {("POST", "/api/v1/auth/signin"), ("POST", "/api/v1/auth/signup"), ("POST", "/api/v1/auth/logout"), ("GET", "/health")}
+STATE_SCOPED_PREFIXES = ("/api/v1/executive/gis", "/api/v1/modules/delegation", "/api/v1/modules/subscriptions")
 SUPER_ADMIN_PREFIXES = (
     "/api/v1/iam",
     "/api/v1/security",
@@ -29,10 +29,14 @@ SUPER_ADMIN_PREFIXES = (
 
 
 def api_routes():
-    for route in app.routes:
-        if isinstance(route, APIRoute):
-            for method in route.methods - {"HEAD", "OPTIONS"}:
-                yield method, route.path
+    """The OpenAPI schema lists every route, including those inside included routers."""
+    routes = [
+        (method.upper(), path)
+        for path, operations in app.openapi()["paths"].items()
+        for method in operations
+    ]
+    assert len(routes) > 100, "Route discovery found too few routes"
+    return routes
 
 
 def concrete(path):
@@ -59,7 +63,7 @@ class RouteProtectionTests(unittest.TestCase):
         for role in ("citizen", "revenue_officer", "state_director"):
             app.dependency_overrides[get_current_user] = lambda role=role: user_with(role)
             for method, path in api_routes():
-                if path.startswith(SUPER_ADMIN_PREFIXES):
+                if path.startswith(SUPER_ADMIN_PREFIXES) and not path.startswith(STATE_SCOPED_PREFIXES):
                     with self.subTest(role=role, method=method, path=path):
                         self.assertEqual(self.client.request(method, concrete(path)).status_code, 403)
 

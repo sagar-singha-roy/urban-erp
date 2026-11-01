@@ -11,7 +11,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-RLS_TABLES = ("zones", "wards", "localities", "property_parcels", "buildings", "property_units", "owners")
+RLS_TABLES = ("zones", "wards", "localities", "property_parcels", "buildings", "property_units", "owners", "gis_layers", "gis_features")
 POLICY_NAME = "tenant_isolation"
 _SCOPE = "string_to_array(current_setting('app.tenant_ids', true), ',')"
 

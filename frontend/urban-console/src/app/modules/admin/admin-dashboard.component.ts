@@ -23,6 +23,7 @@ import { MicroservicesComponent } from './fleet/microservices/microservices.comp
 import { BackupDrComponent } from './fleet/backup-dr/backup-dr.component';
 import { GlobalCommandDashboardComponent } from './executive/global-command-dashboard/global-command-dashboard.component';
 import { BenchmarkingMatrixComponent } from './executive/benchmarking-matrix/benchmarking-matrix.component';
+import { GisViewerComponent } from './executive/gis-viewer/gis-viewer.component';
 import { FinancialLedgerComponent } from './executive/financial-ledger/financial-ledger.component';
 import { SUPER_ADMIN_SECTIONS, SuperAdminSection } from '../../core/models/super-admin.model';
 
@@ -54,6 +55,7 @@ import { SUPER_ADMIN_SECTIONS, SuperAdminSection } from '../../core/models/super
     GlobalCommandDashboardComponent,
     BenchmarkingMatrixComponent,
     FinancialLedgerComponent,
+    GisViewerComponent,
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrl: './admin-dashboard.component.scss',
@@ -87,6 +89,7 @@ export class AdminDashboardComponent implements OnInit {
           'dashboard': { section: 'executive', item: 'EXEC-01' },
           'benchmarking': { section: 'executive', item: 'EXEC-02' },
           'ledger': { section: 'executive', item: 'EXEC-03' },
+          'gis': { section: 'executive', item: 'EXEC-04' },
           'command': { section: 'executive', item: 'EXEC-01' },
           'global-command': { section: 'executive', item: 'EXEC-01' },
           'executive': { section: 'executive', item: 'EXEC-01' },

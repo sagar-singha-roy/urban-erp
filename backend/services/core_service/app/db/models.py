@@ -6,6 +6,11 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
+from sqlalchemy import Index, UniqueConstraint  # noqa: E402
+from sqlalchemy.orm import deferred  # noqa: E402
+from sqlalchemy.types import UserDefinedType  # noqa: E402
+
+
 class Tenant(Base):
     __tablename__ = "tenants"
 
@@ -995,3 +1000,72 @@ class DrillExecutionModel(Base):
 
 
 
+
+
+class Geometry(UserDefinedType):
+    """PostGIS geometry stored in EPSG:4326. Spatial reads and writes use SQL functions directly."""
+    cache_ok = True
+
+    def get_col_spec(self, **kw):
+        return "geometry(Geometry, 4326)"
+
+
+class GisLayerModel(Base):
+    __tablename__ = "gis_layers"
+    __table_args__ = (UniqueConstraint("tenant_id", "layer_code", name="uq_gis_layer_tenant_code"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), ForeignKey("tenants.tenant_id"), nullable=False, index=True)
+    state_code = Column(String(10), nullable=False, index=True)
+    layer_name = Column(String(150), nullable=False)
+    layer_code = Column(String(60), nullable=False)
+    layer_category = Column(String(30), nullable=False, index=True)
+    layer_type = Column(String(30), nullable=False)
+    data_source = Column(String(30), nullable=False)
+    service_url = Column(String(500), nullable=True)
+    workspace_name = Column(String(150), nullable=True)
+    layer_identifier = Column(String(150), nullable=True)
+    crs = Column(String(20), nullable=False)
+    default_visibility = Column(Boolean, default=True, nullable=False)
+    opacity = Column(Float, default=1.0, nullable=False)
+    layer_style = Column(JSON, default=dict)
+    layer_status = Column(String(20), default="Active", nullable=False)
+    utility_category = Column(String(60), nullable=True)
+    network_type = Column(String(60), nullable=True)
+    department = Column(String(100), nullable=True)
+    last_synced_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class GisFeatureModel(Base):
+    __tablename__ = "gis_features"
+    __table_args__ = (Index("ix_gis_features_geom", "geom", postgresql_using="gist"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    layer_id = Column(String(36), ForeignKey("gis_layers.id", ondelete="CASCADE"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.tenant_id"), nullable=False, index=True)
+    feature_ref = Column(String(100), nullable=True)
+    properties = Column(JSON, default=dict)
+    geom = deferred(Column(Geometry, nullable=False))
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class GisWorkspaceModel(Base):
+    __tablename__ = "gis_workspaces"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner = Column(String(150), nullable=False, index=True)
+    workspace_name = Column(String(150), nullable=False)
+    geographic_scope = Column(String(50), nullable=False)
+    state_tenants = Column(JSON, default=list)
+    ulb_tenants = Column(JSON, default=list)
+    map_extent = Column(JSON, nullable=True)
+    base_map = Column(String(30), nullable=False)
+    crs = Column(String(20), nullable=False)
+    default_zoom = Column(Integer, nullable=True)
+    default_centre = Column(JSON, nullable=True)
+    visible_layers = Column(JSON, default=list)
+    refresh_interval = Column(String(30), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

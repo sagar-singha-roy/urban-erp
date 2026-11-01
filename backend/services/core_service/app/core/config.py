@@ -25,6 +25,7 @@ class Settings(BaseSettings):
         _local_default("postgresql+asyncpg://urban_admin:urban_password123@localhost:5432/urban_erp")
     )
     BACKUP_DIR: str = os.getenv("BACKUP_DIR", "backups")
+    GIS_CUSTOM_BASEMAP_URL: str = os.getenv("GIS_CUSTOM_BASEMAP_URL", "")
     BACKUP_ENCRYPTION_KEY: str = os.getenv("BACKUP_ENCRYPTION_KEY", "")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
     WRITE_DATABASE_URL: str = os.getenv("WRITE_DATABASE_URL", "")

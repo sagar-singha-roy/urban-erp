@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.redis import redis_client
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.db.rls import app_role_bypasses_rls, apply_rls
@@ -35,6 +36,7 @@ async def lifespan(app: FastAPI):
         async with admin_engine.begin() as conn:
             # Other environments get their schema from Alembic migrations.
             if settings.is_development:
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
                 await conn.run_sync(Base.metadata.create_all)
             await apply_rls(conn)
         async with AsyncSession(admin_engine, expire_on_commit=False) as session:
@@ -126,6 +128,7 @@ from app.api.v1.audit_vault import router as audit_vault_router
 from app.api.v1.fleet import router as fleet_router
 from app.api.v1.backup_dr import router as backup_dr_router
 from app.api.v1.executive import router as executive_router
+from app.api.v1.gis import router as gis_router
 
 # Include Routers
 app.include_router(auth_router, prefix=settings.API_V1_STR)
@@ -140,6 +143,7 @@ app.include_router(security_router, prefix=settings.API_V1_STR)
 app.include_router(audit_vault_router, prefix=settings.API_V1_STR)
 app.include_router(fleet_router, prefix=settings.API_V1_STR)
 app.include_router(backup_dr_router, prefix=settings.API_V1_STR)
+app.include_router(gis_router, prefix=settings.API_V1_STR)
 app.include_router(executive_router, prefix=settings.API_V1_STR)
 app.include_router(properties_router, prefix=settings.API_V1_STR)
 app.include_router(boundaries_router, prefix=settings.API_V1_STR)
