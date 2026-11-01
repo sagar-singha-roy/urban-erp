@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { LoadingService } from '../../../../core/services/loading.service';
 import { ModuleCatalogueService } from '../../../../core/services/module-catalogue.service';
@@ -18,7 +19,7 @@ import { DependencyRuleDialogComponent } from './dialogs/dependency-rule-dialog/
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     DependencyRuleDialogComponent
   ],
   templateUrl: './action-dependency-registry.component.html',
@@ -347,7 +348,7 @@ export class ActionDependencyRegistryComponent implements OnInit {
 
     this.catalogueService.getAllComponents().subscribe({
       next: comps => this.components.set(comps),
-      error: () => {}
+      error: () => this.dialogs.showToast('Could not load the component list.', 'error', 3000)
     });
   }
 

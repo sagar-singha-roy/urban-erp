@@ -17,7 +17,7 @@ from app.db.models import (
     UlbComponentRestrictionModel,
     DelegationAuditHistoryModel,
 )
-from app.core.auth import get_current_user
+from app.core.auth import ensure_tenant_access, get_current_user, require_roles, require_state_scope_for_reads
 from app.schemas.tenant import ApiResponse
 from app.schemas.delegation import (
     DelegationRuleResponse,
@@ -33,7 +33,7 @@ from app.schemas.delegation import (
     HierarchyVerificationTrace,
 )
 
-router = APIRouter(prefix="/modules/delegation", tags=["ADM-M05 Sub-Tenant Cascade Delegation Guard"])
+router = APIRouter(prefix="/modules/delegation", tags=["ADM-M05 Sub-Tenant Cascade Delegation Guard"], dependencies=[Depends(require_state_scope_for_reads())])
 
 
 def _to_naive_utc(dt: Optional[datetime.datetime]) -> Optional[datetime.datetime]:
@@ -83,7 +83,7 @@ async def get_delegation_stats(
 @router.get("/state-scope/{state_tenant_id}")
 async def get_state_delegation_scope(
     state_tenant_id: str,
-    db: AsyncSession = Depends(get_read_db),
+    db: AsyncSession = Depends(get_write_db),
     user: dict = Depends(get_current_user),
 ):
     st_res = await db.execute(select(StateTenant).where(StateTenant.tenant_id == state_tenant_id))
@@ -227,6 +227,7 @@ async def create_delegation_rule(
     db: AsyncSession = Depends(get_write_db),
     user: dict = Depends(get_current_user),
 ):
+    await ensure_tenant_access(payload.stateTenantId, user, db)
     st_res = await db.execute(select(StateTenant).where(StateTenant.tenant_id == payload.stateTenantId))
     st = st_res.scalar_one_or_none()
     if not st:
@@ -375,6 +376,7 @@ async def create_ulb_allocations(
     db: AsyncSession = Depends(get_write_db),
     user: dict = Depends(get_current_user),
 ):
+    await ensure_tenant_access(payload.stateTenantId, user, db)
     # 1. State Verification
     st_res = await db.execute(select(StateTenant).where(StateTenant.tenant_id == payload.stateTenantId))
     st = st_res.scalar_one_or_none()
@@ -559,6 +561,7 @@ async def revoke_ulb_allocation(
     alloc = res.scalar_one_or_none()
     if not alloc:
         raise HTTPException(status_code=404, detail="Allocation not found.")
+    await ensure_tenant_access(alloc.state_tenant_id, user, db)
 
     alloc.status = "Revoked"
     alloc.updated_at = datetime.datetime.utcnow()
@@ -640,6 +643,7 @@ async def create_component_restriction(
     db: AsyncSession = Depends(get_write_db),
     user: dict = Depends(get_current_user),
 ):
+    await ensure_tenant_access(payload.stateTenantId, user, db)
     rand_suffix = uuid.uuid4().hex[:4].upper()
     rst_id = f"RST-{payload.moduleCode.upper()}-{payload.componentCode.upper()}-{rand_suffix}"
 
@@ -712,6 +716,7 @@ async def delete_component_restriction(
     rst = res.scalar_one_or_none()
     if not rst:
         raise HTTPException(status_code=404, detail="Restriction not found.")
+    await ensure_tenant_access(rst.state_tenant_id, user, db)
 
     hist = DelegationAuditHistoryModel(
         state_tenant_id=rst.state_tenant_id,

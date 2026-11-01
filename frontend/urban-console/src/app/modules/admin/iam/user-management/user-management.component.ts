@@ -2,6 +2,7 @@ import { Component, OnInit, Input, inject, signal, computed } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { IamUserService } from '../../../../core/services/iam-user.service';
 import { IamRbacService } from '../../../../core/services/iam-rbac.service';
 import { IamSsoService } from '../../../../core/services/iam-sso.service';
@@ -21,7 +22,7 @@ import { ResetPasswordDialogComponent } from './dialogs/reset-password-dialog/re
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     CreateUserDialogComponent,
     InviteUserDialogComponent,
     AssignScopeDialogComponent,

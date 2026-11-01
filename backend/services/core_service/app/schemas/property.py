@@ -102,7 +102,7 @@ class DashboardStats(CamelModel):
     totalParcels: int
     totalUnits: int
     totalDemand: float
-    totalCollected: float
+    totalCollected: Optional[float] = None
     residentialCount: int
     commercialCount: int
     wardCount: int

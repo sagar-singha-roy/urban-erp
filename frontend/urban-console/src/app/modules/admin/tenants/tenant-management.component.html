@@ -15,15 +15,7 @@
       </div>
 
       <div class="header-actions">
-        <button
-          class="btn btn-refresh"
-          (click)="onRefreshClick()"
-          [disabled]="isLoading()"
-          title="Refresh State Tenants"
-        >
-          <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-          <span>Refresh</span>
-        </button>
+        <app-refresh-button subject="state tenants" (refresh)="loadMasterStates(); loadTenants(); loadAuditLogs()"></app-refresh-button>
 
         <button
           class="btn btn-primary"

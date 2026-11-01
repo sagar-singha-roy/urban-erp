@@ -1,0 +1,1075 @@
+<div class="financial-container">
+  <!-- 1. Page Header -->
+  <header class="page-header">
+    <div class="header-titles">
+      <div class="title-with-badge">
+        <h1
+          class="page-title"
+          data-tooltip="Consolidated Financial & Treasury Ledger — Level 0 Analytics"
+          title="Consolidated Financial & Treasury Ledger — Level 0 Analytics"
+        >
+          <app-icon name="ri-book-read-line" class="title-icon"></app-icon>
+          Consolidated Financial Ledger
+        </h1>
+        <span class="pulse-indicator" title="Audited Financial & Devolution Stream"></span>
+      </div>
+      <p class="page-subtitle">
+        Track central grants, state and ULB financial allocations, expenditure, balances, and consolidated financial reporting.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      @if (!dataNotice()) {
+<button
+        type="button"
+        class="btn btn-outline"
+        (click)="openAllocationModal()"
+        title="Record New Grant Devolution"
+      >
+        <app-icon name="ri-hand-coin-line"></app-icon>
+        <span>Record Allocation</span>
+      </button>
+}
+
+      @if (!dataNotice()) {
+<button
+        type="button"
+        class="btn btn-outline"
+        (click)="openReconModal()"
+        title="Initiate Automated Bank / Treasury Reconciliation"
+      >
+        <app-icon name="ri-scales-3-line"></app-icon>
+        <span>Reconciliation Run</span>
+      </button>
+}
+
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="exportReport()"
+        [disabled]="isExporting()"
+        title="Export Ledger"
+      >
+        <app-icon name="ri-download-2-line"></app-icon>
+        <span>{{ isExporting() ? 'Exporting...' : 'Export Ledger' }}</span>
+      </button>
+
+      <app-refresh-button subject="financial ledger" (refresh)="refreshData()"></app-refresh-button>
+    </div>
+  </header>
+
+  @if (dataNotice()) {
+    <app-data-notice [message]="dataNotice()"></app-data-notice>
+  } @else {
+
+  <!-- 2. Segmented Navigation Bar -->
+  <nav class="nav-segment-bar" aria-label="Consolidated Financial Ledger Tabs">
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'grants'"
+      (click)="setTab('grants')"
+    >
+      <app-icon name="ri-funds-line"></app-icon>
+      <span>Grants Overview</span>
+    </button>
+
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'allocations'"
+      (click)="setTab('allocations')"
+    >
+      <app-icon name="ri-file-list-3-line"></app-icon>
+      <span>Grant Allocation</span>
+    </button>
+
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'summary'"
+      (click)="setTab('summary')"
+    >
+      <app-icon name="ri-pie-chart-line"></app-icon>
+      <span>Financial Summary</span>
+    </button>
+
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'ledger'"
+      (click)="setTab('ledger')"
+    >
+      <app-icon name="ri-book-2-line"></app-icon>
+      <span>Tenant-wise Ledger</span>
+    </button>
+
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'recon'"
+      (click)="setTab('recon')"
+    >
+      <app-icon name="ri-checkbox-multiple-line"></app-icon>
+      <span>Reconciliation</span>
+    </button>
+  </nav>
+
+  <!-- ========================================================================= -->
+  <!-- TAB A: GRANTS OVERVIEW -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'grants') {
+    <section class="tab-content" aria-label="Grants Overview">
+      <!-- Filter Panel -->
+      <div class="filter-card">
+        <div class="filter-header">
+          <div class="filter-title">
+            <app-icon name="ri-filter-3-line"></app-icon>
+            <span>GRANTS DEVOUTION & SANCTIONS FILTERS</span>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn-text" (click)="resetFilters()">
+              <app-icon name="ri-refresh-line"></app-icon>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" (click)="applyFilters()">
+              <app-icon name="ri-check-line"></app-icon>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-grid">
+          <div class="filter-field">
+            <label class="field-label">Financial Year <span class="required">*</span></label>
+            <select class="field-select" [(ngModel)]="selectedFinancialYear">
+              <option value="FY 2026-27">FY 2026-27</option>
+              <option value="FY 2025-26">FY 2025-26</option>
+              <option value="FY 2024-25">FY 2024-25</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label class="field-label">Grant Scheme</label>
+            <select class="field-select" [(ngModel)]="selectedScheme">
+              <option value="">All Central & State Schemes</option>
+              <option value="15th Finance Commission (Urban)">15th Finance Commission</option>
+              <option value="AMRUT 2.0 (Water & Green Spaces)">AMRUT 2.0</option>
+              <option value="Swachh Bharat Mission (Urban 2.0)">Swachh Bharat Mission 2.0</option>
+              <option value="State Government Matching Grants">State Matching Grants</option>
+              <option value="Smart Cities Mission Devolution">Smart Cities Mission</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label class="field-label">Funding Authority</label>
+            <select class="field-select" [(ngModel)]="selectedAuthority">
+              <option value="">All Funding Authorities</option>
+              <option value="Ministry of Finance">Ministry of Finance (MoF)</option>
+              <option value="MoHUA">Ministry of Housing & Urban Affairs</option>
+              <option value="State Finance Dept">State Finance Department</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label class="field-label">State Tenant</label>
+            <select class="field-select" [(ngModel)]="selectedState">
+              <option value="">All State Governments</option>
+              <option value="Telangana">Telangana (TG)</option>
+              <option value="Maharashtra">Maharashtra (MH)</option>
+              <option value="Karnataka">Karnataka (KA)</option>
+              <option value="Gujarat">Gujarat (GJ)</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label class="field-label">ULB / City</label>
+            <select class="field-select" [(ngModel)]="selectedUlb">
+              <option value="">All Municipal Corporations</option>
+              <option value="Greater Hyderabad">Greater Hyderabad (GHMC)</option>
+              <option value="Brihanmumbai">Brihanmumbai (BMC)</option>
+              <option value="Bruhat Bengaluru">Bruhat Bengaluru (BBMP)</option>
+              <option value="Greater Warangal">Greater Warangal (GWMC)</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label class="field-label">Grant Status</label>
+            <select class="field-select" [(ngModel)]="selectedGrantStatus">
+              <option value="">All Statuses</option>
+              <option value="Sanctioned">Sanctioned</option>
+              <option value="Released">Released</option>
+              <option value="Allocated">Allocated</option>
+              <option value="Utilised">Utilised</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Cards (Vertical Modern Reference) -->
+      <div class="kpi-grid-6">
+        <div class="kpi-card blue">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-hand-coin-line"></app-icon>
+          </div>
+          <span class="kpi-label">Total Sanctioned Grants</span>
+          <div class="kpi-value">{{ formatInr(grantsData().totalSanctionedGrants) }}</div>
+          <span class="kpi-subtext">Approved statutory allocation</span>
+        </div>
+
+        <div class="kpi-card emerald">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-bank-card-line"></app-icon>
+          </div>
+          <span class="kpi-label">Total Released Amount</span>
+          <div class="kpi-value">{{ formatInr(grantsData().totalReleasedAmount) }}</div>
+          <span class="kpi-subtext">Disbursed to state treasury</span>
+        </div>
+
+        <div class="kpi-card purple">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-share-forward-box-line"></app-icon>
+          </div>
+          <span class="kpi-label">Total Allocated Amount</span>
+          <div class="kpi-value">{{ formatInr(grantsData().totalAllocatedAmount) }}</div>
+          <span class="kpi-subtext">Devolved down to ULB accounts</span>
+        </div>
+
+        <div class="kpi-card indigo">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-check-double-line"></app-icon>
+          </div>
+          <span class="kpi-label">Total Utilised Amount</span>
+          <div class="kpi-value">{{ formatInr(grantsData().totalUtilisedAmount) }}</div>
+          <span class="kpi-subtext">Vouchers cleared against works</span>
+        </div>
+
+        <div class="kpi-card amber">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-wallet-3-line"></app-icon>
+          </div>
+          <span class="kpi-label">Unutilised Balance</span>
+          <div class="kpi-value">{{ formatInr(grantsData().unutilisedBalance) }}</div>
+          <span class="kpi-subtext">Available for ongoing works</span>
+        </div>
+
+        <div class="kpi-card teal">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-percent-line"></app-icon>
+          </div>
+          <span class="kpi-label">Utilisation Rate</span>
+          <div class="kpi-value">{{ grantsData().utilisationPercentage }}%</div>
+          <span class="kpi-subtext">Across 5 statutory schemes</span>
+        </div>
+      </div>
+
+      <!-- Schemes Breakdown Table -->
+      <div class="table-card">
+        <div class="card-header">
+          <div class="header-left">
+            <h3 class="table-title">Statutory Grant Schemes Devolution Breakdown</h3>
+            <p class="table-subtitle">Consolidated tracking of 15th FC, AMRUT 2.0, SBM, and State grants</p>
+          </div>
+          <span class="badge badge-success">MoF PFMS Audited</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Scheme Name</th>
+                <th>Funding Authority</th>
+                <th class="text-right">Sanctioned</th>
+                <th class="text-right">Released</th>
+                <th class="text-right">Allocated</th>
+                <th class="text-right">Utilised</th>
+                <th class="text-right">Unutilised</th>
+                <th class="text-center" style="min-width: 130px;">Utilisation %</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of grantsData().schemeBreakdown; track row.schemeCode) {
+                <tr>
+                  <td>
+                    <div class="scheme-name-wrap">
+                      <span class="font-medium text-dark">{{ row.schemeName }}</span>
+                      <span class="text-muted text-xs font-mono">{{ row.schemeCode }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge badge-secondary">{{ row.authority }}</span>
+                  </td>
+                  <td class="text-right font-mono">{{ formatInr(row.sanctioned) }}</td>
+                  <td class="text-right font-mono font-medium">{{ formatInr(row.released) }}</td>
+                  <td class="text-right font-mono text-primary">{{ formatInr(row.allocated) }}</td>
+                  <td class="text-right font-mono text-emerald">{{ formatInr(row.utilised) }}</td>
+                  <td class="text-right font-mono text-amber">{{ formatInr(row.unutilised) }}</td>
+                  <td class="text-center">
+                    <div class="progress-wrap">
+                      <div class="progress-bar-bg">
+                        <div
+                          class="progress-bar-fill"
+                          [style.width.%]="row.utilisationPct"
+                          [class.bg-success]="row.utilisationPct >= 80"
+                          [class.bg-warning]="row.utilisationPct < 80"
+                        ></div>
+                      </div>
+                      <span class="progress-label">{{ row.utilisationPct }}%</span>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB B: GRANT ALLOCATION -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'allocations') {
+    <section class="tab-content" aria-label="Grant Allocation Registry">
+      <!-- Top Action Bar with Live Search & Pagination Limit -->
+      <div class="registry-toolbar">
+        <div class="toolbar-search">
+          <app-icon name="ri-search-line" class="search-icon"></app-icon>
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Search sanction order, scheme, state, ULB..."
+            [ngModel]="allocationSearch()"
+            (ngModelChange)="allocationSearch.set($event); allocationPage.set(1)"
+          />
+        </div>
+
+        <div class="toolbar-controls">
+          <div class="page-size-selector">
+            <span class="selector-label">Rows per page:</span>
+            <select
+              class="selector-select"
+              [ngModel]="allocationLimit()"
+              (ngModelChange)="allocationLimit.set($event); allocationPage.set(1)"
+            >
+              <option [value]="5">5</option>
+              <option [value]="10">10</option>
+              <option [value]="20">20</option>
+              <option [value]="50">50</option>
+            </select>
+          </div>
+
+          <button type="button" class="btn btn-primary" (click)="openAllocationModal()">
+            <app-icon name="ri-add-line"></app-icon>
+            <span>Record Grant Allocation</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Allocations Registry Table -->
+      <div class="table-card">
+        <div class="card-header">
+          <div class="header-left">
+            <h3 class="table-title">Grant Devolution & Sanctions Registry</h3>
+            <p class="table-subtitle">Official inter-governmental fiscal transfers and sanction order archives</p>
+          </div>
+          <span class="badge badge-primary">{{ filteredAllocations().length }} Active Orders</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Grant Ref / Order No</th>
+                <th>Scheme & Funding Authority</th>
+                <th>State & Target ULB</th>
+                <th class="text-right">Sanctioned</th>
+                <th class="text-right">Released</th>
+                <th class="text-right">Allocated</th>
+                <th>Deadline</th>
+                <th>Approval Authority</th>
+                <th class="text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of paginatedAllocations(); track item.grantRef) {
+                <tr>
+                  <td>
+                    <div class="ref-wrap">
+                      <span class="ref-code font-mono">{{ item.grantRef }}</span>
+                      <span class="ref-subtext">{{ item.sanctionOrderNo }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="scheme-wrap">
+                      <span class="font-medium text-dark">{{ item.grantScheme }}</span>
+                      <span class="text-muted text-xs">{{ item.fundingAuthority }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="target-wrap">
+                      <span class="badge badge-secondary">{{ item.stateTenant }}</span>
+                      <span class="ulb-text font-medium">{{ item.targetUlb || 'State Treasury Pool' }}</span>
+                    </div>
+                  </td>
+                  <td class="text-right font-mono">{{ formatInr(item.sanctionedAmount) }}</td>
+                  <td class="text-right font-mono text-emerald">{{ formatInr(item.releasedAmount) }}</td>
+                  <td class="text-right font-mono text-primary font-medium">{{ formatInr(item.allocationAmount) }}</td>
+                  <td>
+                    <span class="date-text">{{ item.deadline || 'Per Scheme Rules' }}</span>
+                  </td>
+                  <td>
+                    <span class="authority-text">{{ item.approvalAuthority }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span
+                      class="badge"
+                      [class.badge-success]="item.status === 'DISBURSED'"
+                      [class.badge-warning]="item.status === 'ALLOCATED'"
+                      [class.badge-secondary]="item.status === 'SANCTIONED'"
+                    >
+                      {{ item.status }}
+                    </span>
+                  </td>
+                </tr>
+              }
+              @if (filteredAllocations().length === 0) {
+                <tr>
+                  <td colspan="9" class="empty-state-cell">
+                    <app-icon name="ri-inbox-line"></app-icon>
+                    <p>No grant allocation orders match your search criteria.</p>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Standardized Pagination Bar -->
+        <div class="pagination-bar">
+          <span class="pagination-info">
+            Showing {{ ((allocationPage() - 1) * allocationLimit()) + (filteredAllocations().length ? 1 : 0) }}
+            to {{ Math.min(allocationPage() * allocationLimit(), filteredAllocations().length) }}
+            of {{ filteredAllocations().length }} entries
+          </span>
+
+          <div class="pagination-controls">
+            <button
+              type="button"
+              class="pagination-btn"
+              [disabled]="allocationPage() === 1"
+              (click)="allocationPage.set(allocationPage() - 1)"
+              title="Previous Page"
+            >
+              <app-icon name="ri-arrow-left-s-line"></app-icon>
+            </button>
+            <span class="page-indicator">Page {{ allocationPage() }} of {{ totalAllocationPages() }}</span>
+            <button
+              type="button"
+              class="pagination-btn"
+              [disabled]="allocationPage() >= totalAllocationPages()"
+              (click)="allocationPage.set(allocationPage() + 1)"
+              title="Next Page"
+            >
+              <app-icon name="ri-arrow-right-s-line"></app-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB C: FINANCIAL SUMMARY -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'summary') {
+    <section class="tab-content" aria-label="Financial Summary">
+      <!-- Filter Panel -->
+      <div class="filter-card">
+        <div class="filter-header">
+          <div class="filter-title">
+            <app-icon name="ri-pie-chart-line"></app-icon>
+            <span>CONSOLIDATED TREASURY & ACCOUNTING FILTERS</span>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn-text" (click)="resetFilters()">
+              <app-icon name="ri-refresh-line"></app-icon>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" (click)="applyFilters()">
+              <app-icon name="ri-check-line"></app-icon>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-grid">
+          <div class="filter-field">
+            <label class="field-label">Financial Year <span class="required">*</span></label>
+            <select class="field-select" [(ngModel)]="selectedFinancialYear">
+              <option value="FY 2026-27">FY 2026-27</option>
+              <option value="FY 2025-26">FY 2025-26</option>
+              <option value="FY 2024-25">FY 2024-25</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label class="field-label">State Tenant</label>
+            <select class="field-select" [(ngModel)]="selectedState">
+              <option value="">All State Tenants</option>
+              <option value="Telangana">Telangana (TG)</option>
+              <option value="Maharashtra">Maharashtra (MH)</option>
+              <option value="Karnataka">Karnataka (KA)</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label class="field-label">ULB / City</label>
+            <select class="field-select" [(ngModel)]="selectedUlb">
+              <option value="">All Municipal Bodies</option>
+              <option value="Greater Hyderabad">Greater Hyderabad (GHMC)</option>
+              <option value="Brihanmumbai">Brihanmumbai (BMC)</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label class="field-label">Aggregation Level <span class="required">*</span></label>
+            <select class="field-select" [(ngModel)]="selectedAggregation">
+              <option value="State">State-Level Aggregation</option>
+              <option value="ULB">ULB-Level Breakdown</option>
+              <option value="Category">Financial Category</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7 KPI Metrics (Requirement C) -->
+      <div class="kpi-grid-7">
+        <div class="kpi-card blue">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-archive-line"></app-icon>
+          </div>
+          <span class="kpi-label">Opening Balance</span>
+          <div class="kpi-value">{{ formatInr(summaryData().openingBalance) }}</div>
+          <span class="kpi-subtext">FY initial cash reserves</span>
+        </div>
+
+        <div class="kpi-card emerald">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-arrow-down-circle-line"></app-icon>
+          </div>
+          <span class="kpi-label">Total Receipts</span>
+          <div class="kpi-value">{{ formatInr(summaryData().totalReceipts) }}</div>
+          <span class="kpi-subtext">Tax + Grants + User charges</span>
+        </div>
+
+        <div class="kpi-card rose">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-arrow-up-circle-line"></app-icon>
+          </div>
+          <span class="kpi-label">Total Expenditure</span>
+          <div class="kpi-value">{{ formatInr(summaryData().totalExpenditure) }}</div>
+          <span class="kpi-subtext">Capital + Revenue operations</span>
+        </div>
+
+        <div class="kpi-card indigo">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-safe-2-line"></app-icon>
+          </div>
+          <span class="kpi-label">Closing Balance</span>
+          <div class="kpi-value">{{ formatInr(summaryData().closingBalance) }}</div>
+          <span class="kpi-subtext">Net liquid bank reserves</span>
+        </div>
+
+        <div class="kpi-card purple">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-building-line"></app-icon>
+          </div>
+          <span class="kpi-label">Total Assets</span>
+          <div class="kpi-value">{{ formatInr(summaryData().totalAssets) }}</div>
+          <span class="kpi-subtext">Fixed infrastructure + cash</span>
+        </div>
+
+        <div class="kpi-card amber">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-money-dollar-box-line"></app-icon>
+          </div>
+          <span class="kpi-label">Total Liabilities</span>
+          <div class="kpi-value">{{ formatInr(summaryData().totalLiabilities) }}</div>
+          <span class="kpi-subtext">Bonds, loans & contractor payables</span>
+        </div>
+
+        <div class="kpi-card teal">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-line-chart-line"></app-icon>
+          </div>
+          <span class="kpi-label">Revenue Surplus</span>
+          <div class="kpi-value text-emerald">+{{ formatInr(summaryData().revenueSurplusDeficit) }}</div>
+          <span class="kpi-subtext">Positive fiscal health</span>
+        </div>
+      </div>
+
+      <!-- Account Heads Breakdown Table -->
+      <div class="table-card">
+        <div class="card-header">
+          <div class="header-left">
+            <h3 class="table-title">Consolidated Account Heads Budget vs Actuals</h3>
+            <p class="table-subtitle">National Municipal Accounting Manual (NMAM) standard budget utilization</p>
+          </div>
+          <span class="badge badge-success">NMAM Compliant</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Account Code</th>
+                <th>Major Account Head</th>
+                <th class="text-right">Budget Allocation</th>
+                <th class="text-right">Actual Receipts / Outflow</th>
+                <th class="text-center" style="min-width: 140px;">Utilization Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of summaryData().accountHeadSummary; track row.code) {
+                <tr>
+                  <td>
+                    <span class="font-mono font-medium text-dark">{{ row.code }}</span>
+                  </td>
+                  <td>
+                    <span class="font-medium text-dark">{{ row.head }}</span>
+                  </td>
+                  <td class="text-right font-mono">{{ formatInr(row.budget) }}</td>
+                  <td class="text-right font-mono font-medium text-primary">{{ formatInr(row.actuals) }}</td>
+                  <td class="text-center">
+                    <div class="progress-wrap">
+                      <div class="progress-bar-bg">
+                        <div
+                          class="progress-bar-fill"
+                          [style.width.%]="row.utilPct"
+                          [class.bg-success]="row.utilPct >= 85"
+                          [class.bg-warning]="row.utilPct < 85"
+                        ></div>
+                      </div>
+                      <span class="progress-label">{{ row.utilPct }}%</span>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB D: TENANT-WISE LEDGER -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'ledger') {
+    <section class="tab-content" aria-label="Tenant-wise Double-Entry Ledger">
+      <!-- KPI Row -->
+      <div class="kpi-grid-4">
+        <div class="kpi-card blue">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-file-list-2-line"></app-icon>
+          </div>
+          <span class="kpi-label">Total Transactions</span>
+          <div class="kpi-value">{{ ledgerData().totalTransactions }}</div>
+          <span class="kpi-subtext">Posted double-entry vouchers</span>
+        </div>
+
+        <div class="kpi-card rose">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-arrow-up-circle-line"></app-icon>
+          </div>
+          <span class="kpi-label">Total Debit Outflow (DR)</span>
+          <div class="kpi-value">{{ formatInr(ledgerData().totalDebit) }}</div>
+          <span class="kpi-subtext">Disbursed contractor claims</span>
+        </div>
+
+        <div class="kpi-card emerald">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-arrow-down-circle-line"></app-icon>
+          </div>
+          <span class="kpi-label">Total Credit Inflow (CR)</span>
+          <div class="kpi-value">{{ formatInr(ledgerData().totalCredit) }}</div>
+          <span class="kpi-subtext">Grants received & taxes collected</span>
+        </div>
+
+        <div class="kpi-card indigo">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-scales-2-line"></app-icon>
+          </div>
+          <span class="kpi-label">Net Running Balance</span>
+          <div class="kpi-value text-primary">{{ formatInr(ledgerData().netBalance) }}</div>
+          <span class="kpi-subtext">Liquid escrow book balance</span>
+        </div>
+      </div>
+
+      <!-- Toolbar with Live Search -->
+      <div class="registry-toolbar">
+        <div class="toolbar-search">
+          <app-icon name="ri-search-line" class="search-icon"></app-icon>
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Search voucher, transaction ID, account head, ULB..."
+            [ngModel]="ledgerSearch()"
+            (ngModelChange)="ledgerSearch.set($event); ledgerPage.set(1)"
+          />
+        </div>
+
+        <div class="toolbar-controls">
+          <div class="page-size-selector">
+            <span class="selector-label">Rows per page:</span>
+            <select
+              class="selector-select"
+              [ngModel]="ledgerLimit()"
+              (ngModelChange)="ledgerLimit.set($event); ledgerPage.set(1)"
+            >
+              <option [value]="5">5</option>
+              <option [value]="10">10</option>
+              <option [value]="20">20</option>
+              <option [value]="50">50</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ledger Table -->
+      <div class="table-card">
+        <div class="card-header">
+          <div class="header-left">
+            <h3 class="table-title">Tenant-wise Running Double-Entry Ledger</h3>
+            <p class="table-subtitle">Granular posting entries from State Treasury to Municipal general accounts</p>
+          </div>
+          <span class="badge badge-success">Audited Double-Entry</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Txn ID / Date</th>
+                <th>ULB Tenant</th>
+                <th>Voucher Reference</th>
+                <th>Account Head</th>
+                <th class="text-right">Debit (DR)</th>
+                <th class="text-right">Credit (CR)</th>
+                <th class="text-right">Running Balance</th>
+                <th class="text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of paginatedLedger(); track row.id) {
+                <tr>
+                  <td>
+                    <div class="ref-wrap">
+                      <span class="font-mono font-medium text-dark">{{ row.id }}</span>
+                      <span class="text-muted text-xs">{{ row.date }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge badge-secondary">{{ row.ulb }}</span>
+                  </td>
+                  <td>
+                    <span class="font-mono text-dark">{{ row.voucher }}</span>
+                  </td>
+                  <td>
+                    <span class="font-medium text-dark">{{ row.accountHead }}</span>
+                  </td>
+                  <td class="text-right font-mono">
+                    @if (row.debit > 0) {
+                      <span class="text-rose font-medium">-{{ formatInr(row.debit) }}</span>
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                  <td class="text-right font-mono">
+                    @if (row.credit > 0) {
+                      <span class="text-emerald font-medium">+{{ formatInr(row.credit) }}</span>
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                  <td class="text-right font-mono font-medium text-dark">
+                    {{ formatInr(row.balance) }}
+                  </td>
+                  <td class="text-center">
+                    <span
+                      class="badge"
+                      [class.badge-success]="row.status === 'CLEARED'"
+                      [class.badge-primary]="row.status === 'POSTED'"
+                    >
+                      {{ row.status }}
+                    </span>
+                  </td>
+                </tr>
+              }
+              @if (filteredLedgerTransactions().length === 0) {
+                <tr>
+                  <td colspan="8" class="empty-state-cell">
+                    <app-icon name="ri-inbox-line"></app-icon>
+                    <p>No ledger transactions match your search filter.</p>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Standardized Pagination Bar -->
+        <div class="pagination-bar">
+          <span class="pagination-info">
+            Showing {{ ((ledgerPage() - 1) * ledgerLimit()) + (filteredLedgerTransactions().length ? 1 : 0) }}
+            to {{ Math.min(ledgerPage() * ledgerLimit(), filteredLedgerTransactions().length) }}
+            of {{ filteredLedgerTransactions().length }} entries
+          </span>
+
+          <div class="pagination-controls">
+            <button
+              type="button"
+              class="pagination-btn"
+              [disabled]="ledgerPage() === 1"
+              (click)="ledgerPage.set(ledgerPage() - 1)"
+              title="Previous Page"
+            >
+              <app-icon name="ri-arrow-left-s-line"></app-icon>
+            </button>
+            <span class="page-indicator">Page {{ ledgerPage() }} of {{ totalLedgerPages() }}</span>
+            <button
+              type="button"
+              class="pagination-btn"
+              [disabled]="ledgerPage() >= totalLedgerPages()"
+              (click)="ledgerPage.set(ledgerPage() + 1)"
+              title="Next Page"
+            >
+              <app-icon name="ri-arrow-right-s-line"></app-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB E: RECONCILIATION -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'recon') {
+    <section class="tab-content" aria-label="Reconciliation Engine">
+      <!-- 6 KPI Metrics (Requirement E) -->
+      <div class="kpi-grid-6">
+        <div class="kpi-card emerald">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-check-line"></app-icon>
+          </div>
+          <span class="kpi-label">Matched Transactions</span>
+          <div class="kpi-value text-emerald">{{ reconData().matchedTransactions }}</div>
+          <span class="kpi-subtext">Automatic BRS match</span>
+        </div>
+
+        <div class="kpi-card rose">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-error-warning-line"></app-icon>
+          </div>
+          <span class="kpi-label">Unmatched Transactions</span>
+          <div class="kpi-value text-rose">{{ reconData().unmatchedTransactions }}</div>
+          <span class="kpi-subtext">Flagged for manual review</span>
+        </div>
+
+        <div class="kpi-card teal">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-percent-line"></app-icon>
+          </div>
+          <span class="kpi-label">Match Rate</span>
+          <div class="kpi-value">{{ reconData().matchRatePct }}%</div>
+          <span class="kpi-subtext">Automated matching score</span>
+        </div>
+
+        <div class="kpi-card amber">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-funds-box-line"></app-icon>
+          </div>
+          <span class="kpi-label">Debit Difference</span>
+          <div class="kpi-value text-amber">{{ formatInr(reconData().debitDifference) }}</div>
+          <span class="kpi-subtext">Escrow variance identified</span>
+        </div>
+
+        <div class="kpi-card indigo">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-shield-check-line"></app-icon>
+          </div>
+          <span class="kpi-label">Credit Difference</span>
+          <div class="kpi-value">₹0</div>
+          <span class="kpi-subtext">Full credit settlement</span>
+        </div>
+
+        <div class="kpi-card purple">
+          <div class="kpi-icon-badge">
+            <app-icon name="ri-calendar-check-line"></app-icon>
+          </div>
+          <span class="kpi-label">Audit Status</span>
+          <div class="kpi-value status-pill">EXCEPTIONS</div>
+          <span class="kpi-subtext">{{ reconData().completionDate }}</span>
+        </div>
+      </div>
+
+      <!-- Toolbar with Live Search -->
+      <div class="registry-toolbar">
+        <div class="toolbar-search">
+          <app-icon name="ri-search-line" class="search-icon"></app-icon>
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Search transaction ref, UTR number, remarks..."
+            [ngModel]="reconSearch()"
+            (ngModelChange)="reconSearch.set($event); reconPage.set(1)"
+          />
+        </div>
+
+        <div class="toolbar-controls">
+          <div class="page-size-selector">
+            <span class="selector-label">Rows per page:</span>
+            <select
+              class="selector-select"
+              [ngModel]="reconLimit()"
+              (ngModelChange)="reconLimit.set($event); reconPage.set(1)"
+            >
+              <option [value]="5">5</option>
+              <option [value]="10">10</option>
+              <option [value]="20">20</option>
+              <option [value]="50">50</option>
+            </select>
+          </div>
+
+          <button type="button" class="btn btn-primary" (click)="openReconModal()">
+            <app-icon name="ri-play-circle-line"></app-icon>
+            <span>Execute Reconciliation Engine</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Reconciliation Table -->
+      <div class="table-card">
+        <div class="card-header">
+          <div class="header-left">
+            <h3 class="table-title">BRS Statement Matching Registry</h3>
+            <p class="table-subtitle">Source Ledger: {{ reconData().sourceLedger }} ➔ Target: {{ reconData().targetLedger }}</p>
+          </div>
+          <span class="badge badge-primary">{{ reconData().reconciliationName }}</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Txn Ref / Date</th>
+                <th>UTR Tracking Number</th>
+                <th class="text-right">Source Book Amount</th>
+                <th class="text-right">Bank / Scroll Amount</th>
+                <th class="text-right">Variance</th>
+                <th class="text-center">Match Status</th>
+                <th>Audit & Verification Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of paginatedRecon(); track item.id) {
+                <tr>
+                  <td>
+                    <div class="ref-wrap">
+                      <span class="font-mono font-medium text-dark">{{ item.txnRef }}</span>
+                      <span class="text-muted text-xs">{{ item.date }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="font-mono text-xs">{{ item.utr }}</span>
+                  </td>
+                  <td class="text-right font-mono">{{ formatInr(item.sourceAmount) }}</td>
+                  <td class="text-right font-mono text-primary font-medium">{{ formatInr(item.targetAmount) }}</td>
+                  <td class="text-right font-mono">
+                    @if (item.variance > 0) {
+                      <span class="badge badge-warning">{{ formatInr(item.variance) }}</span>
+                    } @else {
+                      <span class="text-emerald">₹0</span>
+                    }
+                  </td>
+                  <td class="text-center">
+                    <span
+                      class="badge"
+                      [class.badge-success]="item.matchStatus === 'MATCHED'"
+                      [class.badge-warning]="item.matchStatus === 'VARIANCE_DETECTED'"
+                      [class.badge-danger]="item.matchStatus === 'UNMATCHED_IN_TARGET'"
+                    >
+                      {{ item.matchStatus }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="remarks-text">{{ item.remarks }}</span>
+                  </td>
+                </tr>
+              }
+              @if (filteredReconItems().length === 0) {
+                <tr>
+                  <td colspan="7" class="empty-state-cell">
+                    <app-icon name="ri-inbox-line"></app-icon>
+                    <p>No reconciliation records match your query.</p>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Standardized Pagination Bar -->
+        <div class="pagination-bar">
+          <span class="pagination-info">
+            Showing {{ ((reconPage() - 1) * reconLimit()) + (filteredReconItems().length ? 1 : 0) }}
+            to {{ Math.min(reconPage() * reconLimit(), filteredReconItems().length) }}
+            of {{ filteredReconItems().length }} entries
+          </span>
+
+          <div class="pagination-controls">
+            <button
+              type="button"
+              class="pagination-btn"
+              [disabled]="reconPage() === 1"
+              (click)="reconPage.set(reconPage() - 1)"
+              title="Previous Page"
+            >
+              <app-icon name="ri-arrow-left-s-line"></app-icon>
+            </button>
+            <span class="page-indicator">Page {{ reconPage() }} of {{ totalReconPages() }}</span>
+            <button
+              type="button"
+              class="pagination-btn"
+              [disabled]="reconPage() >= totalReconPages()"
+              (click)="reconPage.set(reconPage() + 1)"
+              title="Next Page"
+            >
+              <app-icon name="ri-arrow-right-s-line"></app-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- Modals -->
+  @if (showAllocationModal()) {
+    <app-grant-allocation-dialog
+      title="Record Central / State Grant Allocation"
+      (save)="onSaveAllocation($event)"
+      (cancel)="closeAllocationModal()"
+    ></app-grant-allocation-dialog>
+  }
+
+  @if (showReconModal()) {
+    <app-reconciliation-run-dialog
+      title="Initiate Treasury Reconciliation"
+      (run)="onExecuteReconciliation($event)"
+      (cancel)="closeReconModal()"
+    ></app-reconciliation-run-dialog>
+  }
+  }
+</div>

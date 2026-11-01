@@ -12,10 +12,10 @@ from app.schemas.tenant import (
     StateTenantCreate, StateTenantUpdate, StateTenantResponse, TenantAuditLogResponse,
     MasterStateResponse, DistrictResponse, CityResponse
 )
-from app.core.auth import get_current_user, get_current_tenant, require_roles
+from app.core.auth import get_current_user, get_current_tenant, is_super_admin, require_roles, tenant_scope_filter
 from app.core.redis import redis_client
 
-router = APIRouter(prefix="/tenants", tags=["SaaS Tenant Management"])
+router = APIRouter(prefix="/tenants", tags=["SaaS Tenant Management"], dependencies=[Depends(get_current_user)])
 
 @router.get("", response_model=List[TenantResponse])
 async def list_tenants(
@@ -39,6 +39,8 @@ async def list_tenants(
         .outerjoin(PropertyParcel, PropertyParcel.tenant_id == Tenant.tenant_id)
         .outerjoin(Ward, Ward.tenant_id == Tenant.tenant_id)
     )
+    if not is_super_admin(user):
+        stmt = stmt.where(tenant_scope_filter(user))
     if search:
         s = f"%{search.strip().lower()}%"
         stmt = stmt.where(
@@ -105,7 +107,7 @@ async def get_active_tenant(
 async def create_tenant(
     payload: TenantCreate,
     db: AsyncSession = Depends(get_write_db),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_roles(["super_admin"]))
 ):
     """Provision a new SaaS tenant (ULB / Municipality)"""
     norm_id = payload.tenantId.strip().upper()
@@ -343,7 +345,7 @@ async def list_state_tenants(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_roles(["super_admin"]))
 ):
     """List all Level 1 State Tenants (State Urban Development Departments)"""
     stmt = select(StateTenant)
@@ -388,7 +390,7 @@ async def list_state_tenants(
 @router.get("/states/audit-logs", response_model=ApiResponse[List[TenantAuditLogResponse]])
 async def get_all_tenant_audit_logs(
     db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_roles(["super_admin"]))
 ):
     """Retrieve audit history logs across all State Tenants"""
     stmt = select(TenantAuditLog).order_by(TenantAuditLog.timestamp.desc()).limit(100)
@@ -412,7 +414,7 @@ async def get_all_tenant_audit_logs(
 async def get_state_tenant(
     tenant_id: str,
     db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_roles(["super_admin"]))
 ):
     """Retrieve single Level 1 State Tenant by UUID or Code"""
     st = await db.scalar(

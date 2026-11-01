@@ -18,15 +18,7 @@
     </div>
 
     <div class="header-actions">
-      <button
-        class="btn btn-refresh"
-        (click)="onRefreshClick()"
-        [disabled]="isLoading()"
-        title="Refresh ULB directory"
-      >
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="ULB directory" (refresh)="loadMasterStates(); loadUlbs()"></app-refresh-button>
 
       <button
         class="btn btn-primary"

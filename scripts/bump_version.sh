@@ -7,55 +7,64 @@
 set -e
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION_TS="$REPO_ROOT/frontend/urban-console/src/app/core/constants/version.ts"
-PACKAGE_JSON="$REPO_ROOT/frontend/urban-console/package.json"
-
 BUMP_TYPE="${1:-patch}"
 
-if [ ! -f "$VERSION_TS" ]; then
-  echo "Error: $VERSION_TS not found"
-  exit 1
-fi
+python3 - <<EOF
+import re
+import os
+import sys
+from datetime import datetime
 
-# Extract current version and versionCode
-CURRENT_VER=$(grep -E "version:\s*'" "$VERSION_TS" | sed -E "s/.*version:\s*'([^']+)'.*/\1/")
-CURRENT_CODE=$(grep -E "versionCode:\s*[0-9]+" "$VERSION_TS" | sed -E "s/.*versionCode:\s*([0-9]+).*/\1/")
+repo_root = "$REPO_ROOT"
+bump_type = "$BUMP_TYPE".lower()
+version_ts = os.path.join(repo_root, "frontend/urban-console/src/app/core/constants/version.ts")
+package_json = os.path.join(repo_root, "frontend/urban-console/package.json")
 
-if [ -z "$CURRENT_VER" ] || [ -z "$CURRENT_CODE" ]; then
-  echo "Error: Could not parse version or versionCode from $VERSION_TS"
-  exit 1
-fi
+# 1. Read version.ts
+with open(version_ts, "r", encoding="utf-8") as f:
+    ts_content = f.read()
 
-IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VER"
-NEW_CODE=$((CURRENT_CODE + 1))
+ver_match = re.search(r"version:\s*'([^']+)'", ts_content)
+code_match = re.search(r"versionCode:\s*([0-9]+)", ts_content)
 
-case "$BUMP_TYPE" in
-  major)
-    NEW_MAJOR=$((MAJOR + 1))
-    NEW_VER="${NEW_MAJOR}.0.0"
-    ;;
-  minor)
-    NEW_MINOR=$((MINOR + 1))
-    NEW_VER="${MAJOR}.${NEW_MINOR}.0"
-    ;;
-  patch|*)
-    NEW_PATCH=$((PATCH + 1))
-    NEW_VER="${MAJOR}.${MINOR}.${NEW_PATCH}"
-    ;;
-esac
+if not ver_match or not code_match:
+    print("Error: Could not parse version or versionCode from version.ts", file=sys.stderr)
+    sys.exit(1)
 
-MONTH_YEAR=$(date +"%B %Y")
+old_ver = ver_match.group(1)
+old_code = int(code_match.group(1))
 
-# Update version.ts
-sed -i '' -E "s/version:\s*'[^']+'/version: '$NEW_VER'/" "$VERSION_TS"
-sed -i '' -E "s/versionCode:\s*[0-9]+/versionCode: $NEW_CODE/" "$VERSION_TS"
-sed -i '' -E "s/releaseDate:\s*'[^']+'/releaseDate: '$MONTH_YEAR'/" "$VERSION_TS"
+major, minor, patch = map(int, old_ver.split("."))
+new_code = old_code + 1
 
-# Update package.json
-sed -i '' -E "s/\"version\":\s*\"[^\"]+\"/\"version\": \"$NEW_VER\"/" "$PACKAGE_JSON"
-sed -i '' -E "s/\"versionCode\":\s*[0-9]+/\"versionCode\": $NEW_CODE/" "$PACKAGE_JSON"
+if bump_type == "major":
+    new_ver = f"{major + 1}.0.0"
+elif bump_type == "minor":
+    new_ver = f"{major}.{minor + 1}.0"
+else:  # patch
+    new_ver = f"{major}.{minor}.{patch + 1}"
 
-echo "✓ Bumped version: $CURRENT_VER -> $NEW_VER"
-echo "✓ Bumped versionCode: $CURRENT_CODE -> $NEW_CODE"
-echo "✓ Release Date: $MONTH_YEAR"
+now_str = datetime.now().strftime("%B %Y")
 
+# 2. Update version.ts
+ts_content = re.sub(r"version:\s*'[^']+'", f"version: '{new_ver}'", ts_content)
+ts_content = re.sub(r"versionCode:\s*[0-9]+", f"versionCode: {new_code}", ts_content)
+ts_content = re.sub(r"releaseDate:\s*'[^']+'", f"releaseDate: '{now_str}'", ts_content)
+
+with open(version_ts, "w", encoding="utf-8") as f:
+    f.write(ts_content)
+
+# 3. Update package.json
+with open(package_json, "r", encoding="utf-8") as f:
+    pkg_content = f.read()
+
+pkg_content = re.sub(r'"version":\s*"[^"]+"', f'"version": "{new_ver}"', pkg_content)
+pkg_content = re.sub(r'"versionCode":\s*[0-9]+', f'"versionCode": {new_code}', pkg_content)
+
+with open(package_json, "w", encoding="utf-8") as f:
+    f.write(pkg_content)
+
+print(f"✓ Bumped version: {old_ver} -> {new_ver}")
+print(f"✓ Bumped versionCode: {old_code} -> {new_code}")
+print(f"✓ Release Date: {now_str}")
+EOF

@@ -78,6 +78,19 @@ if ! HOME=/tmp CI=true npm run build; then
 fi
 echo -e "${GREEN}✓ Angular frontend bundle compiled successfully.${NC}"
 
+echo -e "\n${YELLOW}Running automated tests...${NC}"
+if ! CI=true npx ng test --watch=false; then
+  echo -e "${RED}[ERROR] Frontend tests failed. Push rejected.${NC}"
+  exit 1
+fi
+cd "$REPO_ROOT/backend/services/core_service"
+PYTHON_BIN="python3"
+[ -x .venv/bin/python ] && PYTHON_BIN=".venv/bin/python"
+if ! ENVIRONMENT=test JWT_SECRET_KEY=hook-only AUDIT_SIGNING_KEY=hook-only "$PYTHON_BIN" -m unittest discover -s tests; then
+  echo -e "${RED}[ERROR] Backend tests failed. Push rejected.${NC}"
+  exit 1
+fi
+
 echo -e "\n${GREEN}======================================================${NC}"
 echo -e "${GREEN}  ✓ ALL PRE-PUSH STRUCTURAL CHECKS PASSED SUCCESSFULLY${NC}"
 echo -e "${GREEN}======================================================${NC}\n"

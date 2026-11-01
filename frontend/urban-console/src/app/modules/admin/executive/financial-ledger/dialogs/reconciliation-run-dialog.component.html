@@ -1,0 +1,174 @@
+<div class="modal-backdrop" (click)="cancel.emit()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="header-title-wrap">
+        <div class="icon-circle">
+          <app-icon name="ri-scales-3-line"></app-icon>
+        </div>
+        <div>
+          <h3>{{ title() }}</h3>
+          <p class="subtitle">Execute automated Treasury & PFMS BRS matching engine</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close" (click)="cancel.emit()" title="Close Dialog">
+        <app-icon name="ri-close-line"></app-icon>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+      <!-- Row 1: Name & FY -->
+      <div class="form-row">
+        <div class="form-group flex-2">
+          <label class="form-label">Reconciliation Batch Name <span class="required">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="model.reconciliationName"
+            placeholder="e.g. RBI e-Kuber Treasury Reconciliation Q3"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Financial Year <span class="required">*</span></label>
+          <select class="form-select" [(ngModel)]="model.financialYear">
+            <option value="FY 2026-27">FY 2026-27</option>
+            <option value="FY 2025-26">FY 2025-26</option>
+            <option value="FY 2024-25">FY 2024-25</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 2: Tenancy Scope -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">State Tenant <span class="required">*</span></label>
+          <select class="form-select" [(ngModel)]="model.stateTenant">
+            <option value="Telangana (TG)">Telangana (TG)</option>
+            <option value="Maharashtra (MH)">Maharashtra (MH)</option>
+            <option value="Karnataka (KA)">Karnataka (KA)</option>
+            <option value="Gujarat (GJ)">Gujarat (GJ)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Target ULB / City</label>
+          <select class="form-select" [(ngModel)]="model.ulb">
+            <option value="">All State Municipal Bodies</option>
+            <option value="Greater Hyderabad (GHMC)">Greater Hyderabad (GHMC)</option>
+            <option value="Brihanmumbai (BMC)">Brihanmumbai (BMC)</option>
+            <option value="Bruhat Bengaluru (BBMP)">Bruhat Bengaluru (BBMP)</option>
+            <option value="Greater Warangal (GWMC)">Greater Warangal (GWMC)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Reconciliation Type <span class="required">*</span></label>
+          <select class="form-select" [(ngModel)]="model.reconciliationType">
+            <option value="Bank Reconciliation Statement (BRS)">Bank Reconciliation (BRS)</option>
+            <option value="PFMS Treasury Grant Clearing">PFMS Treasury Grant Clearing</option>
+            <option value="Inter-ULB Transfer Settlement">Inter-ULB Settlement</option>
+            <option value="Escrow Revenue Pool Clearing">Escrow Revenue Pool Clearing</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 3: Source & Target Ledgers -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Source Ledger Head <span class="required">*</span></label>
+          <select class="form-select" [(ngModel)]="model.sourceLedger">
+            <option value="State Treasury Pool (Grant Ledger)">State Treasury Pool (Grant Ledger)</option>
+            <option value="Municipal General Fund Book A/C">Municipal General Fund Book A/C</option>
+            <option value="AMRUT Escrow Disbursement Pool">AMRUT Escrow Disbursement Pool</option>
+            <option value="SBM Capital Development Account">SBM Capital Development Account</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Target Ledger / Bank Scroll <span class="required">*</span></label>
+          <select class="form-select" [(ngModel)]="model.targetLedger">
+            <option value="RBI e-Kuber Daily Clearing Scroll">RBI e-Kuber Daily Clearing Scroll</option>
+            <option value="SBI Treasury Commercial Scroll">SBI Treasury Commercial Scroll</option>
+            <option value="PFMS Central Gateway Settlement">PFMS Central Gateway Settlement</option>
+            <option value="State Nodal Account (SNA) Statement">State Nodal Account (SNA) Statement</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 4: Period & Tolerance -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Period From <span class="required">*</span></label>
+          <input type="date" class="form-control" [(ngModel)]="model.periodFrom" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Period To <span class="required">*</span></label>
+          <input type="date" class="form-control" [(ngModel)]="model.periodTo" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tolerance Amount (INR)</label>
+          <input
+            type="number"
+            class="form-control"
+            [(ngModel)]="model.toleranceAmount"
+            placeholder="0"
+          />
+        </div>
+      </div>
+
+      <!-- Row 5: Matching Criteria & Statement File -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Matching Criteria Engine <span class="required">*</span></label>
+          <select class="form-select" [(ngModel)]="model.matchingCriteria">
+            <option value="UTR + Date Buffer + Exact Amount">UTR + Date Buffer + Exact Amount</option>
+            <option value="Voucher Reference + Exact Amount">Voucher Reference + Exact Amount</option>
+            <option value="Fuzzy Match (Tolerance ± ₹10)">Fuzzy Match (Tolerance ± ₹10)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Bank Statement / Scroll File</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="model.statementFile"
+            placeholder="e.g. RBI_Scroll_Oct_2026.csv"
+          />
+        </div>
+      </div>
+
+      <!-- Row 6: Remarks -->
+      <div class="form-group">
+        <label class="form-label">Reconciliation Audit Remarks</label>
+        <textarea
+          class="form-control"
+          rows="2"
+          [(ngModel)]="model.remarks"
+          placeholder="Enter audit reconciliation directives or notes..."
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" (click)="cancel.emit()">
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="runRecon()"
+        [disabled]="!isValid()"
+      >
+        <app-icon name="ri-play-circle-line"></app-icon>
+        <span>Execute Reconciliation Engine</span>
+      </button>
+    </div>
+  </div>
+</div>
+

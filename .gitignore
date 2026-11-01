@@ -69,3 +69,7 @@ frontend/urban-console/node_modules/
 # Docker Local Volumes
 postgres_data/
 redis_data/
+
+# Database backups contain citizen data
+backend/services/core_service/backups/
+!.env.example

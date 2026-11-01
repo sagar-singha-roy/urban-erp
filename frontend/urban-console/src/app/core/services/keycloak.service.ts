@@ -127,8 +127,10 @@ export class KeycloakAuthService {
       }
     }
 
-    this.refreshModules();
-    this.loadTenants();
+    if (savedToken) {
+      this.refreshModules();
+      this.loadTenants();
+    }
   }
 
   getTenantId(): string {
@@ -228,6 +230,9 @@ export class KeycloakAuthService {
             this.accessibleTenants.set(res.accessibleTenants);
           }
 
+          this.activeTenant.set('');
+          localStorage.removeItem('urban_tenant');
+
           const tId = res.user.tenantId;
           if (tId) {
             this.activeSubTenant.set(tId);
@@ -245,20 +250,14 @@ export class KeycloakAuthService {
     username: string;
     email: string;
     password: string;
-    role?: string;
     tenantId?: string;
-    assignedZone?: string;
-    assignedWard?: string;
   }): Observable<any> {
     const body = {
       username: payload.username,
       email: payload.email,
       password: payload.password,
       fullName: payload.fullName,
-      role: payload.role || 'citizen',
-      tenantId: payload.tenantId || this.activeTenant(),
-      assignedZone: payload.assignedZone,
-      assignedWard: payload.assignedWard,
+      tenantId: payload.tenantId,
     };
     return this.http.post<any>(`${this.apiUrl}/auth/signup`, body).pipe(
       tap((res) => {
@@ -290,8 +289,16 @@ export class KeycloakAuthService {
   logout(): void {
     localStorage.removeItem('urban_token');
     localStorage.removeItem('urban_user');
+    localStorage.removeItem('urban_tenant');
+    localStorage.removeItem('urban_tenant_name');
+    localStorage.removeItem('urban_sub_tenant');
+    localStorage.removeItem('urban_sub_tenant_name');
     this.isAuthenticated.set(false);
     this.userProfile.set(null);
+    this.activeTenant.set('');
+    this.activeTenantName.set('');
+    this.activeSubTenant.set('');
+    this.activeSubTenantName.set('');
   }
 
   refreshModules(): void {

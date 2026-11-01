@@ -4,8 +4,8 @@
     <div class="header-titles">
       <h1
         class="page-title"
-        data-tooltip="Central WORM-Compliant Cryptographic Audit Vault — Level 0/1/2 Pan-State Jurisdictions"
-        title="Central WORM-Compliant Cryptographic Audit Vault — Level 0/1/2 Pan-State Jurisdictions"
+        data-tooltip="Central Hash-Chained Audit Vault — Level 0/1/2 Pan-State Jurisdictions"
+        title="Central Hash-Chained Audit Vault — Level 0/1/2 Pan-State Jurisdictions"
       >
         Immutable Audit Vault
       </h1>
@@ -16,15 +16,7 @@
 
     <div class="header-actions">
       <!-- Refresh -->
-      <button
-        class="btn btn-refresh"
-        (click)="refreshAll()"
-        [disabled]="isLoading()"
-        title="Refresh Audit State"
-      >
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="audit vault" (refresh)="refreshAll()"></app-refresh-button>
 
       <!-- Verify Hash -->
       <button
@@ -68,7 +60,7 @@
       <div class="kpi-content">
         <span class="kpi-label">TOTAL AUDIT EVENTS</span>
         <span class="kpi-val">{{ stats()?.totalAuditEvents ?? '—' }}</span>
-        <span class="kpi-sub">WORM Immutable Ledger</span>
+        <span class="kpi-sub">Hash-chained ledger</span>
       </div>
     </div>
 
@@ -110,16 +102,16 @@
 
     <!-- Integrity Status -->
     <div class="kpi-card integrity-card">
-      <div class="kpi-icon integrity">
+      <div class="kpi-icon" [class]="'kpi-icon integrity-' + integrity().tone">
         <app-icon name="ri-lock-2-line" [size]="22"></app-icon>
       </div>
       <div class="kpi-content">
         <span class="kpi-label">INTEGRITY VERIFICATION</span>
-        <span class="kpi-val text-success integrity-text">
-          <app-icon name="ri-checkbox-circle-fill" [size]="16"></app-icon>
-          <span>{{ stats()?.integrityStatus ?? '100% Chained' }}</span>
+        <span class="kpi-val integrity-text" [class]="'kpi-val integrity-text integrity-text-' + integrity().tone">
+          <app-icon [name]="integrity().icon" [size]="16"></app-icon>
+          <span>{{ integrity().label }}</span>
         </span>
-        <span class="kpi-sub">SHA-256 Chained Hash Proof</span>
+        <span class="kpi-sub">{{ integrity().detail }}</span>
       </div>
     </div>
   </div>
@@ -256,7 +248,7 @@
           <div class="panel-header">
             <div class="panel-title">
               <app-icon name="ri-shield-check-line" [size]="18"></app-icon>
-              <span>WORM Cryptographic Chain Verification Sentinel</span>
+              <span>Hash Chain Verification</span>
             </div>
             <span class="status-pill-intact">SHA-256 INTACT</span>
           </div>
@@ -576,7 +568,7 @@
       <div class="tab-header-banner">
         <div class="banner-left">
           <h3 class="banner-title">Statutory Retention & Legal-Hold Policies</h3>
-          <p class="banner-desc">Manage mandatory data retention windows, cold storage WORM destinations, and litigation legal holds.</p>
+          <p class="banner-desc">Manage mandatory data retention windows, archive destinations, and litigation legal holds.</p>
         </div>
         <button class="btn btn-primary" (click)="openPolicyDialog()">
           <app-icon name="ri-add-line" [size]="16"></app-icon>

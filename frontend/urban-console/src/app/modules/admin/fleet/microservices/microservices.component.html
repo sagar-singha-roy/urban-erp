@@ -16,15 +16,7 @@
 
     <div class="header-actions">
       <!-- Refresh -->
-      <button
-        class="btn btn-refresh"
-        (click)="refreshAll()"
-        [disabled]="isLoading()"
-        title="Refresh Cluster & Telemetry State"
-      >
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="cluster health" (refresh)="refreshAll()"></app-refresh-button>
 
       <!-- Register Service -->
       <button
@@ -95,7 +87,7 @@
       </div>
       <div class="kpi-content">
         <span class="kpi-label">AVG RESPONSE TIME</span>
-        <span class="kpi-val text-primary">{{ stats()?.averageResponseTimeMs ?? '—' }} ms</span>
+        <span class="kpi-val text-primary">{{ stats()?.averageResponseTimeMs ?? 'Not measured' }}{{ stats()?.averageResponseTimeMs === null ? '' : ' ms' }}</span>
         <span class="kpi-sub">Cluster P95 Latency</span>
       </div>
     </div>
@@ -108,7 +100,7 @@
       <div class="kpi-content">
         <span class="kpi-label">ERROR RATE</span>
         <span class="kpi-val" [class.text-danger]="(stats()?.errorRatePct ?? 0) > 1">
-          {{ stats()?.errorRatePct ?? '0.00' }}%
+          {{ stats()?.errorRatePct ?? 'Not measured' }}
         </span>
         <span class="kpi-sub">HTTP 5xx Ingress Ratio</span>
       </div>
@@ -121,7 +113,7 @@
       </div>
       <div class="kpi-content">
         <span class="kpi-label">CPU UTILISATION</span>
-        <span class="kpi-val">{{ stats()?.cpuUtilisationPct ?? '—' }}%</span>
+        <span class="kpi-val">{{ stats()?.cpuUtilisationPct ?? 'Not measured' }}</span>
         <span class="kpi-sub">Cluster Allocated Cores</span>
       </div>
     </div>
@@ -133,7 +125,7 @@
       </div>
       <div class="kpi-content">
         <span class="kpi-label">MEMORY UTILISATION</span>
-        <span class="kpi-val">{{ stats()?.memoryUtilisationPct ?? '—' }}%</span>
+        <span class="kpi-val">{{ stats()?.memoryUtilisationPct ?? 'Not measured' }}</span>
         <span class="kpi-sub">Cluster RAM Consumption</span>
       </div>
     </div>
@@ -284,19 +276,19 @@
             <div class="telemetry-meters">
               <div class="meter-col">
                 <span class="meter-label">UPTIME</span>
-                <span class="meter-val text-success">{{ svc.uptimePct }}%</span>
+                <span class="meter-val text-success">{{ svc.uptimePct === null ? 'Not measured' : svc.uptimePct + '%' }}</span>
               </div>
               <div class="meter-col">
                 <span class="meter-label">LATENCY</span>
-                <span class="meter-val">{{ svc.avgLatencyMs }}ms</span>
+                <span class="meter-val">{{ svc.avgLatencyMs === null ? 'Not measured' : svc.avgLatencyMs + 'ms' }}</span>
               </div>
               <div class="meter-col">
                 <span class="meter-label">ERROR</span>
-                <span class="meter-val" [class.text-danger]="svc.errorRatePct > 1">{{ svc.errorRatePct }}%</span>
+                <span class="meter-val" [class.text-danger]="svc.errorRatePct > 1">{{ svc.errorRatePct === null ? 'Not measured' : svc.errorRatePct + '%' }}</span>
               </div>
               <div class="meter-col">
                 <span class="meter-label">CPU / MEM</span>
-                <span class="meter-val">{{ svc.cpuUsagePct }}% / {{ svc.memoryUsagePct }}%</span>
+                <span class="meter-val">{{ svc.cpuUsagePct === null ? 'Not measured' : svc.cpuUsagePct + '% / ' + svc.memoryUsagePct + '%' }}</span>
               </div>
             </div>
 

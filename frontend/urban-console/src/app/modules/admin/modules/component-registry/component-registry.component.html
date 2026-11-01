@@ -15,10 +15,7 @@
     </div>
 
     <div class="header-actions">
-      <button class="btn btn-refresh" (click)="onRefreshClick()" [disabled]="isLoading()" title="Refresh Components">
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="component registry" (refresh)="loadData(true)"></app-refresh-button>
 
       <button class="btn btn-primary" (click)="openCreateComponentDialog()" title="Create Component">
         <app-icon name="ri-puzzle-line" [size]="16"></app-icon>

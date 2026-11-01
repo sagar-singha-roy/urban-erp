@@ -10,10 +10,10 @@ class MicroserviceOverviewStats(CamelModel):
     healthyServices: int = 0
     degradedServices: int = 0
     unavailableServices: int = 0
-    averageResponseTimeMs: float = 0.0
-    errorRatePct: float = 0.0
-    cpuUtilisationPct: float = 0.0
-    memoryUtilisationPct: float = 0.0
+    averageResponseTimeMs: Optional[float] = None
+    errorRatePct: Optional[float] = None
+    cpuUtilisationPct: Optional[float] = None
+    memoryUtilisationPct: Optional[float] = None
     totalPods: int = 0
     runningPods: int = 0
     totalQueues: int = 0
@@ -41,11 +41,11 @@ class MicroserviceRegistryResponse(CamelModel):
     status: str
     version: str
     region: str
-    uptimePct: float
-    avgLatencyMs: float
-    errorRatePct: float
-    cpuUsagePct: float
-    memoryUsagePct: float
+    uptimePct: Optional[float] = None
+    avgLatencyMs: Optional[float] = None
+    errorRatePct: Optional[float] = None
+    cpuUsagePct: Optional[float] = None
+    memoryUsagePct: Optional[float] = None
     createdAt: datetime.datetime
     updatedAt: Optional[datetime.datetime] = None
 
@@ -145,9 +145,9 @@ class DatabaseConnectionPoolResponse(CamelModel):
     activeConnections: int
     idleConnections: int
     maxPoolSize: int
-    connectionWaitTimeMs: float
-    connectionFailures: int
-    queryLatencyP95Ms: float
+    connectionWaitTimeMs: Optional[float] = None
+    connectionFailures: Optional[int] = None
+    queryLatencyP95Ms: Optional[float] = None
     alertThresholdPct: int
     createdAt: datetime.datetime
     updatedAt: Optional[datetime.datetime] = None

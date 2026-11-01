@@ -131,6 +131,14 @@ export class BackupDrService {
       .pipe(map(unwrapResponse));
   }
 
+  approveRestore(restoreId: string): Observable<unknown> {
+    return this.http
+      .post<ApiResponse<unknown>>(`${this.baseUrl}/restores/${restoreId}/approve`, {}, {
+        headers: this.getHeaders(),
+      })
+      .pipe(map(unwrapResponse));
+  }
+
   initiateRestore(payload: RestoreJobPayload): Observable<RestoreJobItem> {
     return this.http
       .post<ApiResponse<RestoreJobItem>>(`${this.baseUrl}/restores`, payload, {

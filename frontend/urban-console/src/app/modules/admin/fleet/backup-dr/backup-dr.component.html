@@ -16,15 +16,7 @@
 
     <div class="header-actions">
       <!-- Refresh -->
-      <button
-        class="btn btn-refresh"
-        (click)="refreshAll()"
-        [disabled]="isLoading()"
-        title="Refresh Backup & Recovery Telemetry"
-      >
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="backup and recovery data" (refresh)="refreshAll()"></app-refresh-button>
 
       <!-- Schedule DR Drill -->
       <button
@@ -104,7 +96,7 @@
       <div class="kpi-content">
         <span class="kpi-label">STORED SNAPSHOTS</span>
         <span class="kpi-val text-primary">{{ stats()?.totalStoredDataTb ?? '—' }} TB</span>
-        <span class="kpi-sub">Glacier WORM Vaults</span>
+        <span class="kpi-sub">Local backup files</span>
       </div>
     </div>
 
@@ -443,8 +435,7 @@
           <app-icon name="ri-shield-keyhole-line" [size]="18"></app-icon>
         </div>
         <div class="banner-text">
-          <strong>Disaster Recovery Guard:</strong> Production restores enforce strict two-person authentication, isolated dry-run schema validation, and write-ahead log replaying. Test restore sandboxes are provisioned automatically without touching production compute.
-        </div>
+          <strong>Disaster Recovery Guard:</strong> Every restore needs a second administrator's approval and runs in a new scratch database. Existing databases are not changed. Backups run when triggered; policy schedules are not automated yet.</div>
       </div>
 
       <!-- Restores Table -->
@@ -493,6 +484,9 @@
                   <span class="status-badge" [class.healthy]="res.executionStatus === 'Completed'">
                     {{ res.executionStatus }}
                   </span>
+                  @if (res.executionStatus === 'Pending Approval') {
+                    <button type="button" class="btn btn-primary btn-approve" (click)="approveRestore(res)">Approve</button>
+                  }
                 </td>
                 <td>
                   <span class="timing-text">{{ res.durationSeconds }}s</span>
@@ -529,7 +523,7 @@
           </div>
           <div>
             <h3 class="pitr-title">Continuous WAL Archival & Point-in-Time Recovery Window</h3>
-            <p class="pitr-sub">PostgreSQL Continuous Streaming to S3 WORM Vault — Recovery granularity to the exact millisecond</p>
+            <p class="pitr-sub">Read live from PostgreSQL</p>
           </div>
         </div>
 

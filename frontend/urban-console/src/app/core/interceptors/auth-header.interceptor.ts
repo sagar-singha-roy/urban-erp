@@ -1,9 +1,12 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
 import { KeycloakAuthService } from '../services/keycloak.service';
 
 export const authHeaderInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(KeycloakAuthService);
+  const router = inject(Router);
   const token = authService.getToken();
   const tenantId = authService.getTenantId();
   const subTenantId = authService.getSubTenantId();
@@ -23,6 +26,14 @@ export const authHeaderInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   const clonedReq = req.clone({ headers });
-  return next(clonedReq);
+  return next(clonedReq).pipe(
+    catchError((err: unknown) => {
+      if (token && err instanceof HttpErrorResponse && err.status === 401) {
+        authService.logout();
+        router.navigate(['/login']);
+      }
+      return throwError(() => err);
+    }),
+  );
 };
 

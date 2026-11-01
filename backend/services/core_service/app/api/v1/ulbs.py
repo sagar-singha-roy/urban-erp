@@ -17,9 +17,20 @@ from app.schemas.ulb import (
     WardCreate,
     WardResponse,
 )
-from app.core.auth import get_current_user, require_roles
+from app.core.auth import (
+    ensure_tenant_access,
+    get_current_user,
+    is_super_admin,
+    require_path_tenant_access,
+    require_roles,
+    tenant_scope_filter,
+)
 
-router = APIRouter(prefix="/ulbs", tags=["ADM-T02 ULB / City Management"])
+router = APIRouter(
+    prefix="/ulbs",
+    tags=["ADM-T02 ULB / City Management"],
+    dependencies=[Depends(require_path_tenant_access)],
+)
 
 @router.get("", response_model=ApiResponse[List[UlbTenantResponse]])
 async def list_ulbs(
@@ -47,6 +58,9 @@ async def list_ulbs(
         .group_by(Tenant.tenant_id, StateTenant.state_name)
         .order_by(Tenant.name)
     )
+
+    if not is_super_admin(user):
+        stmt = stmt.where(tenant_scope_filter(user))
 
     if search:
         search_fmt = f"%{search.strip().lower()}%"
@@ -169,6 +183,11 @@ async def create_ulb(
     db: AsyncSession = Depends(get_write_db),
     user: dict = Depends(require_roles(["super_admin", "state_director"])),
 ):
+    if not is_super_admin(user):
+        if not payload.parentStateTenantId:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="A parent state within your scope is required")
+        await ensure_tenant_access(payload.parentStateTenantId, user, db)
+
     assigned_tenant_id = (payload.tenantId or payload.ulbCode or str(uuid.uuid4())[:8]).strip().upper()
 
     existing = await db.execute(select(Tenant).where(Tenant.tenant_id == assigned_tenant_id))

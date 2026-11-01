@@ -1,7 +1,8 @@
+import { environment } from '../../../environments/environment';
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   KeycloakAuthService,
   AccessibleTenant,
@@ -29,6 +30,7 @@ export interface DemoPersona {
 export class AuthComponent {
   private authService = inject(KeycloakAuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   public loadingService = inject(LoadingService);
   readonly appVersion = APP_VERSION;
 
@@ -52,7 +54,7 @@ export class AuthComponent {
   ulbSearch = signal<string>('');
 
   // Quick Demo Personas
-  readonly demoPersonas: DemoPersona[] = [
+  readonly demoPersonas: DemoPersona[] = environment.production ? [] : [
     {
       title: 'Platform Super Admin',
       username: 'admin@urban.gov.in',
@@ -95,9 +97,6 @@ export class AuthComponent {
     email: '',
     username: '',
     password: '',
-    role: 'citizen',
-    assignedZone: '',
-    assignedWard: '',
   };
 
   // Filtered State Tenants
@@ -247,7 +246,8 @@ export class AuthComponent {
   }
 
   selectStatewideDirectorate(): void {
-    const st = this.selectedTenant() || { stateCode: 'TG', stateName: 'Telangana' };
+    const st = this.selectedTenant();
+    if (!st) return;
     this.authService.setContext(st.stateCode, 'ALL', st.stateName, 'Statewide Directorate');
     this.successMessage.set(`Activating Statewide Directorate: ${st.stateName}...`);
     setTimeout(() => {
@@ -256,7 +256,10 @@ export class AuthComponent {
   }
 
   navigateToWorkspace(): void {
-    if (this.authService.isSuperAdmin()) {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+      this.router.navigateByUrl(returnUrl);
+    } else if (this.authService.isSuperAdmin()) {
       this.router.navigate(['/admin']);
     } else {
       this.router.navigate(['/dashboard']);

@@ -3,6 +3,11 @@
   flex-direction: column;
   gap: 1.5rem;
   padding: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .admin-header-card {

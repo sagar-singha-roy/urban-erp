@@ -7,10 +7,6 @@
           <app-icon name="ri-government-line" [size]="14"></app-icon>
           <span>Government of India · MoHUA</span>
         </div>
-        <div class="status-live-pill">
-          <span class="live-dot"></span>
-          <span>Postgres RLS Enforced</span>
-        </div>
       </div>
 
       <div class="brand-hero">
@@ -248,41 +244,6 @@
                   placeholder="Minimum 8 characters"
                   class="form-input"
                   required
-                />
-              </div>
-            </div>
-
-            <div class="form-field-group">
-              <label class="input-label">Designation / Operational Role</label>
-              <select [(ngModel)]="signUpData.role" name="role" class="form-input form-select">
-                <option value="citizen">Citizen / Resident / Property Owner</option>
-                <option value="revenue_officer">Revenue & Tax Officer</option>
-                <option value="town_planner">Town Planning Officer</option>
-                <option value="engineering_officer">Engineering Works Officer</option>
-                <option value="super_admin">Platform Administrator</option>
-              </select>
-            </div>
-
-            <div class="form-grid-2">
-              <div class="form-field-group">
-                <label class="input-label">Assigned Zone</label>
-                <input
-                  type="text"
-                  [(ngModel)]="signUpData.assignedZone"
-                  name="assignedZone"
-                  placeholder="e.g. Kazipet Zone"
-                  class="form-input"
-                />
-              </div>
-
-              <div class="form-field-group">
-                <label class="input-label">Assigned Ward</label>
-                <input
-                  type="text"
-                  [(ngModel)]="signUpData.assignedWard"
-                  name="assignedWard"
-                  placeholder="e.g. Ward 14 - Subedari"
-                  class="form-input"
                 />
               </div>
             </div>

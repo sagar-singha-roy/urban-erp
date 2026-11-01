@@ -9,7 +9,7 @@ from app.db.models import PropertyParcel, Building, PropertyUnit, Owner, Ward
 from app.schemas.property import (
     PropertySummary, PropertyDetailResponse, PropertyCreate, DashboardStats
 )
-from app.core.auth import get_current_user, require_roles, get_current_tenant
+from app.core.auth import get_current_tenant, require_permission
 from app.core.redis import redis_client
 from app.core.config import settings
 
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/properties", tags=["Properties & ULPIN"])
 async def get_dashboard_stats(
     tenant_id: str = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission("PTX-P01", "VIEW"))
 ):
     cache_key = f"stats:summary:{tenant_id}"
     cached = await redis_client.get(cache_key)
@@ -55,13 +55,11 @@ async def get_dashboard_stats(
         )
     ) or 0
     
-    total_collected = float(total_demand) * 0.76 # Reference collection efficiency
-
     stats = {
         "totalParcels": parcels_count,
         "totalUnits": units_count,
         "totalDemand": float(total_demand),
-        "totalCollected": round(total_collected, 2),
+        "totalCollected": None,
         "residentialCount": res_count,
         "commercialCount": comm_count,
         "wardCount": wards_count
@@ -72,14 +70,14 @@ async def get_dashboard_stats(
 
 @router.get("", response_model=List[PropertySummary])
 async def list_properties(
-    q: Optional[str] = Query(None, description="Search by ULPIN, PTIN, or Owner"),
-    wardId: Optional[str] = Query(None, alias="wardId", description="Filter by Ward ID"),
-    taxStatus: Optional[str] = Query(None, alias="taxStatus", description="Filter by Tax Status (PAID/DUE/ARREARS)"),
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    search: Optional[str] = Query(None, description="Search by ULPIN, survey number, address, PTIN or owner"),
+    wardId: Optional[str] = Query(None, description="Filter by Ward ID"),
+    taxStatus: Optional[str] = Query(None, description="Filter by Tax Status (PAID/DUE/ARREARS)"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     tenant_id: str = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission("PTX-P01", "VIEW"))
 ):
     stmt = (
         select(PropertyParcel)
@@ -88,22 +86,39 @@ async def list_properties(
             selectinload(PropertyParcel.buildings).selectinload(Building.units).selectinload(PropertyUnit.owners)
         )
         .where(PropertyParcel.tenant_id == tenant_id)
-        .limit(limit)
-        .offset(offset)
+        .order_by(PropertyParcel.ulpin)
     )
 
     if wardId:
         stmt = stmt.where(PropertyParcel.ward_id == wardId)
 
-    if q:
-        q_clean = f"%{q.strip()}%"
+    if taxStatus:
+        stmt = stmt.where(
+            select(PropertyUnit.id)
+            .join(Building, PropertyUnit.building_id == Building.id)
+            .where(Building.parcel_id == PropertyParcel.id, PropertyUnit.tax_status == taxStatus)
+            .exists()
+        )
+
+    if search and search.strip():
+        term = f"%{search.strip()}%"
         stmt = stmt.where(
             or_(
-                PropertyParcel.ulpin.ilike(q_clean),
-                PropertyParcel.survey_number.ilike(q_clean),
-                PropertyParcel.address.ilike(q_clean)
+                PropertyParcel.ulpin.ilike(term),
+                PropertyParcel.survey_number.ilike(term),
+                PropertyParcel.address.ilike(term),
+                select(PropertyUnit.id)
+                .join(Building, PropertyUnit.building_id == Building.id)
+                .outerjoin(Owner, Owner.unit_id == PropertyUnit.id)
+                .where(
+                    Building.parcel_id == PropertyParcel.id,
+                    or_(PropertyUnit.ptin.ilike(term), Owner.full_name.ilike(term)),
+                )
+                .exists(),
             )
         )
+
+    stmt = stmt.offset(skip).limit(limit)
 
     result = await db.execute(stmt)
     parcels = result.scalars().all()
@@ -113,9 +128,6 @@ async def list_properties(
         firstBldg = p.buildings[0] if p.buildings else None
         firstUnit = firstBldg.units[0] if firstBldg and firstBldg.units else None
         firstOwner = firstUnit.owners[0] if firstUnit and firstUnit.owners else None
-
-        if taxStatus and firstUnit and firstUnit.tax_status != taxStatus:
-            continue
 
         summaries.append(
             PropertySummary(
@@ -142,7 +154,7 @@ async def get_property_by_ulpin(
     ulpin: str,
     tenant_id: str = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission("PTX-P01", "VIEW"))
 ):
     stmt = (
         select(PropertyParcel)
@@ -187,7 +199,7 @@ async def create_property(
     payload: PropertyCreate,
     tenant_id: str = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_write_db),
-    user: dict = Depends(require_roles(["revenue_officer", "super_admin"]))
+    user: dict = Depends(require_permission("PTX-P01", "CREATE"))
 ):
     # Check ULPIN duplicate
     existing = await db.scalar(

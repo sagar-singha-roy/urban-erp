@@ -135,7 +135,7 @@ cd backend/services/core_service
 # Activate virtual environment
 source .venv/bin/activate
 # Start development server
-uvicorn app.main:app --reload --port 8000
+ENVIRONMENT=development uvicorn app.main:app --reload --port 8000
 ```
 
 ### 2. Frontend (Angular 22)

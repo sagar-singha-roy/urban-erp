@@ -1,0 +1,16 @@
+<div class="table-pager">
+  <span class="pager-count">Showing {{ first() }} to {{ last() }} of {{ total() }} entries</span>
+  <div class="pager-controls">
+    <label class="pager-size">
+      <span>Rows</span>
+      <select [value]="limit()" (change)="changeLimit($any($event.target).value)">
+        @for (size of sizes; track size) {
+          <option [value]="size" [selected]="size === limit()">{{ size }}</option>
+        }
+      </select>
+    </label>
+    <button type="button" [disabled]="page() <= 1" (click)="go(page() - 1)" aria-label="Previous page">‹</button>
+    <span class="pager-page">{{ page() }} / {{ pages() }}</span>
+    <button type="button" [disabled]="page() >= pages()" (click)="go(page() + 1)" aria-label="Next page">›</button>
+  </div>
+</div>

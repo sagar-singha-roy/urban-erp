@@ -1,11 +1,15 @@
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.redis import redis_client
-from app.db.session import engine, Base, AsyncSessionLocal
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+from app.db.rls import app_role_bypasses_rls, apply_rls
+from app.db.session import engine, Base
 from app.db.seed import seed_initial_data
 from app.api.v1.properties import router as properties_router
 from app.api.v1.boundaries import router as boundaries_router
@@ -21,16 +25,29 @@ async def lifespan(app: FastAPI):
     # Connect Redis
     await redis_client.connect()
     
-    # Auto-create tables (for rapid development/docker start)
+    # Schema, policies and seed data use the owner role. Requests never do.
+    admin_engine = create_async_engine(settings.admin_db_url)
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        
-        # Seed default GWMC data
-        async with AsyncSessionLocal() as session:
+        async with admin_engine.begin() as conn:
+            # Other environments get their schema from Alembic migrations.
+            if settings.is_development:
+                await conn.run_sync(Base.metadata.create_all)
+            await apply_rls(conn)
+        async with AsyncSession(admin_engine, expire_on_commit=False) as session:
             await seed_initial_data(session)
     except Exception as e:
-        logger.warning(f"Database bootstrap warning: {e}")
+        logger.exception("Database bootstrap failed: %s", e)
+        if not settings.is_development:
+            raise
+    finally:
+        await admin_engine.dispose()
+
+    async with engine.connect() as conn:
+        if await app_role_bypasses_rls(conn):
+            message = "The application database role bypasses row-level security."
+            if not settings.is_development:
+                raise RuntimeError(message)
+            logger.error(message)
 
     yield
 
@@ -41,16 +58,45 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    openapi_url=f"{settings.API_V1_STR}/openapi.json" if settings.is_development else None,
+    docs_url="/docs" if settings.is_development else None,
+    redoc_url="/redoc" if settings.is_development else None,
     lifespan=lifespan
 )
+
+class ServerErrorResponder:
+    """Sits inside CORS so unexpected errors reach the browser as a readable 500."""
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.inner(scope, receive, send)
+            return
+        started = False
+
+        async def tracking_send(message):
+            nonlocal started
+            started = started or message["type"] == "http.response.start"
+            await send(message)
+
+        try:
+            await self.inner(scope, receive, tracking_send)
+        except Exception:
+            logger.exception("Unhandled error on %s %s", scope.get("method"), scope.get("path"))
+            if started:
+                raise
+            response = JSONResponse({"detail": "The server could not complete this request."}, status_code=500)
+            await response(scope, receive, send)
+
+
+app.add_middleware(ServerErrorResponder)
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200", "http://localhost:80", "*"],
+    allow_origins=settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,6 +113,7 @@ from app.api.v1.security import router as security_router
 from app.api.v1.audit_vault import router as audit_vault_router
 from app.api.v1.fleet import router as fleet_router
 from app.api.v1.backup_dr import router as backup_dr_router
+from app.api.v1.executive import router as executive_router
 
 # Include Routers
 app.include_router(auth_router, prefix=settings.API_V1_STR)
@@ -81,6 +128,7 @@ app.include_router(security_router, prefix=settings.API_V1_STR)
 app.include_router(audit_vault_router, prefix=settings.API_V1_STR)
 app.include_router(fleet_router, prefix=settings.API_V1_STR)
 app.include_router(backup_dr_router, prefix=settings.API_V1_STR)
+app.include_router(executive_router, prefix=settings.API_V1_STR)
 app.include_router(properties_router, prefix=settings.API_V1_STR)
 app.include_router(boundaries_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)
@@ -90,6 +138,5 @@ async def health_check():
     return {
         "status": "UP",
         "service": "urban-core-service",
-        "tenant": settings.DEFAULT_TENANT_ID,
         "environment": settings.ENVIRONMENT
     }

@@ -1,7 +1,9 @@
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import event, text
+from sqlalchemy.orm import Session, declarative_base
 from app.core.config import settings
+from app.core.tenant_context import SET_RLS_CONTEXT_SQL, rls_params
 
 # 1. Primary / Writer DB Engine (Mutations: INSERT, UPDATE, DELETE)
 write_engine = create_async_engine(
@@ -37,6 +39,13 @@ AsyncReadSessionLocal = async_sessionmaker(
     expire_on_commit=False,
     autoflush=False
 )
+
+
+@event.listens_for(Session, "after_begin")
+def _apply_rls_context(session, transaction, connection):
+    """set_config(..., true) lasts only for this transaction, so pooled connections cannot leak scope."""
+    connection.execute(text(SET_RLS_CONTEXT_SQL), rls_params())
+
 
 # Backward-compatibility alias
 engine = write_engine

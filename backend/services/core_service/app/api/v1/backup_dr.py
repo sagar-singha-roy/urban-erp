@@ -3,8 +3,13 @@ import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, func
+from sqlalchemy import select, desc, func, null, text
 
+from sqlalchemy.engine import make_url
+
+from app.core.auth import get_current_user, require_roles
+from app.core.backup_runner import run_backup, run_restore, start_background
+from app.core.config import settings
 from app.db.session import get_db
 from app.db.models import BackupPolicyModel, BackupJobModel, RestoreJobModel, DrillExecutionModel
 from app.schemas.backup_dr import (
@@ -20,292 +25,17 @@ from app.schemas.backup_dr import (
 )
 from app.schemas.tenant import ApiResponse
 
-router = APIRouter(prefix="/fleet/backup-dr", tags=["Platform Fleet & Operations - Backup & DR"])
+router = APIRouter(prefix="/fleet/backup-dr", tags=["Platform Fleet & Operations - Backup & DR"], dependencies=[Depends(require_roles(["super_admin"]))])
+
+PENDING_APPROVER = "Pending second administrator"
 
 
-async def _ensure_backup_dr_seeded(db: AsyncSession):
-    # 1. Seed Policies if empty
-    res = await db.execute(select(func.count(BackupPolicyModel.id)))
-    policy_count = res.scalar() or 0
-    if policy_count == 0:
-        default_policies = [
-            BackupPolicyModel(
-                policy_name="Statewide Core PostgreSQL Daily Full Backup",
-                policy_code="POL-PG-CORE-DAILY-FULL",
-                backup_type="Full Backup",
-                backup_scope="Platform Full Database",
-                environment="Production",
-                database_cluster="pg-aurora-cluster-prod",
-                database_name="urban_core_prod",
-                tenant_scope="All State Tenants",
-                backup_destination="AWS S3 (Immutable Glacier Lock)",
-                storage_bucket_path="s3://suvidha-backup-vault-prod/pg-cluster-01/daily-full/",
-                backup_frequency="Daily",
-                backup_schedule="0 2 * * * (02:00 AM IST)",
-                time_zone="Asia/Kolkata (IST)",
-                retention_period=90,
-                retention_unit="Days",
-                encryption_enabled=True,
-                compression_enabled=True,
-                backup_verification=True,
-                notification_recipients=["sre-dr-team@urban.gov.in", "cert-in-alerts@urban.gov.in"],
-                policy_status="Active",
-            ),
-            BackupPolicyModel(
-                policy_name="Property Tax Billing Differential & WAL Stream",
-                policy_code="POL-PTX-BILLING-WAL-HOURLY",
-                backup_type="WAL / Transaction Log Backup",
-                backup_scope="Platform Full Database",
-                environment="Production",
-                database_cluster="pg-aurora-cluster-prod",
-                database_name="urban_ptx_billing",
-                tenant_scope="All State Tenants",
-                backup_destination="GCS Coldline (WORM Vault)",
-                storage_bucket_path="gs://suvidha-wal-archive-prod/ptx-billing/",
-                backup_frequency="Hourly",
-                backup_schedule="0 * * * * (Every hour on the hour)",
-                time_zone="Asia/Kolkata (IST)",
-                retention_period=30,
-                retention_unit="Days",
-                encryption_enabled=True,
-                compression_enabled=True,
-                backup_verification=True,
-                notification_recipients=["sre-dr-team@urban.gov.in"],
-                policy_status="Active",
-            ),
-            BackupPolicyModel(
-                policy_name="GIS Spatial Cadastral Map Weekly Backup",
-                policy_code="POL-GIS-SPATIAL-WEEKLY",
-                backup_type="Differential Backup",
-                backup_scope="Platform Full Database",
-                environment="Production",
-                database_cluster="pg-gis-postgis-cluster",
-                database_name="urban_gis_spatial",
-                tenant_scope="All State Tenants",
-                backup_destination="AWS S3 (Immutable Glacier Lock)",
-                storage_bucket_path="s3://suvidha-backup-vault-prod/gis-postgis/weekly/",
-                backup_frequency="Weekly",
-                backup_schedule="0 3 * * 0 (Every Sunday 03:00 AM IST)",
-                time_zone="Asia/Kolkata (IST)",
-                retention_period=180,
-                retention_unit="Days",
-                encryption_enabled=True,
-                compression_enabled=True,
-                backup_verification=True,
-                notification_recipients=["gis-admin@urban.gov.in"],
-                policy_status="Active",
-            ),
-            BackupPolicyModel(
-                policy_name="Statutory Audit Vault Cryptographic Snapshot",
-                policy_code="POL-AUDIT-VAULT-WORM-MONTHLY",
-                backup_type="Full Backup",
-                backup_scope="Audit Vault WORM",
-                environment="Production",
-                database_cluster="pg-aurora-cluster-prod",
-                database_name="urban_audit_vault",
-                tenant_scope="All State Tenants",
-                backup_destination="State Gov Data Centre NAS",
-                storage_bucket_path="/mnt/state-san-worm/suvidha/audit-worm-archives/",
-                backup_frequency="Monthly",
-                backup_schedule="0 0 1 * * (1st of month 00:00 IST)",
-                time_zone="Asia/Kolkata (IST)",
-                retention_period=7,
-                retention_unit="Years",
-                encryption_enabled=True,
-                compression_enabled=True,
-                backup_verification=True,
-                notification_recipients=["cag-audit-liaison@urban.gov.in"],
-                policy_status="Active",
-            ),
-        ]
-        for p in default_policies:
-            db.add(p)
-        await db.commit()
-
-    # 2. Seed Jobs if empty
-    res_jobs = await db.execute(select(func.count(BackupJobModel.id)))
-    job_count = res_jobs.scalar() or 0
-    if job_count == 0:
-        now = datetime.datetime.utcnow()
-        default_jobs = [
-            BackupJobModel(
-                job_id="BKP-JOB-2026-1031-0200",
-                policy_code="POL-PG-CORE-DAILY-FULL",
-                policy_name="Statewide Core PostgreSQL Daily Full Backup",
-                environment="Production",
-                database_cluster="pg-aurora-cluster-prod",
-                database_name="urban_core_prod",
-                backup_type="Full Backup",
-                execution_status="Completed",
-                start_time=now - datetime.timedelta(hours=22, minutes=30),
-                completion_time=now - datetime.timedelta(hours=22, minutes=11),
-                duration_seconds=1140,
-                file_size_bytes=153342000000,
-                file_size_formatted="142.8 GB",
-                storage_location="s3://suvidha-backup-vault-prod/2026-10-31/pg_core_full.zst",
-                checksum_sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                verification_status="Verified (Restorable)",
-                verification_result="Automated isolated sandbox dry-run passed: 100% tables intact",
-            ),
-            BackupJobModel(
-                job_id="BKP-JOB-2026-1031-2300",
-                policy_code="POL-PTX-BILLING-WAL-HOURLY",
-                policy_name="Property Tax Billing Differential & WAL Stream",
-                environment="Production",
-                database_cluster="pg-aurora-cluster-prod",
-                database_name="urban_ptx_billing",
-                backup_type="WAL / Transaction Log Backup",
-                execution_status="Completed",
-                start_time=now - datetime.timedelta(hours=1, minutes=15),
-                completion_time=now - datetime.timedelta(hours=1, minutes=10),
-                duration_seconds=300,
-                file_size_bytes=4290000000,
-                file_size_formatted="4.1 GB",
-                storage_location="gs://suvidha-wal-archive-prod/ptx-billing/wal-segment-00A2FF.tar.zst",
-                checksum_sha256="7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
-                verification_status="Verified (Restorable)",
-                verification_result="LSN consistency verified against Aurora primary engine",
-            ),
-            BackupJobModel(
-                job_id="BKP-JOB-2026-1030-0200",
-                policy_code="POL-PG-CORE-DAILY-FULL",
-                policy_name="Statewide Core PostgreSQL Daily Full Backup",
-                environment="Production",
-                database_cluster="pg-aurora-cluster-prod",
-                database_name="urban_core_prod",
-                backup_type="Full Backup",
-                execution_status="Completed",
-                start_time=now - datetime.timedelta(days=1, hours=22),
-                completion_time=now - datetime.timedelta(days=1, hours=21, minutes=41),
-                duration_seconds=1135,
-                file_size_bytes=151200000000,
-                file_size_formatted="140.8 GB",
-                storage_location="s3://suvidha-backup-vault-prod/2026-10-30/pg_core_full.zst",
-                checksum_sha256="cb8379ac2098aa165029e3938a51da0bcecfc008b679be2064ac613c8628e3b8",
-                verification_status="Verified (Restorable)",
-                verification_result="Automated isolated sandbox dry-run passed: 100% tables intact",
-            ),
-            BackupJobModel(
-                job_id="BKP-JOB-2026-1029-0300",
-                policy_code="POL-GIS-SPATIAL-WEEKLY",
-                policy_name="GIS Spatial Cadastral Map Weekly Backup",
-                environment="Production",
-                database_cluster="pg-gis-postgis-cluster",
-                database_name="urban_gis_spatial",
-                backup_type="Differential Backup",
-                execution_status="Completed",
-                start_time=now - datetime.timedelta(days=2, hours=10),
-                completion_time=now - datetime.timedelta(days=2, hours=9, minutes=32),
-                duration_seconds=1680,
-                file_size_bytes=94500000000,
-                file_size_formatted="88.0 GB",
-                storage_location="s3://suvidha-backup-vault-prod/gis-postgis/2026-10-29/postgis.dump",
-                checksum_sha256="b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
-                verification_status="Verified (Restorable)",
-                verification_result="PostGIS geometry topologies successfully validated",
-            ),
-        ]
-        for j in default_jobs:
-            db.add(j)
-        await db.commit()
-
-    # 3. Seed Restore Jobs if empty
-    res_restores = await db.execute(select(func.count(RestoreJobModel.id)))
-    restore_count = res_restores.scalar() or 0
-    if restore_count == 0:
-        now = datetime.datetime.utcnow()
-        default_restores = [
-            RestoreJobModel(
-                restore_job_name="Q3 Pre-Drill Validation Sandbox Restore",
-                source_backup_id="BKP-JOB-2026-1030-0200",
-                source_database="urban_core_prod",
-                target_environment="Staging Recovery Sandbox",
-                target_database="urban_core_recovered_staging",
-                restore_type="Test Environment Restore",
-                restore_destination="pg-restore-sandbox.internal:5432/urban_core_recovered_staging",
-                restore_timestamp=now - datetime.timedelta(days=1),
-                include_transaction_logs=True,
-                validation_required=True,
-                approval_authority="Dr. Rajesh Rao (Chief SRE Officer)",
-                change_reference="CR-2026-DR-092",
-                restore_reason="Mandatory pre-drill data consistency testing and schema validation prior to failover",
-                execution_status="Completed",
-                duration_seconds=1640,
-                initiated_by="anand.verma@urban.gov.in",
-            )
-        ]
-        for r in default_restores:
-            db.add(r)
-        await db.commit()
-
-    # 4. Seed DR Drills if empty
-    res_drills = await db.execute(select(func.count(DrillExecutionModel.id)))
-    drill_count = res_drills.scalar() or 0
-    if drill_count == 0:
-        now = datetime.datetime.utcnow()
-        default_drills = [
-            DrillExecutionModel(
-                drill_name="Statewide Annual Regional Failover Exercise 2026",
-                drill_code="DR-DRILL-2026-Q3",
-                drill_type="Cross-Region Failover",
-                environment="Production Simulation",
-                primary_region="ap-south-1 (Mumbai Primary)",
-                secondary_region="ap-south-2 (Hyderabad Secondary)",
-                services_in_scope=["Core API", "Billing Engine", "Citizen Auth Realm", "Audit Vault"],
-                databases_in_scope=["pg-aurora-cluster-prod", "pg-gis-postgis-cluster", "redis-cluster-ha"],
-                planned_start_date=now - datetime.timedelta(days=28),
-                planned_end_date=now - datetime.timedelta(days=28, hours=-2),
-                expected_rpo_minutes=5,
-                expected_rto_minutes=15,
-                actual_rpo_minutes=1.8,
-                actual_rto_minutes=11.4,
-                recovery_success_rate_pct=100.0,
-                service_availability_pct=99.92,
-                data_integrity_result="Verified: 0 transactions lost (Strict Serializability Preserved)",
-                completion_status="Passed - SLA Compliant",
-                drill_coordinator="Anand Verma (Lead SRE)",
-                approval_authority="Director General (State IT)",
-                notification_recipients=["sre-dr-team@urban.gov.in", "secretary-it@telangana.gov.in"],
-                drill_objective="Verify automated cross-region DNS failover and read-replica promotion with zero data divergence under synthetic 10,000 req/sec load.",
-                rollback_plan="Re-point Route53 DNS traffic to ap-south-1 primary endpoint after synchronized WAL catch-up.",
-                findings="All 8 critical microservice probes passed within 14 seconds post DNS switchover. Zero orphaned records detected.",
-            ),
-            DrillExecutionModel(
-                drill_name="Q4 Simulated Ransomware Storage Isolation Drill",
-                drill_code="DR-DRILL-2026-Q4",
-                drill_type="Simulated Ransomware Recovery",
-                environment="Pre-Prod Staging",
-                primary_region="ap-south-1 (Mumbai Primary)",
-                secondary_region="ap-south-2 (Hyderabad Secondary)",
-                services_in_scope=["Document Vault", "Audit Vault", "Core DB"],
-                databases_in_scope=["urban_audit_vault", "urban_core_prod"],
-                planned_start_date=now + datetime.timedelta(days=14),
-                planned_end_date=now + datetime.timedelta(days=14, hours=3),
-                expected_rpo_minutes=0,
-                expected_rto_minutes=30,
-                actual_rpo_minutes=0.0,
-                actual_rto_minutes=0.0,
-                recovery_success_rate_pct=100.0,
-                service_availability_pct=100.0,
-                data_integrity_result="Pending Scheduled Execution",
-                completion_status="Scheduled",
-                drill_coordinator="Priya Nair (Principal Security Architect)",
-                approval_authority="Chief Information Security Officer (CISO)",
-                notification_recipients=["security-ops@urban.gov.in", "ciso@urban.gov.in"],
-                drill_objective="Test restoration from air-gapped WORM Glacier vault under complete primary cluster wipe simulation.",
-                rollback_plan="Re-hydrate state from verified clean cold storage snapshot.",
-                findings="Pre-drill test harness and mock air-gapped credentials verified.",
-            ),
-        ]
-        for d in default_drills:
-            db.add(d)
-        await db.commit()
+def _operator(user: dict) -> str:
+    return str(user.get("email") or user.get("preferred_username") or user.get("sub") or "unknown")
 
 
 @router.get("/stats", response_model=ApiResponse[BackupDrOverviewStats])
 async def get_backup_dr_stats(db: AsyncSession = Depends(get_db)):
-    await _ensure_backup_dr_seeded(db)
-
     # Calculate live stats
     total_bkp_res = await db.execute(select(func.count(BackupJobModel.id)))
     total_backups = total_bkp_res.scalar() or 0
@@ -328,9 +58,14 @@ async def get_backup_dr_stats(db: AsyncSession = Depends(get_db)):
         total_tb = round(total_bytes / (1000 ** 4), 3)
 
     # Last backup time
-    last_bkp_res = await db.execute(select(BackupJobModel.completion_time).order_by(desc(BackupJobModel.completion_time)).limit(1))
+    last_bkp_res = await db.execute(
+        select(BackupJobModel.completion_time)
+        .where(BackupJobModel.execution_status.in_(["Completed", "Verified"]))
+        .order_by(desc(BackupJobModel.completion_time))
+        .limit(1)
+    )
     last_time = last_bkp_res.scalar_one_or_none()
-    last_time_str = last_time.strftime("%d %b %Y, %H:%M IST") if last_time else "None"
+    last_time_str = last_time.strftime("%d %b %Y, %H:%M UTC") if last_time else None
 
     # Active policies
     pol_res = await db.execute(select(func.count(BackupPolicyModel.id)).where(BackupPolicyModel.policy_status == "Active"))
@@ -343,12 +78,9 @@ async def get_backup_dr_stats(db: AsyncSession = Depends(get_db)):
             totalBackups=total_backups,
             successfulBackups=successful_backups,
             failedBackups=failed_backups,
-            totalStoredDataTb=max(total_tb, 0.42),
+            totalStoredDataTb=total_tb,
             lastBackupTime=last_time_str,
-            currentRpoMinutes=1.8,
-            currentRtoMinutes=11.4,
             activePoliciesCount=active_policies,
-            drDrillReadinessPct=100.0,
         ),
     )
 
@@ -360,8 +92,6 @@ async def list_backup_policies(
     backup_type: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
-    await _ensure_backup_dr_seeded(db)
-
     query = select(BackupPolicyModel).order_by(desc(BackupPolicyModel.created_at))
     if status and status != "ALL":
         query = query.where(BackupPolicyModel.policy_status == status)
@@ -490,8 +220,6 @@ async def list_backup_jobs(
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    await _ensure_backup_dr_seeded(db)
-
     query = select(BackupJobModel).order_by(desc(BackupJobModel.start_time))
 
     if search:
@@ -562,29 +290,30 @@ async def trigger_on_demand_backup(
         job_id=job_id,
         policy_code=pol.policy_code,
         policy_name=pol.policy_name,
-        environment=pol.environment,
-        database_cluster=pol.database_cluster,
-        database_name=pol.database_name,
-        backup_type=pol.backup_type,
-        execution_status="Completed",
-        start_time=now - datetime.timedelta(minutes=8),
-        completion_time=now,
-        duration_seconds=480,
-        file_size_bytes=42500000000,
-        file_size_formatted="39.6 GB",
-        storage_location=f"{pol.storage_bucket_path}{job_id}.zst",
-        checksum_sha256=uuid.uuid4().hex + uuid.uuid4().hex,
-        verification_status="Verified (Restorable)",
-        verification_result="Automated checksum hash match and isolated dry-run verified",
+        environment=settings.ENVIRONMENT,
+        database_cluster=make_url(settings.admin_db_url).host or "",
+        database_name=make_url(settings.admin_db_url).database or "",
+        backup_type="Full Backup (pg_dump)",
+        execution_status="Running",
+        start_time=now,
+        completion_time=null(),
+        duration_seconds=0,
+        file_size_bytes=0,
+        file_size_formatted="0 B",
+        storage_location="Not written yet",
+        checksum_sha256="",
+        verification_status="Not Verified",
+        verification_result="Backup in progress.",
     )
     db.add(new_job)
     await db.commit()
     await db.refresh(new_job)
+    start_background(run_backup(new_job.id))
 
     return ApiResponse(
         success=True,
         code=2001,
-        message=f"Backup job '{new_job.job_id}' executed successfully.",
+        message=f"Backup job '{new_job.job_id}' started.",
         data=BackupJobResponse(
             id=new_job.id,
             jobId=new_job.job_id,
@@ -611,8 +340,6 @@ async def trigger_on_demand_backup(
 
 @router.get("/restores", response_model=ApiResponse[List[RestoreJobResponse]])
 async def list_restore_jobs(db: AsyncSession = Depends(get_db)):
-    await _ensure_backup_dr_seeded(db)
-
     res = await db.execute(select(RestoreJobModel).order_by(desc(RestoreJobModel.created_at)))
     restores = res.scalars().all()
 
@@ -649,6 +376,7 @@ async def list_restore_jobs(db: AsyncSession = Depends(get_db)):
 async def initiate_restore_operation(
     payload: RestoreJobPayload,
     db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
 ):
     if not payload.finalConfirmation:
         raise HTTPException(
@@ -656,11 +384,9 @@ async def initiate_restore_operation(
             detail="Final compliance confirmation checkbox must be explicitly acknowledged.",
         )
 
-    if "Production" in payload.targetEnvironment and not payload.approvalAuthority:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Dual-person senior authorization required for any Production restore operation.",
-        )
+    source = await db.scalar(select(BackupJobModel).where(BackupJobModel.job_id == payload.sourceBackupId))
+    if not source or source.execution_status != "Completed":
+        raise HTTPException(status_code=400, detail="Choose a completed backup to restore from.")
 
     restore = RestoreJobModel(
         restore_job_name=payload.restoreJobName,
@@ -673,12 +399,12 @@ async def initiate_restore_operation(
         restore_timestamp=payload.restoreTimestamp or datetime.datetime.utcnow(),
         include_transaction_logs=payload.includeTransactionLogs,
         validation_required=payload.validationRequired,
-        approvalAuthority=payload.approvalAuthority,
+        approval_authority=PENDING_APPROVER,
         change_reference=payload.changeReference,
         restore_reason=payload.restoreReason,
-        executionStatus="Completed",
-        duration_seconds=1240,
-        initiated_by="super_admin@urban.gov.in",
+        execution_status="Pending Approval",
+        duration_seconds=0,
+        initiated_by=_operator(user),
     )
     db.add(restore)
     await db.commit()
@@ -687,7 +413,7 @@ async def initiate_restore_operation(
     return ApiResponse(
         success=True,
         code=2001,
-        message=f"Restore job '{restore.restore_job_name}' initiated and validated successfully.",
+        message=f"Restore request '{restore.restore_job_name}' recorded and awaiting approval by a second administrator.",
         data=RestoreJobResponse(
             id=restore.id,
             restoreJobName=restore.restore_job_name,
@@ -711,29 +437,52 @@ async def initiate_restore_operation(
     )
 
 
+@router.post("/restores/{restore_id}/approve", response_model=ApiResponse[dict])
+async def approve_restore_request(
+    restore_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    restore = await db.scalar(select(RestoreJobModel).where(RestoreJobModel.id == restore_id))
+    if not restore:
+        raise HTTPException(status_code=404, detail="Restore request not found.")
+    if restore.execution_status != "Pending Approval":
+        raise HTTPException(status_code=409, detail="This restore request is not awaiting approval.")
+    approver = _operator(user)
+    if approver.lower() == (restore.initiated_by or "").lower():
+        raise HTTPException(status_code=403, detail="A restore must be approved by a different administrator.")
+    restore.approval_authority = approver
+    restore.execution_status = "Running"
+    await db.commit()
+    start_background(run_restore(restore.id))
+    return ApiResponse(
+        success=True,
+        code=2000,
+        message="Restore approved and started in a new scratch database.",
+        data={"id": restore.id, "executionStatus": restore.execution_status, "approvedBy": approver},
+    )
+
+
 @router.get("/pitr-status", response_model=ApiResponse[PitrWindowStatus])
-async def get_pitr_status():
-    now = datetime.datetime.utcnow()
+async def get_pitr_status(db: AsyncSession = Depends(get_db)):
+    row = (await db.execute(text("SELECT current_database(), pg_current_wal_lsn()::text, current_setting('archive_mode')"))).one()
+    replicas = await db.scalar(text("SELECT count(*) FROM pg_stat_replication")) or 0
+    archiving = row[2] != "off"
     return ApiResponse(
         success=True,
         code=2000,
         data=PitrWindowStatus(
-            databaseCluster="pg-aurora-cluster-prod",
-            databaseName="urban_core_prod",
-            earliestRestoreTime=now - datetime.timedelta(days=14),
-            latestRestoreTime=now - datetime.timedelta(seconds=45),
-            currentWalLsn="00000001000000A2000000FF",
-            walArchiveLocation="s3://suvidha-wal-archive-prod/wal/continuous-stream/",
-            recoveryWindowDays=14,
-            streamingReplicationStatus="Active & Synced (< 1s WAL lag)",
+            databaseCluster=settings.write_db_url.rsplit("@", 1)[-1].split("/", 1)[0],
+            databaseName=row[0],
+            currentWalLsn=row[1],
+            walArchiveLocation=None if not archiving else "See archive_command on the database server",
+            streamingReplicationStatus=f"{replicas} streaming replica(s); WAL archiving {'on' if archiving else 'off'}",
         ),
     )
 
 
 @router.get("/drills", response_model=ApiResponse[List[DrillExecutionResponse]])
 async def list_drills(db: AsyncSession = Depends(get_db)):
-    await _ensure_backup_dr_seeded(db)
-
     res = await db.execute(select(DrillExecutionModel).order_by(desc(DrillExecutionModel.planned_start_date)))
     drills = res.scalars().all()
 
@@ -792,18 +541,18 @@ async def schedule_dr_drill(
         planned_end_date=payload.plannedEndDate,
         expected_rpo_minutes=payload.expectedRpoMinutes,
         expected_rto_minutes=payload.expectedRtoMinutes,
-        actual_rpo_minutes=0.0,
-        actual_rto_minutes=0.0,
-        recovery_success_rate_pct=100.0,
-        service_availability_pct=100.0,
-        data_integrity_result="Scheduled for automated rehearsal execution",
-        completionStatus="Scheduled",
+        actual_rpo_minutes=null(),
+        actual_rto_minutes=null(),
+        recovery_success_rate_pct=null(),
+        service_availability_pct=null(),
+        data_integrity_result="Not executed",
+        completion_status="Scheduled",
         drill_coordinator=payload.drillCoordinator,
         approval_authority=payload.approvalAuthority,
         notification_recipients=payload.notificationRecipients,
         drill_objective=payload.drillObjective,
         rollback_plan=payload.rollbackPlan,
-        findings="Pre-flight check passed: Secondary replicas and DNS configurations ready.",
+        findings="Not executed. No pre-flight checks have been run.",
     )
     db.add(drill)
     await db.commit()

@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: urban_erp
       POSTGRES_USER: urban_admin
-      POSTGRES_PASSWORD: urban_password123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set it in .env}
     ports:
       - "5432:5432"
     volumes:
@@ -38,11 +38,11 @@ services:
     restart: always
     environment:
       KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set it in .env}
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/urban_erp
       KC_DB_USERNAME: urban_admin
-      KC_DB_PASSWORD: urban_password123
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:?Set it in .env}
       KC_DB_SCHEMA: keycloak
       KC_HTTP_ENABLED: "true"
       KC_HOSTNAME_STRICT: "false"
@@ -66,10 +66,15 @@ services:
     restart: always
     environment:
       ENVIRONMENT: development
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
+      AUDIT_SIGNING_KEY: ${AUDIT_SIGNING_KEY:-}
+      CORS_ORIGINS: http://localhost:4200
       PORT: 8000
-      DATABASE_URL: postgresql+asyncpg://urban_admin:urban_password123@postgres:5432/urban_erp
-      WRITE_DATABASE_URL: postgresql+asyncpg://urban_admin:urban_password123@postgres:5432/urban_erp
-      READ_DATABASE_URL: postgresql+asyncpg://urban_admin:urban_password123@postgres:5432/urban_erp
+      DATABASE_URL: postgresql+asyncpg://urban_app:${APP_DB_PASSWORD:?Set it in .env}@postgres:5432/urban_erp
+      WRITE_DATABASE_URL: postgresql+asyncpg://urban_app:${APP_DB_PASSWORD:?Set it in .env}@postgres:5432/urban_erp
+      READ_DATABASE_URL: postgresql+asyncpg://urban_app:${APP_DB_PASSWORD:?Set it in .env}@postgres:5432/urban_erp
+      DB_ADMIN_URL: postgresql+asyncpg://urban_admin:${POSTGRES_PASSWORD:?Set it in .env}@postgres:5432/urban_erp
+      BACKUP_DIR: /backups
       REDIS_URL: redis://redis:6379/0
       KEYCLOAK_URL: http://keycloak:8080
       KEYCLOAK_REALM: urban
@@ -79,6 +84,8 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/services/core_service/app:/app/app
+      - backup_data:/backups
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -97,5 +104,6 @@ services:
       - core-service
 
 volumes:
+  backup_data:
   postgres_data:
   redis_data:

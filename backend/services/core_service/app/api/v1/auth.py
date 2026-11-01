@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
@@ -9,6 +9,8 @@ from app.schemas.auth import (
     SignInRequest, SignUpRequest, AuthResponse, UserProfileResponse, ModuleMetadata,
     AccessibleTenant, AccessibleUlb
 )
+from app.core import rate_limit
+from app.core.auth import BLOCKED_ACCOUNT_STATUSES
 from app.core.security import hash_password, verify_password, create_access_token, decode_access_token
 from app.core.auth import get_current_user
 from app.core.config import settings
@@ -211,19 +213,23 @@ async def signup(payload: SignUpRequest, db: AsyncSession = Depends(get_write_db
         )
 
     # Determine assigned modules
-    modules = ROLE_DEFAULT_MODULES.get(payload.role, ROLE_DEFAULT_MODULES["citizen"])
+    modules = ROLE_DEFAULT_MODULES["citizen"]
 
     user_tenant = (payload.tenantId or settings.DEFAULT_TENANT_ID).strip().upper()
+    tenant_exists = await db.scalar(select(Tenant.tenant_id).where(Tenant.tenant_id == user_tenant))
+    if not tenant_exists:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Selected municipal body is not registered"
+        )
     user = User(
         tenant_id=user_tenant,
         username=payload.username.strip(),
         email=str(payload.email).lower().strip(),
         password_hash=hash_password(payload.password),
         full_name=payload.fullName.strip(),
-        role=payload.role,
-        assigned_modules=modules,
-        assigned_zone=payload.assignedZone,
-        assigned_ward=payload.assignedWard
+        role="citizen",
+        assigned_modules=modules
     )
     db.add(user)
     await db.commit()
@@ -326,28 +332,45 @@ async def _get_accessible_tenants(
     return accessible_tenants
 
 @router.post("/signin", response_model=AuthResponse)
-async def signin(payload: SignInRequest, db: AsyncSession = Depends(get_write_db)):
+async def signin(payload: SignInRequest, request: Request, db: AsyncSession = Depends(get_write_db)):
     identifier = payload.identifier
     if not identifier:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Official Email or Username is required."
         )
+    throttle_key = f"{request.client.host if request.client else 'unknown'}:{identifier.lower()}"
+    wait = rate_limit.retry_after(throttle_key)
+    if wait:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed sign-in attempts. Try again later.",
+            headers={"Retry-After": str(wait)},
+        )
     user = await db.scalar(
         select(User).where(or_(User.username == identifier, User.email == identifier.lower()))
     )
 
     if not user or not verify_password(payload.password, user.password_hash):
+        rate_limit.record_failure(throttle_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials. Please verify your username/email and password."
         )
 
-    if not user.is_active:
+    gup_rec = await db.scalar(select(GlobalUserProfile).where(GlobalUserProfile.email == user.email))
+    if not user.is_active or (gup_rec and gup_rec.account_status in BLOCKED_ACCOUNT_STATUSES):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is deactivated. Contact Municipal Administrator."
         )
+    rate_limit.clear(throttle_key)
+
+    effective_tenant = user.tenant_id
+    if gup_rec:
+        parts = [p.strip() for p in [gup_rec.state_tenant_id, gup_rec.ulb_tenant_id] if p and p.strip()]
+        if parts:
+            effective_tenant = ",".join(parts)
 
     # Issue SSO JWT Token
     modulesList = [m.strip() for m in user.assigned_modules.split(",") if m.strip()]
@@ -358,6 +381,7 @@ async def signin(payload: SignInRequest, db: AsyncSession = Depends(get_write_db
         "name": user.full_name,
         "realm_access": {"roles": [user.role]},
         "tenant_id": user.tenant_id,
+        "tenant_scope": effective_tenant,
         "assigned_modules": modulesList
     }
     accessToken = create_access_token(token_claims)
@@ -373,13 +397,6 @@ async def signin(payload: SignInRequest, db: AsyncSession = Depends(get_write_db
         assignedZone=user.assigned_zone,
         assignedWard=user.assigned_ward
     )
-
-    effective_tenant = user.tenant_id
-    gup_rec = await db.scalar(select(GlobalUserProfile).where(GlobalUserProfile.email == user.email))
-    if gup_rec:
-        parts = [p.strip() for p in [gup_rec.state_tenant_id, gup_rec.ulb_tenant_id] if p and p.strip()]
-        if parts:
-            effective_tenant = ",".join(parts)
 
     accessible_tenants = await _get_accessible_tenants(db, user.role, effective_tenant)
     return AuthResponse(accessToken=accessToken, user=userProfile, accessibleTenants=accessible_tenants)
@@ -414,7 +431,7 @@ async def get_me(user: dict = Depends(get_current_user), db: AsyncSession = Depe
         email=user.get("email", "officer@gwmc.gov.in"),
         fullName=user.get("name", "Ramesh Reddy"),
         role=role,
-        tenantId=user.get("tenant_id", settings.DEFAULT_TENANT_ID),
+        tenantId=user.get("tenant_id") or settings.DEFAULT_TENANT_ID,
         assignedModules=assigned,
         assignedZone=user.get("assigned_zone", "Zone-1"),
         assignedWard=user.get("assigned_ward", "Ward-14")

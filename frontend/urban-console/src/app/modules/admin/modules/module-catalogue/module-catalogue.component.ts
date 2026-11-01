@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { LoadingService } from '../../../../core/services/loading.service';
 import { ModuleCatalogueService } from '../../../../core/services/module-catalogue.service';
@@ -16,7 +17,7 @@ import { CatalogueHistoryDialogComponent } from './dialogs/catalogue-history-dia
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     ModuleFormDialogComponent,
     CatalogueHistoryDialogComponent
   ],
@@ -140,10 +141,6 @@ export class ModuleCatalogueComponent implements OnInit {
         },
         error: () => this.dialogs.showToast('Failed to load modules catalogue', 'error', 3000)
       });
-  }
-
-  onRefreshClick(): void {
-    this.loadData(true);
   }
 
   onSearchChange(term: string): void {

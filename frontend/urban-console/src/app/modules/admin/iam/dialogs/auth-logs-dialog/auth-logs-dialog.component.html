@@ -46,9 +46,7 @@
           />
         </div>
 
-        <button class="btn-refresh" (click)="loadLogs()" [disabled]="isLoading()" title="Reload audit logs">
-          <app-icon name="ri-refresh-line" [size]="15" [class.spinning]="isLoading()"></app-icon>
-        </button>
+        <app-refresh-button subject="authentication logs" [iconOnly]="true" (refresh)="loadLogs()"></app-refresh-button>
       </div>
 
       <!-- Logs Table -->
@@ -78,7 +76,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (log of logs(); track log.id) {
+                @for (log of (logs()) | slice:pagers.start('t1', (logs()).length):pagers.end('t1', (logs()).length); track log.id) {
                   <tr>
                     <td class="font-mono text-nowrap">
                       {{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}
@@ -115,6 +113,7 @@
               </tbody>
             </table>
           </div>
+<app-table-pager [state]="pagers" key="t1" [total]="(logs()).length"></app-table-pager>
         }
       </div>
 

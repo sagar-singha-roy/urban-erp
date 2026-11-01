@@ -31,9 +31,9 @@ export class PropertyService {
 
   getProperties(search?: string, wardId?: string, taxStatus?: string): Observable<PropertySummary[]> {
     let params = new HttpParams();
-    if (search) params = params.set('q', search);
-    if (wardId) params = params.set('ward_id', wardId);
-    if (taxStatus) params = params.set('tax_status', taxStatus);
+    if (search) params = params.set('search', search);
+    if (wardId) params = params.set('wardId', wardId);
+    if (taxStatus) params = params.set('taxStatus', taxStatus);
 
     return this.http.get<PropertySummary[]>(`${this.baseUrl}/properties`, {
       headers: this.getHeaders(),

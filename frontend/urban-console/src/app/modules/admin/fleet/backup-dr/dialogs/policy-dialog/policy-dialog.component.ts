@@ -49,7 +49,7 @@ export class PolicyDialogComponent {
     'Platform Full Database',
     'Tenant Scoped',
     'Configuration Only',
-    'Audit Vault WORM',
+    'Audit Vault',
   ];
 
   readonly availableEnvironments = ['Production', 'Staging', 'Development'];
@@ -69,7 +69,7 @@ export class PolicyDialogComponent {
 
   readonly availableDestinations = [
     'AWS S3 (Immutable Glacier Lock)',
-    'GCS Coldline (WORM Vault)',
+    'GCS Coldline (Vault)',
     'State Gov Data Centre NAS',
   ];
 

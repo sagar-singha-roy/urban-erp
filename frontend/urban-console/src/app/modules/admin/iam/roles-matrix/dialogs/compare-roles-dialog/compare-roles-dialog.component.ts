@@ -1,4 +1,5 @@
 import { Component, Input, Output, EventEmitter, OnInit, inject, signal } from '@angular/core';
+import { PagerState, TablePagerComponent } from '../../../../../../shared/components/table-pager/table-pager.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
@@ -9,11 +10,12 @@ import { RoleItem, RoleComparisonResult } from '../../../../../../core/models/ia
 @Component({
   selector: 'app-compare-roles-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent],
+  imports: [TablePagerComponent, CommonModule, FormsModule, IconComponent],
   templateUrl: './compare-roles-dialog.component.html',
   styleUrl: './compare-roles-dialog.component.scss'
 })
 export class CompareRolesDialogComponent implements OnInit {
+  readonly pagers = new PagerState();
   @Input() availableRoles: RoleItem[] = [];
   @Input() initialRoleAId: string = '';
   @Input() initialRoleBId: string = '';

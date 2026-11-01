@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 class CamelModel(BaseModel):
@@ -21,12 +21,9 @@ class SignInRequest(CamelModel):
 class SignUpRequest(CamelModel):
     username: str
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8, max_length=128)
     fullName: str
-    role: str = "citizen"
-    tenantId: Optional[str] = "GWMC"
-    assignedZone: Optional[str] = None
-    assignedWard: Optional[str] = None
+    tenantId: Optional[str] = None
 
 class UserProfileResponse(CamelModel):
     id: str

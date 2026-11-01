@@ -32,10 +32,7 @@
 
     <!-- Header Actions strictly in a single row -->
     <div class="header-actions">
-      <button class="btn btn-refresh" (click)="loadUsers(); loadInvitations()" title="Refresh Directory">
-        <app-icon name="ri-refresh-line" [size]="16"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="users and invitations" (refresh)="loadUsers(); loadInvitations(); loadRoles(); loadAuditLogs()"></app-refresh-button>
 
       @if (activeTab() === 'directory') {
         <button class="btn btn-secondary-action" (click)="openInviteDialog()" title="Send Expiring Onboarding Invitation">

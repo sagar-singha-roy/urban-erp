@@ -1,0 +1,65 @@
+<div class="modal-backdrop" (click)="cancel.emit()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-title-wrap">
+        <div class="icon-circle">
+          <app-icon name="ri-file-text-line"></app-icon>
+        </div>
+        <div>
+          <h3>{{ title() }}</h3>
+          <p class="subtitle">{{ subtitle() }}</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close" (click)="cancel.emit()" title="Close Dialog">
+        <app-icon name="ri-close-line"></app-icon>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Comparison Title / Reference Tag</label>
+        <input
+          type="text"
+          class="form-control"
+          [(ngModel)]="noteTitle"
+          placeholder="e.g. Q2 State League Performance Audit"
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Analytical Observations & Executive Directives</label>
+        <textarea
+          class="form-control textarea-field"
+          rows="5"
+          [(ngModel)]="notesContent"
+          placeholder="Record strategic insights, resource re-allocations, or remedial directives for lagging ULBs..."
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Action Priority</label>
+        <select class="form-select" [(ngModel)]="priority">
+          <option value="routine">Routine Monitoring (Bi-Monthly)</option>
+          <option value="high">High Priority — Remedial Review Required</option>
+          <option value="critical">Critical — Immediate Chief Secretary Escalation</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" (click)="cancel.emit()">
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="saveNotes()"
+        [disabled]="!notesContent().trim()"
+      >
+        <app-icon name="ri-check-line"></app-icon>
+        <span>Save Directive Note</span>
+      </button>
+    </div>
+  </div>
+</div>
+

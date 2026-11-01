@@ -1,0 +1,208 @@
+<div class="modal-backdrop" (click)="cancel.emit()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="header-title-wrap">
+        <div class="icon-circle">
+          <app-icon name="ri-hand-coin-line"></app-icon>
+        </div>
+        <div>
+          <h3>{{ title() }}</h3>
+          <p class="subtitle">Statutory grant devolution & treasury allocation order</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close" (click)="cancel.emit()" title="Close Dialog">
+        <app-icon name="ri-close-line"></app-icon>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+      <!-- Row 1: Scheme & Authority -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Grant Scheme <span class="required">*</span></label>
+          <select class="form-select" [(ngModel)]="model.grantScheme">
+            <option value="15th Finance Commission (Urban)">15th Finance Commission (Urban)</option>
+            <option value="AMRUT 2.0 (Water & Green Spaces)">AMRUT 2.0 (Water & Green Spaces)</option>
+            <option value="Swachh Bharat Mission (Urban 2.0)">Swachh Bharat Mission (Urban 2.0)</option>
+            <option value="State Government Matching Grants">State Government Matching Grants</option>
+            <option value="Smart Cities Mission">Smart Cities Mission</option>
+            <option value="PMAY-U (Affordable Housing)">PMAY-U (Affordable Housing)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Funding Authority <span class="required">*</span></label>
+          <select class="form-select" [(ngModel)]="model.fundingAuthority">
+            <option value="Ministry of Finance (MoF)">Ministry of Finance (MoF)</option>
+            <option value="Ministry of Housing & Urban Affairs (MoHUA)">Ministry of Housing & Urban Affairs (MoHUA)</option>
+            <option value="State Finance Directorate">State Finance Directorate</option>
+            <option value="World Bank / ADB Infrastructure Facility">World Bank / ADB Facility</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 2: FY & Sanction Order -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Financial Year <span class="required">*</span></label>
+          <select class="form-select" [(ngModel)]="model.financialYear">
+            <option value="FY 2026-27">FY 2026-27</option>
+            <option value="FY 2025-26">FY 2025-26</option>
+            <option value="FY 2024-25">FY 2024-25</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Sanction Order Number <span class="required">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="model.sanctionOrderNo"
+            placeholder="e.g. MOF/FCD/2026/XVFC-ULB-88"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Sanction Date <span class="required">*</span></label>
+          <input type="date" class="form-control" [(ngModel)]="model.sanctionOrderDate" />
+        </div>
+      </div>
+
+      <!-- Row 3: Tenancy Hierarchy Target -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">State Tenant <span class="required">*</span></label>
+          <select class="form-select" [(ngModel)]="model.stateTenant">
+            <option value="Telangana (TG)">Telangana (TG)</option>
+            <option value="Maharashtra (MH)">Maharashtra (MH)</option>
+            <option value="Karnataka (KA)">Karnataka (KA)</option>
+            <option value="Gujarat (GJ)">Gujarat (GJ)</option>
+            <option value="Madhya Pradesh (MP)">Madhya Pradesh (MP)</option>
+            <option value="Tamil Nadu (TN)">Tamil Nadu (TN)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Target ULB Corporation <span class="required">*</span></label>
+          <select class="form-select" [(ngModel)]="model.targetUlb">
+            <option value="Greater Hyderabad (GHMC)">Greater Hyderabad (GHMC)</option>
+            <option value="Brihanmumbai (BMC)">Brihanmumbai (BMC)</option>
+            <option value="Bruhat Bengaluru (BBMP)">Bruhat Bengaluru (BBMP)</option>
+            <option value="Greater Warangal (GWMC)">Greater Warangal (GWMC)</option>
+            <option value="Indore Municipal Corp">Indore Municipal Corp</option>
+            <option value="Surat Municipal Corp">Surat Municipal Corp</option>
+            <option value="Nagpur Municipal Corp">Nagpur Municipal Corp</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 4: Currency Amounts -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Total Sanctioned Amount (INR) <span class="required">*</span></label>
+          <input
+            type="number"
+            class="form-control"
+            [(ngModel)]="model.sanctionedAmount"
+            placeholder="e.g. 1000000000"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Released Amount (INR) <span class="required">*</span></label>
+          <input
+            type="number"
+            class="form-control"
+            [(ngModel)]="model.releasedAmount"
+            placeholder="e.g. 800000000"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Allocation to ULB (INR) <span class="required">*</span></label>
+          <input
+            type="number"
+            class="form-control"
+            [(ngModel)]="model.allocationAmount"
+            placeholder="e.g. 750000000"
+          />
+        </div>
+      </div>
+
+      <!-- Row 5: Dates -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Treasury Release Date</label>
+          <input type="date" class="form-control" [(ngModel)]="model.releaseDate" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Fund Utilisation Deadline</label>
+          <input type="date" class="form-control" [(ngModel)]="model.deadline" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Approval Authority <span class="required">*</span></label>
+          <select class="form-select" [(ngModel)]="model.approvalAuthority">
+            <option value="Principal Secretary (UDD / Municipal Administration)">Principal Secretary (UDD)</option>
+            <option value="Director of Municipal Administration (CDMA)">Director of Municipal Administration (CDMA)</option>
+            <option value="State Treasury Commissioner">State Treasury Commissioner</option>
+            <option value="Municipal Commissioner (IAS)">Municipal Commissioner (IAS)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 6: Purpose & Upload Document -->
+      <div class="form-group">
+        <label class="form-label">Grant Purpose & Infrastructure Scope <span class="required">*</span></label>
+        <textarea
+          class="form-control"
+          rows="3"
+          [(ngModel)]="model.grantPurpose"
+          placeholder="Specify capital project head, tied conditions, and execution milestones..."
+        ></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Sanction Order Document File <span class="required">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="model.sanctionDoc"
+            placeholder="e.g. MoF_XVFC_2026_Sanction_Order.pdf"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Audit / Allocation Remarks</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="model.allocationRemarks"
+            placeholder="e.g. Approved under Cabinet Sub-Committee Directive 14"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" (click)="cancel.emit()">
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="saveAllocation()"
+        [disabled]="!isValid()"
+      >
+        <app-icon name="ri-check-line"></app-icon>
+        <span>Authorize & Disburse Allocation</span>
+      </button>
+    </div>
+  </div>
+</div>
+

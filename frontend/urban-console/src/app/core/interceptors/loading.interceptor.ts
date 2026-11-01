@@ -1,6 +1,6 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { finalize } from 'rxjs/operators';
+import { finalize, tap } from 'rxjs/operators';
 import { LoadingService } from '../services/loading.service';
 
 export const loadingInterceptor: HttpInterceptorFn = (req, next) => {
@@ -16,6 +16,7 @@ export const loadingInterceptor: HttpInterceptorFn = (req, next) => {
   loader.show();
 
   return next(req).pipe(
+    tap({ error: () => loader.failedRequests.update((count) => count + 1) }),
     finalize(() => {
       loader.hide();
     })

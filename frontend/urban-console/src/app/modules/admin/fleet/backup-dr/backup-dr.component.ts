@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { BackupDrService } from '../../../../core/services/backup-dr.service';
 import { DialogService } from '../../../../core/services/dialog.service';
 import {
@@ -25,7 +26,7 @@ import { DrillDialogComponent } from './dialogs/drill-dialog/drill-dialog.compon
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     PolicyDialogComponent,
     RestoreDialogComponent,
     DrillDialogComponent,
@@ -209,6 +210,24 @@ export class BackupDrComponent implements OnInit {
     this.activeDialog.set('policy');
   }
 
+  async approveRestore(restore: RestoreJobItem): Promise<void> {
+    const confirmed = await this.dialogs.confirm({
+      title: 'Approve restore',
+      message: `Restore '${restore.sourceBackupId}' into a new scratch database? Existing databases are not changed.`,
+      confirmText: 'Approve and Run',
+      cancelText: 'Cancel',
+      variant: 'primary',
+    });
+    if (!confirmed) return;
+    this.backupService.approveRestore(restore.id).subscribe({
+      next: () => {
+        this.dialogs.showToast('Restore started. Use Refresh to see its result.', 'success');
+        this.loadRestores();
+      },
+      error: (err) => this.dialogs.showToast(err?.error?.detail || 'The restore could not be approved.', 'error'),
+    });
+  }
+
   openRestoreDialog(): void {
     this.activeDialog.set('restore');
   }
@@ -239,7 +258,7 @@ export class BackupDrComponent implements OnInit {
     this.dialogs.showToast(`Initiating on-demand backup for policy '${policy.policyCode}'...`, 'info');
     this.backupService.triggerOnDemandBackup(policy.policyCode).subscribe({
       next: (job) => {
-        this.dialogs.showToast(`Snapshot '${job.jobId}' created and verified (${job.fileSizeFormatted}).`, 'success');
+        this.dialogs.showToast(`Backup '${job.jobId}' started. Use Refresh to see its result.`, 'info');
         this.refreshAll();
       },
       error: (err) => {
@@ -253,7 +272,7 @@ export class BackupDrComponent implements OnInit {
     this.backupService.initiateRestore(payload).subscribe({
       next: (job) => {
         this.closeDialog();
-        this.dialogs.showToast(`Restore job '${job.restoreJobName}' executed and validated.`, 'success');
+        this.dialogs.showToast(`Restore request '${job.restoreJobName}' recorded. A second administrator must approve it.`, 'info');
         this.refreshAll();
       },
       error: (err) => {

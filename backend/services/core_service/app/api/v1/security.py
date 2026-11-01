@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, update, delete, func, desc, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, require_roles
+from app.core.tenant_context import SET_RLS_CONTEXT_SQL, rls_params
 from app.db.session import get_db
 from app.db.models import RLSPolicyModel, TenantIsolationTestRun, IsolationFindingReport
 from app.schemas.security import (
@@ -28,280 +29,41 @@ from app.schemas.tenant import ApiResponse
 router = APIRouter(
     prefix="/security",
     tags=["Data Security & Tenant Isolation"],
-    dependencies=[Depends(get_current_user)]
+    dependencies=[Depends(require_roles(["super_admin"]))]
 )
 
 
 # -------------------------------------------------------------------------
 # Seed Data Helpers
 # -------------------------------------------------------------------------
-async def _ensure_seeded_security_data(db: AsyncSession):
-    # 1. RLS Policies
-    existing_policies = await db.execute(select(func.count(RLSPolicyModel.id)))
-    if (existing_policies.scalar() or 0) == 0:
-        seed_policies = [
-            RLSPolicyModel(
-                policy_name="Property Tax Parcels Statutory RLS Isolation",
-                policy_code="RLS-PTX-01",
-                database_service="PostgreSQL 16 (Core Service)",
-                schema_name="public",
-                table_name="properties",
-                tenant_key_column="tenant_id",
-                policy_type="ALL",
-                database_commands=["SELECT", "INSERT", "UPDATE", "DELETE"],
-                applicable_tenant_levels=["State (Level 1)", "ULB / City (Level 2)"],
-                policy_definition=(
-                    "CREATE POLICY ptx_properties_isolation ON properties FOR ALL "
-                    "USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid "
-                    "AND (sub_tenant_id IS NULL OR sub_tenant_id = current_setting('app.current_sub_tenant_id', true)::uuid));"
-                ),
-                policy_status="ACTIVE",
-                last_verified_at=datetime.datetime.utcnow(),
-                last_verification_result="VERIFIED",
-                verification_latency_ms=1.1,
-                enforcement_notes="Enforced at Postgres engine kernel level with ZERO bypass."
-            ),
-            RLSPolicyModel(
-                policy_name="Water & Sewerage Consumer Ledger Boundary Policy",
-                policy_code="RLS-WTR-01",
-                database_service="PostgreSQL 16 (Core Service)",
-                schema_name="public",
-                table_name="water_connections",
-                tenant_key_column="tenant_id",
-                policy_type="ALL",
-                database_commands=["SELECT", "INSERT", "UPDATE", "DELETE"],
-                applicable_tenant_levels=["State (Level 1)", "ULB / City (Level 2)"],
-                policy_definition=(
-                    "CREATE POLICY wtr_consumer_isolation ON water_connections FOR ALL "
-                    "USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid "
-                    "AND (sub_tenant_id IS NULL OR sub_tenant_id = current_setting('app.current_sub_tenant_id', true)::uuid));"
-                ),
-                policy_status="ACTIVE",
-                last_verified_at=datetime.datetime.utcnow(),
-                last_verification_result="VERIFIED",
-                verification_latency_ms=1.4,
-                enforcement_notes="Prevents cross-city meter reading access."
-            ),
-            RLSPolicyModel(
-                policy_name="Double-Entry Financial Vouchers Multi-Tenant Partition",
-                policy_code="RLS-FIN-01",
-                database_service="PostgreSQL 16 (Core Service)",
-                schema_name="public",
-                table_name="financial_ledgers",
-                tenant_key_column="tenant_id",
-                policy_type="ALL",
-                database_commands=["SELECT", "INSERT", "UPDATE"],
-                applicable_tenant_levels=["State (Level 1)", "ULB / City (Level 2)"],
-                policy_definition=(
-                    "CREATE POLICY fin_ledger_isolation ON financial_ledgers FOR ALL "
-                    "USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid "
-                    "AND (sub_tenant_id IS NULL OR sub_tenant_id = current_setting('app.current_sub_tenant_id', true)::uuid));"
-                ),
-                policy_status="ACTIVE",
-                last_verified_at=datetime.datetime.utcnow(),
-                last_verification_result="VERIFIED",
-                verification_latency_ms=0.9,
-                enforcement_notes="Blocks inter-ULB treasury fund balance disclosure."
-            ),
-            RLSPolicyModel(
-                policy_name="Trade Licences Inspection & Approval Gate Policy",
-                policy_code="RLS-TRL-01",
-                database_service="PostgreSQL 16 (Core Service)",
-                schema_name="public",
-                table_name="trade_licences",
-                tenant_key_column="tenant_id",
-                policy_type="ALL",
-                database_commands=["SELECT", "INSERT", "UPDATE", "DELETE"],
-                applicable_tenant_levels=["ULB / City (Level 2)"],
-                policy_definition=(
-                    "CREATE POLICY trl_applications_isolation ON trade_licences FOR ALL "
-                    "USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid "
-                    "AND sub_tenant_id = current_setting('app.current_sub_tenant_id', true)::uuid);"
-                ),
-                policy_status="ACTIVE",
-                last_verified_at=datetime.datetime.utcnow(),
-                last_verification_result="VERIFIED",
-                verification_latency_ms=1.3,
-                enforcement_notes="Strict city-boundary confinement for commercial licenses."
-            ),
-            RLSPolicyModel(
-                policy_name="Global User Profiles & Administrative Delegation Boundary",
-                policy_code="RLS-IAM-01",
-                database_service="PostgreSQL 16 (Core Service)",
-                schema_name="public",
-                table_name="global_user_profiles",
-                tenant_key_column="state_tenant_id",
-                policy_type="SELECT",
-                database_commands=["SELECT"],
-                applicable_tenant_levels=["State (Level 1)", "ULB / City (Level 2)"],
-                policy_definition=(
-                    "CREATE POLICY iam_user_directory_isolation ON global_user_profiles FOR SELECT "
-                    "USING (platform_access = true OR state_tenant_id = current_setting('app.current_tenant_id', true)::text);"
-                ),
-                policy_status="ACTIVE",
-                last_verified_at=datetime.datetime.utcnow(),
-                last_verification_result="VERIFIED",
-                verification_latency_ms=1.0,
-                enforcement_notes="Ensures state officers only view personnel inside their home state."
-            ),
-        ]
-        for p in seed_policies:
-            db.add(p)
+async def _rls_state(db: AsyncSession, table_name: str) -> Dict[str, Any]:
+    """Row-level security state as PostgreSQL reports it for one table."""
+    row = (await db.execute(
+        text(
+            "SELECT c.relrowsecurity, c.relforcerowsecurity, "
+            "(SELECT count(*) FROM pg_policies p WHERE p.schemaname = n.nspname AND p.tablename = c.relname) "
+            "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "WHERE c.relname = :tbl AND n.nspname = current_schema() AND c.relkind IN ('r', 'p')"
+        ),
+        {"tbl": table_name},
+    )).first()
+    if row is None:
+        return {"exists": False, "enabled": False, "forced": False, "policies": 0}
+    return {"exists": True, "enabled": bool(row[0]), "forced": bool(row[1]), "policies": int(row[2])}
 
-    # 2. Test Runs
-    existing_runs = await db.execute(select(func.count(TenantIsolationTestRun.id)))
-    if (existing_runs.scalar() or 0) == 0:
-        seed_runs = [
-            TenantIsolationTestRun(
-                id="ISO-RUN-2026-001",
-                test_run_name="Nightly Automated State Boundary Penetration Run",
-                environment="Isolated Sandbox",
-                source_tenant="State of Telangana (TG)",
-                target_tenant="State of Maharashtra (MH)",
-                test_scenarios=[
-                    "State A cannot read State B's records",
-                    "A user cannot change a tenant ID in a request to access another tenant",
-                    "Cross-tenant updates and deletes are rejected",
-                    "Queries without valid tenant context are denied",
-                    "Connection-pool reuse does not leak a previous request's tenant context",
-                ],
-                database_services=["PostgreSQL Core", "Redis Scoped Cache"],
-                tables_in_scope=["properties", "water_accounts", "users", "financial_ledgers"],
-                test_type="Synthetic Penetration Test",
-                execution_mode="Automated Batch",
-                schedule="0 2 * * * (Daily 02:00 IST)",
-                notification_recipients=["secops@urban.gov.in", "ciso@suvidha.gov.in"],
-                stop_on_critical_failure=True,
-                status="PASSED",
-                start_time=datetime.datetime.utcnow() - datetime.timedelta(hours=6),
-                end_time=datetime.datetime.utcnow() - datetime.timedelta(hours=5, minutes=58),
-                total_tests=16,
-                passed_count=16,
-                failed_count=0,
-                execution_latency_ms=48.2,
-            ),
-            TenantIsolationTestRun(
-                id="ISO-RUN-2026-002",
-                test_run_name="City ULB Inter-Tenant Data Leak Verification",
-                environment="Staging",
-                source_tenant="Greater Hyderabad MC (GHMC)",
-                target_tenant="Greater Warangal MC (GWMC)",
-                test_scenarios=[
-                    "ULB A cannot read ULB B's records",
-                    "Cross-tenant updates and deletes are rejected",
-                    "Background jobs and exports enforce the same tenant restrictions",
-                ],
-                database_services=["PostgreSQL Core"],
-                tables_in_scope=["properties", "trade_licences"],
-                test_type="Synthetic Penetration Test",
-                execution_mode="Automated Batch",
-                schedule="Weekly Sunday 04:00 IST",
-                notification_recipients=["audit@tg.gov.in"],
-                stop_on_critical_failure=True,
-                status="PASSED",
-                start_time=datetime.datetime.utcnow() - datetime.timedelta(days=1),
-                end_time=datetime.datetime.utcnow() - datetime.timedelta(days=1, minutes=-3),
-                total_tests=12,
-                passed_count=12,
-                failed_count=0,
-                execution_latency_ms=36.4,
-            ),
-            TenantIsolationTestRun(
-                id="ISO-RUN-2026-003",
-                test_run_name="Connection Pool Context Sanitization & Header Spoofing Audit",
-                environment="Production-Mirror",
-                source_tenant="State of Maharashtra (MH)",
-                target_tenant="State of Karnataka (KA)",
-                test_scenarios=[
-                    "A user cannot change a tenant ID in a request to access another tenant",
-                    "Connection-pool reuse does not leak a previous request's tenant context",
-                    "Privileged support access follows its explicit, audited authorisation path",
-                ],
-                database_services=["PostgreSQL Core", "Redis Scoped Cache"],
-                tables_in_scope=["users", "roles", "financial_ledgers"],
-                test_type="Concurrency & Pool Leak Test",
-                execution_mode="Step-by-Step Interactive",
-                schedule="On-Demand",
-                notification_recipients=["secops@urban.gov.in"],
-                stop_on_critical_failure=True,
-                status="PASSED",
-                start_time=datetime.datetime.utcnow() - datetime.timedelta(days=3),
-                end_time=datetime.datetime.utcnow() - datetime.timedelta(days=3, minutes=-5),
-                total_tests=10,
-                passed_count=10,
-                failed_count=0,
-                execution_latency_ms=62.1,
-            ),
-        ]
-        for r in seed_runs:
-            db.add(r)
 
-    # 3. Security Findings
-    existing_findings = await db.execute(select(func.count(IsolationFindingReport.id)))
-    if (existing_findings.scalar() or 0) == 0:
-        seed_findings = [
-            IsolationFindingReport(
-                id="SEC-FIND-2026-001",
-                test_run_id="ISO-RUN-2026-001",
-                severity="HIGH",
-                finding_title="Missing sub_tenant_id index on analytical water meter aggregation view",
-                finding_description="Query execution plan required index scan on tenant_id without composite sub_tenant_id, risking slow denial boundary during concurrent city queries.",
-                affected_tenant="State of Telangana (TG)",
-                affected_resource="water_meter_aggregations",
-                remediation_owner="Database Engineering Team",
-                remediation_due_date="2026-11-15",
-                resolution_notes="Composite B-Tree index created on (tenant_id, sub_tenant_id). Latency reduced to 0.8ms.",
-                retest_status="RESOLVED",
-                detected_at=datetime.datetime.utcnow() - datetime.timedelta(days=7),
-                resolved_at=datetime.datetime.utcnow() - datetime.timedelta(days=2),
-            ),
-            IsolationFindingReport(
-                id="SEC-FIND-2026-002",
-                test_run_id="ISO-RUN-2026-002",
-                severity="MEDIUM",
-                finding_title="Background document generator missing explicit sub-tenant context header",
-                finding_description="Background Celery / Redis worker used generic service tenant context rather than inheriting active sub_tenant_id for citizen receipt PDFs.",
-                affected_tenant="Greater Hyderabad MC (GHMC)",
-                affected_resource="DMS / Worker Task: generate_receipt_pdf",
-                remediation_owner="Backend Infrastructure Lead",
-                remediation_due_date="2026-11-20",
-                resolution_notes="Worker payload now mandates signed JWT context token propagating sub_tenant_id.",
-                retest_status="VERIFIED",
-                detected_at=datetime.datetime.utcnow() - datetime.timedelta(days=5),
-                resolved_at=datetime.datetime.utcnow() - datetime.timedelta(days=1),
-            ),
-            IsolationFindingReport(
-                id="SEC-FIND-2026-003",
-                test_run_id="ISO-RUN-2026-003",
-                severity="LOW",
-                finding_title="Audit log retention parameter missing for temporary synthetic penetration fixtures",
-                finding_description="Synthetic injection test logs were persisting into primary audit table without automated 30-day purge policy.",
-                affected_tenant="State of Maharashtra (MH)",
-                affected_resource="tenant_audit_logs",
-                remediation_owner="Security Compliance Officer",
-                remediation_due_date="2026-12-01",
-                resolution_notes="Partition retention rule configured in Postgres pg_partman.",
-                retest_status="OPEN",
-                detected_at=datetime.datetime.utcnow() - datetime.timedelta(days=2),
-                resolved_at=None,
-            ),
-        ]
-        for f in seed_findings:
-            db.add(f)
+def _rls_is_enforced(state: Dict[str, Any]) -> bool:
+    return state["enabled"] and state["policies"] > 0
 
-    # Auto-migrate any existing runs with civora.io
-    runs = (await db.scalars(select(TenantIsolationTestRun))).all()
-    run_changed = False
-    for r in runs:
-        if r.notification_recipients:
-            updated = [rec.replace("civora.io", "suvidha.gov.in") for rec in r.notification_recipients]
-            if updated != r.notification_recipients:
-                r.notification_recipients = updated
-                run_changed = True
-    if run_changed:
-        await db.commit()
 
-    await db.commit()
+def _describe_rls(table_name: str, state: Dict[str, Any]) -> str:
+    if not state["exists"]:
+        return f"Table '{table_name}' does not exist."
+    if not state["enabled"]:
+        return f"Row-level security is not enabled on '{table_name}'."
+    if not state["policies"]:
+        return f"Row-level security is enabled on '{table_name}' but it has no policies."
+    return f"Row-level security is enabled on '{table_name}' with {state['policies']} policies (forced: {state['forced']})."
 
 
 # -------------------------------------------------------------------------
@@ -309,11 +71,13 @@ async def _ensure_seeded_security_data(db: AsyncSession):
 # -------------------------------------------------------------------------
 @router.get("/stats", response_model=ApiResponse[SecuritySummaryStatsResponse])
 async def get_security_stats(db: AsyncSession = Depends(get_db)):
-    await _ensure_seeded_security_data(db)
-
     total_policies = (await db.execute(select(func.count(RLSPolicyModel.id)))).scalar() or 0
     active_policies = (await db.execute(
         select(func.count(RLSPolicyModel.id)).where(RLSPolicyModel.policy_status == "ACTIVE")
+    )).scalar() or 0
+
+    verified_policies = (await db.execute(
+        select(func.count(RLSPolicyModel.id)).where(RLSPolicyModel.last_verification_result == "VERIFIED")
     )).scalar() or 0
 
     total_runs = (await db.execute(select(func.count(TenantIsolationTestRun.id)))).scalar() or 0
@@ -341,10 +105,10 @@ async def get_security_stats(db: AsyncSession = Depends(get_db)):
     stats = SecuritySummaryStatsResponse(
         totalRlsPolicies=total_policies,
         activeRlsPolicies=active_policies,
-        policyCoverageRate=100.0 if total_policies > 0 else 0.0,
+        policyCoverageRate=round(verified_policies / total_policies * 100.0, 1) if total_policies > 0 else 0.0,
         totalTestRuns=total_runs,
         passedTestRuns=passed_runs,
-        isolationPassRate=round((passed_runs / total_runs * 100.0), 1) if total_runs > 0 else 100.0,
+        isolationPassRate=round((passed_runs / total_runs * 100.0), 1) if total_runs > 0 else 0.0,
         openFindingsCount=open_findings,
         criticalFindingsCount=critical_findings,
         remediatedFindingsCount=remediated_findings,
@@ -369,8 +133,6 @@ async def list_rls_policies(
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
 ):
-    await _ensure_seeded_security_data(db)
-
     query = select(RLSPolicyModel).order_by(RLSPolicyModel.policy_code.asc())
     if status and status != "ALL":
         query = query.where(RLSPolicyModel.policy_status == status)
@@ -445,7 +207,7 @@ async def create_rls_policy(payload: RLSPolicyCreate, db: AsyncSession = Depends
         policy_definition=payload.policyDefinition,
         policy_status=payload.policyStatus,
         last_verified_at=datetime.datetime.utcnow(),
-        last_verification_result="VERIFIED",
+        last_verification_result="NOT_VERIFIED",
         verification_latency_ms=1.2,
         enforcement_notes=payload.enforcementNotes,
     )
@@ -568,28 +330,26 @@ async def validate_rls_policy(policy_id: str, db: AsyncSession = Depends(get_db)
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
 
-    # Perform active PostgreSQL catalog validation test
     start_time = time.perf_counter()
-    table_check = await db.execute(text(f"SELECT 1 FROM information_schema.tables WHERE table_name = :tbl"), {"tbl": policy.table_name})
+    state = await _rls_state(db, policy.table_name)
     latency_ms = max(0.1, round((time.perf_counter() - start_time) * 1000, 2))
-    table_exists = table_check.scalar_one_or_none() is not None
 
     now = datetime.datetime.utcnow()
     policy.last_verified_at = now
-    policy.last_verification_result = "VERIFIED" if table_exists else "FAILED"
+    policy.last_verification_result = "VERIFIED" if _rls_is_enforced(state) else "FAILED"
     policy.verification_latency_ms = latency_ms
     await db.commit()
 
     return ApiResponse(
         success=True,
-        message=f"Policy '{policy.policy_code}' verified against active PostgreSQL catalog",
+        message=f"Policy '{policy.policy_code}' checked against the PostgreSQL catalog: {policy.last_verification_result}",
         data=RLSPolicyValidationResult(
             policyId=policy.id,
             policyCode=policy.policy_code,
             status=policy.last_verification_result,
             latencyMs=latency_ms,
             verifiedAt=now,
-            details=f"Postgres kernel catalog verification for table '{policy.table_name}': {'RLS Active' if table_exists else 'Table Not Found'}.",
+            details=_describe_rls(policy.table_name, state),
             enforcedQuerySample=f"SELECT count(*) FROM {policy.table_name} WHERE {policy.tenant_key_column} = current_setting('app.current_tenant_id', true)::uuid;"
         )
     )
@@ -607,8 +367,6 @@ async def list_isolation_tests(
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
 ):
-    await _ensure_seeded_security_data(db)
-
     query = select(TenantIsolationTestRun).order_by(desc(TenantIsolationTestRun.created_at))
     if status and status != "ALL":
         query = query.where(TenantIsolationTestRun.status == status)
@@ -733,34 +491,53 @@ async def execute_isolation_test_run(
     if not test_run:
         raise HTTPException(status_code=404, detail="Test run not found")
 
+    # Reads the target tenant's rows while scoped to the source tenant, under the application role.
     start_time = datetime.datetime.utcnow()
-    scenarios = test_run.test_scenarios or [
-        "State A cannot read State B's records",
-        "A user cannot change a tenant ID in a request to access another tenant",
-        "Cross-tenant updates and deletes are rejected",
-        "Connection-pool reuse does not leak a previous request's tenant context",
-    ]
-
+    tables = test_run.tables_in_scope or []
+    source = (test_run.source_tenant or "").strip().upper()
+    target = (test_run.target_tenant or "").strip().upper()
+    role_bypasses = bool(await db.scalar(text("SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user")))
     scenario_results = []
-    total_tests = len(scenarios) * 2
-    passed = total_tests
-    failed = 0
-
-    for idx, sc in enumerate(scenarios, 1):
+    for table_name in tables:
+        check_started = time.perf_counter()
+        state = await _rls_state(db, table_name)
+        outcome, evidence = "FAILED", _describe_rls(table_name, state)
+        if role_bypasses:
+            evidence = "The application database role bypasses row-level security."
+        elif _rls_is_enforced(state):
+            quoted = '"' + table_name.replace('"', '""') + '"'
+            count_target = text(f"SELECT count(*) FROM {quoted} WHERE upper(tenant_id) = :target")
+            await db.execute(text(SET_RLS_CONTEXT_SQL), {"tenant_ids": "", "bypass": "on"})
+            target_rows = await db.scalar(count_target, {"target": target})
+            await db.execute(text(SET_RLS_CONTEXT_SQL), {"tenant_ids": source, "bypass": "off"})
+            leaked = await db.scalar(count_target, {"target": target})
+            await db.execute(text(SET_RLS_CONTEXT_SQL), rls_params())
+            if not target_rows:
+                outcome, evidence = "INCONCLUSIVE", f"{target} has no rows in {table_name} to test against."
+            elif leaked:
+                evidence = f"{source} could read {leaked} of {target}'s {target_rows} rows in {table_name}."
+            else:
+                outcome, evidence = "PASSED", f"{source} read 0 of {target}'s {target_rows} rows in {table_name}."
         scenario_results.append({
-            "scenario": sc,
-            "status": "PASSED",
-            "assertion": f"Strict 403 Forbidden boundary returned. Zero cross-tenant data leaked.",
-            "latencyMs": round(4.5 + (idx * 1.2), 2)
+            "scenario": f"{source} cannot read {target} rows in {table_name}",
+            "status": outcome,
+            "assertion": evidence,
+            "latencyMs": round((time.perf_counter() - check_started) * 1000, 2),
         })
 
     end_time = datetime.datetime.utcnow()
-    latency_ms = round((end_time - start_time).total_seconds() * 1000 + 40.0, 1)
+    latency_ms = round((end_time - start_time).total_seconds() * 1000, 1)
+    passed = sum(1 for r in scenario_results if r["status"] == "PASSED")
+    failed = sum(1 for r in scenario_results if r["status"] == "FAILED")
+    if not scenario_results:
+        run_status = "NOT_EXECUTED"
+    else:
+        run_status = "FAILED" if failed else ("PASSED" if passed == len(scenario_results) else "INCONCLUSIVE")
 
-    test_run.status = "PASSED"
+    test_run.status = run_status
     test_run.start_time = start_time
     test_run.end_time = end_time
-    test_run.total_tests = total_tests
+    test_run.total_tests = len(scenario_results)
     test_run.passed_count = passed
     test_run.failed_count = failed
     test_run.execution_latency_ms = latency_ms
@@ -769,11 +546,11 @@ async def execute_isolation_test_run(
 
     return ApiResponse(
         success=True,
-        message=f"Isolation test run '{test_run_id}' executed with 100% pass rate",
+        message=f"Isolation test run '{test_run_id}': {run_status} ({passed} passed, {failed} failed)",
         data=TenantIsolationTestRunResult(
             testRunId=test_run_id,
-            status="PASSED",
-            totalTests=total_tests,
+            status=run_status,
+            totalTests=len(scenario_results),
             passedCount=passed,
             failedCount=failed,
             latencyMs=latency_ms,
@@ -795,8 +572,6 @@ async def list_isolation_findings(
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
 ):
-    await _ensure_seeded_security_data(db)
-
     query = select(IsolationFindingReport).order_by(desc(IsolationFindingReport.detected_at))
     if severity and severity != "ALL":
         query = query.where(IsolationFindingReport.severity == severity)
@@ -863,7 +638,7 @@ async def create_isolation_finding(
         remediation_owner=payload.remediationOwner,
         remediation_due_date=payload.remediationDueDate,
         resolution_notes=payload.resolutionNotes,
-        retest_status=payload.retestStatus,
+        retest_status="OPEN" if payload.retestStatus == "VERIFIED" else payload.retestStatus,
         detected_at=datetime.datetime.utcnow(),
     )
     db.add(finding)
@@ -919,6 +694,8 @@ async def update_isolation_finding(
     if payload.resolutionNotes is not None:
         finding.resolution_notes = payload.resolutionNotes
     if payload.retestStatus is not None:
+        if payload.retestStatus == "VERIFIED" and finding.retest_status != "VERIFIED":
+            raise HTTPException(status_code=400, detail="VERIFIED can only be set by a passing retest.")
         finding.retest_status = payload.retestStatus
         if payload.retestStatus in ["RESOLVED", "VERIFIED"]:
             finding.resolved_at = datetime.datetime.utcnow()
@@ -958,19 +735,29 @@ async def retest_isolation_finding(
         raise HTTPException(status_code=404, detail="Finding not found")
 
     now = datetime.datetime.utcnow()
-    finding.retest_status = "VERIFIED"
-    finding.resolved_at = now
+    state = await _rls_state(db, finding.affected_resource)
+    if not state["exists"]:
+        result_label = "INCONCLUSIVE"
+        details = f"'{finding.affected_resource}' is not a database table, so it has no automated retest."
+    elif _rls_is_enforced(state):
+        result_label = "PASS"
+        finding.retest_status = "VERIFIED"
+        finding.resolved_at = now
+        details = _describe_rls(finding.affected_resource, state)
+    else:
+        result_label = "FAIL"
+        finding.retest_status = "OPEN"
+        finding.resolved_at = None
+        details = _describe_rls(finding.affected_resource, state)
     await db.commit()
 
     return ApiResponse(
         success=True,
-        message=f"Finding '{finding.id}' successfully re-tested and marked VERIFIED",
         data=IsolationFindingRetestResult(
             findingId=finding.id,
-            retestStatus="VERIFIED",
-            verificationResult="PASS",
+            retestStatus=finding.retest_status,
+            verificationResult=result_label,
             testedAt=now,
-            details=f"Synthetic boundary penetration retest on '{finding.affected_resource}' passed without cross-tenant exposure."
+            details=details,
         )
     )
-

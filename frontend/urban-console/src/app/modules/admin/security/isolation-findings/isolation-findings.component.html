@@ -24,10 +24,7 @@
 
     <!-- Header Actions Strictly Single Row -->
     <div class="header-actions">
-      <button class="btn btn-refresh" (click)="loadFindings(); loadStats()" [disabled]="isLoading()" title="Reload findings">
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="isolation findings" (refresh)="loadFindings(); loadStats()"></app-refresh-button>
 
       <button class="btn btn-primary" (click)="openExportDialog()" title="Generate Compliance Audit Dossier">
         <app-icon name="ri-file-shield-line" [size]="16"></app-icon>

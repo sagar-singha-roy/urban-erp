@@ -29,15 +29,7 @@
       </button>
 
       <!-- Refresh Directory -->
-      <button
-        class="btn btn-refresh"
-        (click)="loadDirectory()"
-        [disabled]="isLoading()"
-        title="Refresh Directory"
-      >
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="tenant lifecycle" (refresh)="loadMasterStates(); loadDirectory(); loadSuspensionHistory()"></app-refresh-button>
 
       <!-- Global Change Status Launcher -->
       <button

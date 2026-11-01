@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../shared/components/refresh-button/refresh-button.component';
 import { DialogService } from '../../../core/services/dialog.service';
 import { KeycloakAuthService } from '../../../core/services/keycloak.service';
 import { LoadingService } from '../../../core/services/loading.service';
@@ -19,7 +20,7 @@ import { UlbStructureDialogComponent } from './dialogs/ulb-structure-dialog/ulb-
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     UlbFormDialogComponent,
     UlbStructureDialogComponent,
   ],
@@ -167,37 +168,6 @@ export class UlbManagementComponent implements OnInit {
         error: (err) => {
           this.dialogs.showToast(
             err.error?.detail || 'Unable to connect to Core Service API.',
-            'error',
-            3500,
-          );
-        },
-      });
-  }
-
-  onRefreshClick(): void {
-    this.loadingService.setMessage('Refreshing ULB directory...');
-    this.loadingService.show();
-    this.isLoading.set(true);
-    this.ulbService
-      .getUlbs()
-      .pipe(
-        finalize(() => {
-          this.isLoading.set(false);
-          this.loadingService.hide();
-        }),
-      )
-      .subscribe({
-        next: (ulbs) => {
-          this.ulbs.set(ulbs);
-          this.dialogs.showToast(
-            `Refreshed ${ulbs.length} ULB records successfully.`,
-            'success',
-            2500,
-          );
-        },
-        error: (err) => {
-          this.dialogs.showToast(
-            err.error?.detail || 'Could not fetch updated ULB records.',
             'error',
             3500,
           );

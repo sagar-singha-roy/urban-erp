@@ -1,4 +1,24 @@
 <div class="admin-dashboard-wrapper">
+  <!-- SECTION 0: EXECUTIVE INTELLIGENCE (ADM-A01, ADM-A02) -->
+  @if (activeSection() === 'executive') {
+    <div class="section-content">
+      <!-- Submenu 1: Global Command Dashboard (EXEC-01) -->
+      @if (activeItemId() === 'EXEC-01') {
+        <app-global-command-dashboard></app-global-command-dashboard>
+      }
+
+      <!-- Submenu 2: State & City Benchmarking Matrix (EXEC-02) -->
+      @if (activeItemId() === 'EXEC-02') {
+        <app-benchmarking-matrix></app-benchmarking-matrix>
+      }
+
+      <!-- Submenu 3: Consolidated Financial Ledger (EXEC-03) -->
+      @if (activeItemId() === 'EXEC-03') {
+        <app-financial-ledger></app-financial-ledger>
+      }
+    </div>
+  }
+
   <!-- SECTION 1: TENANCY & HIERARCHY -->
   @if (activeSection() === 'tenancy') {
     <div class="section-content">
