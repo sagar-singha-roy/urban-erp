@@ -456,88 +456,173 @@
   }
 }
 
-/* Tablet & Mobile Responsive */
-@media (max-width: 992px) {
-  .app-header {
-    .header-left {
-      .mobile-menu-btn {
-        display: flex;
-      }
-    }
+/* Mobile first: phone values are the default, wider screens restore the rest. */
+.app-header {
+  height: 56px;
+  padding: 0 0.75rem;
 
-    .header-center {
+  .header-left .mobile-menu-btn {
+    display: flex;
+  }
+
+  .brand-section {
+    .tenant-badge {
+      display: none;
+    }
+    .app-name {
+      font-size: 0.95rem;
+    }
+  }
+
+  .divider-v {
+    display: none;
+  }
+
+  .header-center {
+    display: none;
+  }
+
+  .active-module-pill {
+    padding: 0.25rem 0.5rem;
+
+    .domain-tag {
+      display: none;
+    }
+    .active-mod-info {
+      display: none;
+    }
+    .active-mod-name {
+      max-width: 120px;
+    }
+  }
+
+  .user-section {
+    gap: 0.5rem;
+
+    .user-meta {
       display: none;
     }
 
-    .active-module-pill {
-      .domain-tag {
-        display: none;
-      }
-      .active-mod-name {
-        max-width: 120px;
-      }
+    .btn-outline-light {
+      padding: 0.3rem 0.55rem;
+      font-size: 0.7rem;
     }
   }
+}
 
-  .sidebar-backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(2px);
-    z-index: 1050;
+.sidebar-backdrop {
+  display: block;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 1050;
+}
+
+.app-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 290px;
+  max-width: 85vw;
+  height: 100vh;
+  z-index: 1100;
+  transform: translateX(-100%);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.2);
+
+  &.mobile-open {
+    transform: translateX(0);
   }
 
-  .app-sidebar {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 290px;
-    max-width: 85vw;
-    height: 100vh;
-    z-index: 1100;
-    transform: translateX(-100%);
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.2);
+  .sidebar-mobile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
 
-    &.mobile-open {
-      transform: translateX(0);
-    }
-
-    .sidebar-mobile-header {
+    .mobile-brand {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding: 0.75rem 1rem;
-      margin-bottom: 0.5rem;
-      border-bottom: 1px solid #e2e8f0;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #0f172a;
+    }
 
-      .mobile-brand {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-weight: 700;
-        font-size: 0.9rem;
+    .sidebar-close-btn {
+      background: #f1f5f9;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+      cursor: pointer;
+
+      &:hover {
+        background: #e2e8f0;
         color: #0f172a;
       }
+    }
+  }
+}
 
-      .sidebar-close-btn {
-        background: #f1f5f9;
-        border: none;
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
+.app-content {
+  padding: 1rem 0.65rem;
+}
+
+.module-notice-banner {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+
+  .notice-left {
+    align-items: flex-start;
+  }
+}
+
+@media (min-width: 768px) {
+  .app-header {
+    height: 64px;
+    padding: 0 1.25rem;
+
+    .brand-section {
+      .tenant-badge {
+        display: block;
+      }
+      .app-name {
+        font-size: 1.05rem;
+      }
+    }
+
+    .divider-v {
+      display: block;
+    }
+
+    .active-module-pill {
+      padding: 0.35rem 0.75rem;
+
+      .active-mod-info {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #64748b;
-        cursor: pointer;
+      }
+    }
 
-        &:hover {
-          background: #e2e8f0;
-          color: #0f172a;
-        }
+    .user-section {
+      gap: 1rem;
+
+      .user-meta {
+        display: flex;
+      }
+
+      .btn-outline-light {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.75rem;
       }
     }
   }
@@ -545,59 +630,59 @@
   .app-content {
     padding: 1.25rem 1rem;
   }
+
+  .module-notice-banner {
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+
+    .notice-left {
+      align-items: center;
+    }
+  }
 }
 
-@media (max-width: 640px) {
+@media (min-width: 1024px) {
   .app-header {
-    height: 56px;
-    padding: 0 0.75rem;
-
-    .brand-section {
-      .tenant-badge {
-        display: none;
-      }
-      .app-name {
-        font-size: 0.95rem;
-      }
-    }
-
-    .divider-v {
+    .header-left .mobile-menu-btn {
       display: none;
     }
 
-    .active-module-pill {
-      padding: 0.25rem 0.5rem;
-      .active-mod-info {
-        display: none;
-      }
+    .header-center {
+      display: block;
     }
 
-    .user-section {
-      gap: 0.5rem;
-
-      .user-meta {
-        display: none;
+    .active-module-pill {
+      .domain-tag {
+        display: inline;
       }
-
-      .btn-outline-light {
-        padding: 0.3rem 0.55rem;
-        font-size: 0.7rem;
+      .active-mod-name {
+        max-width: 180px;
       }
+    }
+  }
+
+  .sidebar-backdrop {
+    display: none;
+  }
+
+  .app-sidebar {
+    position: static;
+    width: 270px;
+    max-width: none;
+    height: auto;
+    z-index: auto;
+    transform: none;
+    transition: none;
+    box-shadow: none;
+
+    .sidebar-mobile-header {
+      display: none;
     }
   }
 
   .app-content {
-    padding: 1rem 0.65rem;
-  }
-
-  .module-notice-banner {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-
-    .notice-left {
-      align-items: flex-start;
-    }
+    padding: 1.5rem 2rem;
   }
 }
 

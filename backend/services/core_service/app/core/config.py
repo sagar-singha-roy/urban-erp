@@ -1,6 +1,14 @@
 import os
 from pydantic_settings import BaseSettings
 
+PLATFORM_ULB_TYPE = "Platform"
+
+
+def _local_default(value: str) -> str:
+    """Development credentials never apply to production."""
+    return "" if os.getenv("ENVIRONMENT", "production") == "production" else value
+
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Urban ERP Core Service"
     API_V1_STR: str = "/api/v1"
@@ -9,14 +17,15 @@ class Settings(BaseSettings):
     # Database - Read/Write Replica Splitting (CQRS / Master-Replica)
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL", 
-        "postgresql+asyncpg://urban_app:urban_app_password123@localhost:5432/urban_erp"
+        _local_default("postgresql+asyncpg://urban_app:urban_app_password123@localhost:5432/urban_erp")
     )
     # Owner role for startup schema work and backups. Requests never use it, so RLS always applies to them.
     DB_ADMIN_URL: str = os.getenv(
         "DB_ADMIN_URL",
-        "postgresql+asyncpg://urban_admin:urban_password123@localhost:5432/urban_erp"
+        _local_default("postgresql+asyncpg://urban_admin:urban_password123@localhost:5432/urban_erp")
     )
     BACKUP_DIR: str = os.getenv("BACKUP_DIR", "backups")
+    BACKUP_ENCRYPTION_KEY: str = os.getenv("BACKUP_ENCRYPTION_KEY", "")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
     WRITE_DATABASE_URL: str = os.getenv("WRITE_DATABASE_URL", "")
     READ_DATABASE_URL: str = os.getenv("READ_DATABASE_URL", "")
@@ -59,3 +68,6 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 settings = Settings()
+
+if settings.ENVIRONMENT == "production" and not (settings.DATABASE_URL and settings.DB_ADMIN_URL):
+    raise RuntimeError("DATABASE_URL and DB_ADMIN_URL must be set in production.")

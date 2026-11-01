@@ -8,7 +8,7 @@ from sqlalchemy import select, desc, func, null, text
 from sqlalchemy.engine import make_url
 
 from app.core.auth import get_current_user, require_roles
-from app.core.backup_runner import run_backup, run_restore, start_background
+from app.core.backup_runner import new_backup_job, run_backup, run_drill, run_restore, start_background
 from app.core.config import settings
 from app.db.session import get_db
 from app.db.models import BackupPolicyModel, BackupJobModel, RestoreJobModel, DrillExecutionModel
@@ -286,25 +286,7 @@ async def trigger_on_demand_backup(
 
     now = datetime.datetime.utcnow()
     job_id = f"BKP-ONDEMAND-{now.strftime('%Y%m%d-%H%M%S')}"
-    new_job = BackupJobModel(
-        job_id=job_id,
-        policy_code=pol.policy_code,
-        policy_name=pol.policy_name,
-        environment=settings.ENVIRONMENT,
-        database_cluster=make_url(settings.admin_db_url).host or "",
-        database_name=make_url(settings.admin_db_url).database or "",
-        backup_type="Full Backup (pg_dump)",
-        execution_status="Running",
-        start_time=now,
-        completion_time=null(),
-        duration_seconds=0,
-        file_size_bytes=0,
-        file_size_formatted="0 B",
-        storage_location="Not written yet",
-        checksum_sha256="",
-        verification_status="Not Verified",
-        verification_result="Backup in progress.",
-    )
+    new_job = new_backup_job(pol, job_id, now)
     db.add(new_job)
     await db.commit()
     await db.refresh(new_job)
@@ -521,6 +503,19 @@ async def list_drills(db: AsyncSession = Depends(get_db)):
             for d in drills
         ],
     )
+
+
+@router.post("/drills/{drill_id}/run", response_model=ApiResponse[dict])
+async def start_dr_drill(drill_id: str, db: AsyncSession = Depends(get_db)):
+    drill = await db.scalar(select(DrillExecutionModel).where(DrillExecutionModel.id == drill_id))
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found.")
+    if drill.completion_status != "Scheduled":
+        raise HTTPException(status_code=409, detail="This drill has already run.")
+    drill.completion_status = "Running"
+    await db.commit()
+    start_background(run_drill(drill.id))
+    return ApiResponse(data={"id": drill.id, "completionStatus": "Running"})
 
 
 @router.post("/drills", response_model=ApiResponse[DrillExecutionResponse], status_code=status.HTTP_201_CREATED)

@@ -17,6 +17,7 @@ import {
   DrillExecutionPayload,
 } from '../../../../core/models/backup-dr.model';
 import { PolicyDialogComponent } from './dialogs/policy-dialog/policy-dialog.component';
+import { DataNoticeComponent } from '../../../../shared/components/data-notice/data-notice.component';
 import { RestoreDialogComponent } from './dialogs/restore-dialog/restore-dialog.component';
 import { DrillDialogComponent } from './dialogs/drill-dialog/drill-dialog.component';
 
@@ -29,6 +30,7 @@ import { DrillDialogComponent } from './dialogs/drill-dialog/drill-dialog.compon
     IconComponent, RefreshButtonComponent,
     PolicyDialogComponent,
     RestoreDialogComponent,
+    DataNoticeComponent,
     DrillDialogComponent,
   ],
   templateUrl: './backup-dr.component.html',
@@ -63,15 +65,6 @@ export class BackupDrComponent implements OnInit {
   // Filters: Policies
   policyStatusFilter: string = 'ALL';
 
-  // PITR Form Controls
-  pitrTargetTime: string = '';
-  pitrPointType: string = 'Transaction Timestamp';
-  pitrTargetEnv: string = 'Staging Recovery Sandbox';
-  pitrReason: string = '';
-  pitrApprovalRef: string = 'CR-2026-PITR-011';
-  pitrValidationRequired: boolean = true;
-  isSimulatingPitr = signal(false);
-  pitrSimResult = signal<string | null>(null);
 
   // Pagination for Jobs
   readonly currentPage = signal<number>(1);
@@ -210,6 +203,16 @@ export class BackupDrComponent implements OnInit {
     this.activeDialog.set('policy');
   }
 
+  runDrill(drill: { id: string }): void {
+    this.backupService.runDrill(drill.id).subscribe({
+      next: () => {
+        this.dialogs.showToast('Drill started. Use Refresh to see its result.', 'success');
+        this.loadDrills();
+      },
+      error: (err) => this.dialogs.showToast(err?.error?.detail || 'The drill could not be started.', 'error'),
+    });
+  }
+
   async approveRestore(restore: RestoreJobItem): Promise<void> {
     const confirmed = await this.dialogs.confirm({
       title: 'Approve restore',
@@ -294,23 +297,6 @@ export class BackupDrComponent implements OnInit {
         this.dialogs.showToast(msg, 'error');
       },
     });
-  }
-
-  simulatePitr(): void {
-    if (!this.pitrTargetTime) {
-      this.dialogs.showToast('Please select a recovery target time.', 'warning');
-      return;
-    }
-    this.isSimulatingPitr.set(true);
-    this.pitrSimResult.set(null);
-
-    setTimeout(() => {
-      this.isSimulatingPitr.set(false);
-      this.pitrSimResult.set(
-        `WAL replay simulation complete. Exactly 84 WAL segments required from archive. Estimated recovery time: 4m 12s. Zero checksum divergence detected against Aurora primary LSN.`
-      );
-      this.dialogs.showToast('PITR simulation validation passed.', 'success');
-    }, 1200);
   }
 }
 

@@ -5,6 +5,7 @@ import os
 import secrets
 import datetime
 from typing import Dict, Any, Optional
+from fastapi import Response
 from jose import jwt
 from app.core.config import settings
 
@@ -79,3 +80,23 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
         return payload
     except Exception:
         return None
+
+
+SESSION_COOKIE = "urban_session"
+CSRF_HEADER = "x-requested-with"
+
+
+def set_session_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        SESSION_COOKIE,
+        token,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        httponly=True,
+        secure=not settings.is_development,
+        samesite="lax",
+        path="/",
+    )
+
+
+def clear_session_cookie(response: Response) -> None:
+    response.delete_cookie(SESSION_COOKIE, path="/", secure=not settings.is_development, httponly=True, samesite="lax")

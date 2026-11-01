@@ -16,7 +16,7 @@ from app.core.security import create_access_token
 from app.main import app
 from app.schemas.auth import SignUpRequest
 
-PUBLIC_ROUTES = {("POST", "/api/v1/auth/signin"), ("POST", "/api/v1/auth/signup"), ("GET", "/health")}
+PUBLIC_ROUTES = {("POST", "/api/v1/auth/signin"), ("POST", "/api/v1/auth/signup"), ("POST", "/api/v1/auth/logout"), ("GET", "/health")}
 SUPER_ADMIN_PREFIXES = (
     "/api/v1/iam",
     "/api/v1/security",

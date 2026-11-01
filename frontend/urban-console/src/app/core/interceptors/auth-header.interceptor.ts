@@ -25,10 +25,16 @@ export const authHeaderInterceptor: HttpInterceptorFn = (req, next) => {
     headers = headers.set('X-Sub-Tenant-ID', subTenantId);
   }
 
-  const clonedReq = req.clone({ headers });
+  // Services still set this from an empty token; the session cookie carries authentication now.
+  if (/Bearer (undefined|null)?$/.test(headers.get('Authorization') ?? '')) {
+    headers = headers.delete('Authorization');
+  }
+  headers = headers.set('X-Requested-With', 'SUVIDHA');
+
+  const clonedReq = req.clone({ headers, withCredentials: true });
   return next(clonedReq).pipe(
     catchError((err: unknown) => {
-      if (token && err instanceof HttpErrorResponse && err.status === 401) {
+      if (authService.isAuthenticated() && err instanceof HttpErrorResponse && err.status === 401) {
         authService.logout();
         router.navigate(['/login']);
       }

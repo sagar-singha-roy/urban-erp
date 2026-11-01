@@ -5,6 +5,16 @@ export const PAGE_SIZES = [5, 10, 20, 50];
 /** Page and rows-per-page for each table on a page, addressed by a key. */
 export class PagerState {
   private readonly state = signal<Record<string, { page: number; limit: number }>>({});
+  private readonly terms = signal<Record<string, string>>({});
+
+  search(key: string): string {
+    return this.terms()[key] ?? '';
+  }
+
+  setSearch(key: string, term: string): void {
+    this.terms.update((all) => ({ ...all, [key]: term }));
+    this.setPage(key, 1);
+  }
 
   private current(key: string) {
     return this.state()[key] ?? { page: 1, limit: PAGE_SIZES[1] };

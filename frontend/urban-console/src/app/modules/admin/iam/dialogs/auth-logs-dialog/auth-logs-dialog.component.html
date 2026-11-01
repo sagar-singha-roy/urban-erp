@@ -62,7 +62,8 @@
             <p>No authentication events match the selected criteria.</p>
           </div>
         } @else {
-          <div class="table-responsive">
+          <app-table-search [state]="pagers" key="t1"></app-table-search>
+<div class="table-responsive">
             <table class="logs-table">
               <thead>
                 <tr>
@@ -76,7 +77,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (log of (logs()) | slice:pagers.start('t1', (logs()).length):pagers.end('t1', (logs()).length); track log.id) {
+                @for (log of (logs() | rowSearch:pagers.search('t1')) | slice:pagers.start('t1', (logs() | rowSearch:pagers.search('t1')).length):pagers.end('t1', (logs() | rowSearch:pagers.search('t1')).length); track log.id) {
                   <tr>
                     <td class="font-mono text-nowrap">
                       {{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}
@@ -113,7 +114,7 @@
               </tbody>
             </table>
           </div>
-<app-table-pager [state]="pagers" key="t1" [total]="(logs()).length"></app-table-pager>
+<app-table-pager [state]="pagers" key="t1" [total]="(logs() | rowSearch:pagers.search('t1')).length"></app-table-pager>
         }
       </div>
 

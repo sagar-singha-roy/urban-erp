@@ -17,11 +17,13 @@ from app.schemas.ulb import (
     WardCreate,
     WardResponse,
 )
+from app.core.config import PLATFORM_ULB_TYPE
 from app.core.auth import (
     ensure_tenant_access,
     get_current_user,
     is_super_admin,
     require_path_tenant_access,
+    require_permission,
     require_roles,
     tenant_scope_filter,
 )
@@ -59,6 +61,7 @@ async def list_ulbs(
         .order_by(Tenant.name)
     )
 
+    stmt = stmt.where(Tenant.ulb_type != PLATFORM_ULB_TYPE)
     if not is_super_admin(user):
         stmt = stmt.where(tenant_scope_filter(user))
 
@@ -505,7 +508,7 @@ async def delete_ulb(
 async def list_zones(
     tenant_id: str,
     db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission("PTX-P01", "VIEW")),
 ):
     stmt = (
         select(
@@ -540,7 +543,7 @@ async def create_zone(
     tenant_id: str,
     payload: ZoneCreate,
     db: AsyncSession = Depends(get_write_db),
-    user: dict = Depends(require_roles(["super_admin", "state_director", "revenue_officer"])),
+    user: dict = Depends(require_permission("PTX-P01", "UPDATE")),
 ):
     # Verify tenant exists
     t_res = await db.execute(select(Tenant).where(Tenant.tenant_id == tenant_id))
@@ -579,7 +582,7 @@ async def delete_zone(
     tenant_id: str,
     zone_id: str,
     db: AsyncSession = Depends(get_write_db),
-    user: dict = Depends(require_roles(["super_admin", "state_director", "revenue_officer"])),
+    user: dict = Depends(require_permission("PTX-P01", "UPDATE")),
 ):
     result = await db.execute(
         select(Zone).where(Zone.id == zone_id, Zone.tenant_id == tenant_id)
@@ -603,7 +606,7 @@ async def delete_zone(
 async def list_wards(
     tenant_id: str,
     db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_permission("PTX-P01", "VIEW")),
 ):
     stmt = (
         select(
@@ -651,7 +654,7 @@ async def create_ward(
     tenant_id: str,
     payload: WardCreate,
     db: AsyncSession = Depends(get_write_db),
-    user: dict = Depends(require_roles(["super_admin", "state_director", "revenue_officer"])),
+    user: dict = Depends(require_permission("PTX-P01", "UPDATE")),
 ):
     # Verify tenant exists
     t_res = await db.execute(select(Tenant).where(Tenant.tenant_id == tenant_id))
@@ -708,7 +711,7 @@ async def delete_ward(
     tenant_id: str,
     ward_id: str,
     db: AsyncSession = Depends(get_write_db),
-    user: dict = Depends(require_roles(["super_admin", "state_director", "revenue_officer"])),
+    user: dict = Depends(require_permission("PTX-P01", "UPDATE")),
 ):
     result = await db.execute(
         select(Ward).where(Ward.id == ward_id, Ward.tenant_id == tenant_id)

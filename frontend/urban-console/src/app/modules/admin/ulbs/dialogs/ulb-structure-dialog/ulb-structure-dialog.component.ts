@@ -1,4 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, inject, signal } from '@angular/core';
+import { RowSearchPipe } from '../../../../../shared/components/table-pager/row-search.pipe';
+import { TableSearchComponent } from '../../../../../shared/components/table-pager/table-search.component';
 import { PagerState, TablePagerComponent } from '../../../../../shared/components/table-pager/table-pager.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -18,7 +20,7 @@ import {
 @Component({
   selector: 'app-ulb-structure-dialog',
   standalone: true,
-  imports: [TablePagerComponent, CommonModule, FormsModule, IconComponent],
+  imports: [TablePagerComponent, RowSearchPipe, TableSearchComponent, CommonModule, FormsModule, IconComponent],
   templateUrl: './ulb-structure-dialog.component.html',
   styleUrl: './ulb-structure-dialog.component.scss',
 })

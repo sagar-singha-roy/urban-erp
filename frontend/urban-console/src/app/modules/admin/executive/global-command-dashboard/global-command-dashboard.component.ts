@@ -1,4 +1,6 @@
 import { Component, OnInit, WritableSignal, inject, signal, computed } from '@angular/core';
+import { RowSearchPipe } from '../../../../shared/components/table-pager/row-search.pipe';
+import { TableSearchComponent } from '../../../../shared/components/table-pager/table-search.component';
 import { PagerState, TablePagerComponent } from '../../../../shared/components/table-pager/table-pager.component';
 import { Observable } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -23,7 +25,7 @@ export type ExecutiveTab = 'overview' | 'revenue' | 'parcels' | 'grievances' | '
 @Component({
   selector: 'app-global-command-dashboard',
   standalone: true,
-  imports: [TablePagerComponent, CommonModule, FormsModule, IconComponent, RefreshButtonComponent, DataNoticeComponent],
+  imports: [TablePagerComponent, RowSearchPipe, TableSearchComponent, CommonModule, FormsModule, IconComponent, RefreshButtonComponent, DataNoticeComponent],
   templateUrl: './global-command-dashboard.component.html',
   styleUrl: './global-command-dashboard.component.scss',
 })

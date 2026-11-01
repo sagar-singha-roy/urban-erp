@@ -12,6 +12,7 @@ from sqlalchemy import and_, distinct, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import require_roles
+from app.core.config import PLATFORM_ULB_TYPE
 from app.db.models import Building, ModuleModel, PropertyParcel, PropertyUnit, StateTenant, Tenant, User
 from app.db.session import get_read_db
 from app.schemas.executive import (
@@ -76,7 +77,7 @@ def _tenant_condition(states: List[str], ulbs: List[str]):
 
 
 async def _tenant_rollups(db: AsyncSession, states: List[str], ulbs: List[str]) -> List[TenantRollup]:
-    stmt = select(Tenant).order_by(Tenant.name)
+    stmt = select(Tenant).where(Tenant.ulb_type != PLATFORM_ULB_TYPE).order_by(Tenant.name)
     condition = _tenant_condition(states, ulbs)
     if condition is not None:
         stmt = stmt.where(condition)
@@ -140,7 +141,7 @@ def _unavailable(model, reason: str, **fields):
 async def get_filter_options(db: AsyncSession = Depends(get_read_db)):
     """Filter values derived from platform records. Empty lists mean no records exist yet."""
     states = (await db.scalars(select(StateTenant).order_by(StateTenant.state_name))).all()
-    tenants = (await db.scalars(select(Tenant).order_by(Tenant.name))).all()
+    tenants = (await db.scalars(select(Tenant).where(Tenant.ulb_type != PLATFORM_ULB_TYPE).order_by(Tenant.name))).all()
     modules = (await db.execute(select(ModuleModel.code, ModuleModel.name).order_by(ModuleModel.display_order))).all()
     categories = (await db.scalars(select(distinct(PropertyUnit.usage_category)).order_by(PropertyUnit.usage_category))).all()
     ulb_types = sorted({t.ulb_type for t in tenants if t.ulb_type})

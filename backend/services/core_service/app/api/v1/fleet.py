@@ -10,6 +10,7 @@ from sqlalchemy import select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import request_metrics
 from app.core.auth import require_roles
 from app.core.config import settings
 from app.core.redis import redis_client
@@ -59,7 +60,7 @@ async def _probe_redis() -> Tuple[str, Optional[float]]:
     return HEALTHY, round((time.perf_counter() - started) * 1000, 1)
 
 
-def _service(code: str, name: str, description: str, category: str, base_url: str, endpoint: str, status: str, latency: Optional[float]) -> MicroserviceRegistryResponse:
+def _service(code: str, name: str, description: str, category: str, base_url: str, method: str, endpoint: str, status: str, latency: Optional[float], measured: bool = False) -> MicroserviceRegistryResponse:
     return MicroserviceRegistryResponse(
         id=f"builtin-{code.lower()}",
         serviceCode=code,
@@ -70,7 +71,7 @@ def _service(code: str, name: str, description: str, category: str, base_url: st
         environments=[settings.ENVIRONMENT],
         baseUrl=base_url,
         healthCheckEndpoint=endpoint,
-        healthCheckMethod="GET",
+        healthCheckMethod=method,
         healthCheckIntervalSeconds=0,
         timeoutSeconds=3,
         retryCount=0,
@@ -80,6 +81,9 @@ def _service(code: str, name: str, description: str, category: str, base_url: st
         version="",
         region="",
         avgLatencyMs=latency,
+        errorRatePct=request_metrics.error_rate_pct() if measured else None,
+        cpuUsagePct=request_metrics.cpu_pct() if measured else None,
+        memoryUsagePct=request_metrics.memory_pct() if measured else None,
         createdAt=SERVICE_STARTED_AT,
     )
 
@@ -119,10 +123,10 @@ async def _measure_builtin(db: AsyncSession) -> List[MicroserviceRegistryRespons
         _probe_http(f"{settings.KEYCLOAK_URL}/realms/{settings.KEYCLOAK_REALM}", 3.0),
     )
     return [
-        _service("CORE-API", settings.PROJECT_NAME, "This API instance, which is answering this request.", "Core Platform", "", "/health", HEALTHY, None),
-        _service("POSTGRES", "PostgreSQL", "Primary database connection.", "Data", f"{database.host}:{database.port or 5432}", "SELECT 1", *db_probe),
-        _service("REDIS", "Redis Cache", "Shared cache connection.", "Data", "", "PING", *redis_probe),
-        _service("KEYCLOAK", "Keycloak", "Identity provider realm endpoint.", "Identity", settings.KEYCLOAK_URL, f"/realms/{settings.KEYCLOAK_REALM}", *keycloak_probe),
+        _service("CORE-API", settings.PROJECT_NAME, "This API instance, which is answering this request.", "Core Platform", "", "GET", "/health", HEALTHY, None, measured=True),
+        _service("POSTGRES", "PostgreSQL", "Primary database connection.", "Data", f"{database.host}:{database.port or 5432}", "SQL", "SELECT 1", *db_probe),
+        _service("REDIS", "Redis Cache", "Shared cache connection.", "Data", "", "REDIS", "PING", *redis_probe),
+        _service("KEYCLOAK", "Keycloak", "Identity provider realm endpoint.", "Identity", settings.KEYCLOAK_URL, "GET", f"/realms/{settings.KEYCLOAK_REALM}", *keycloak_probe),
     ]
 
 
@@ -149,6 +153,9 @@ async def get_cluster_stats(db: AsyncSession = Depends(get_read_db)):
             unavailableServices=sum(1 for s in services if s.status == UNAVAILABLE),
             averageResponseTimeMs=round(sum(latencies) / len(latencies), 1) if latencies else None,
             activeDbConnections=connections or 0,
+            errorRatePct=request_metrics.error_rate_pct(),
+            cpuUtilisationPct=request_metrics.cpu_pct(),
+            memoryUtilisationPct=request_metrics.memory_pct(),
         )
     )
 

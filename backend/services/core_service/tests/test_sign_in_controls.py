@@ -38,6 +38,45 @@ class RateLimitTests(unittest.TestCase):
             self.assertEqual(rate_limit.retry_after("k"), 0)
 
 
+class SharedRateLimitTests(unittest.IsolatedAsyncioTestCase):
+    async def test_uses_redis_when_connected(self):
+        from unittest.mock import AsyncMock
+
+        fake = AsyncMock()
+        fake.incr.return_value = 1
+        fake.get.return_value = str(rate_limit.MAX_FAILURES)
+        fake.ttl.return_value = 120
+        with patch.object(rate_limit.redis_client, "redis", fake):
+            await rate_limit.fail("k")
+            fake.expire.assert_awaited_once()
+            self.assertEqual(await rate_limit.check("k"), 120)
+
+
+class SessionCookieTests(unittest.TestCase):
+    def test_cookie_is_http_only(self):
+        from fastapi import Response
+
+        from app.core.security import SESSION_COOKIE, set_session_cookie
+
+        response = Response()
+        set_session_cookie(response, "token")
+        header = response.headers["set-cookie"].lower()
+        self.assertIn(SESSION_COOKIE, header)
+        self.assertIn("httponly", header)
+        self.assertIn("samesite=lax", header)
+
+    def test_cookie_write_needs_csrf_header(self):
+        from fastapi.testclient import TestClient
+
+        from app.core.security import SESSION_COOKIE, create_access_token
+        from app.main import app
+
+        client = TestClient(app, raise_server_exceptions=False)
+        client.cookies.set(SESSION_COOKIE, create_access_token({"sub": "x"}))
+        self.assertEqual(client.post("/api/v1/iam/users", json={}).status_code, 403)
+        self.assertEqual(client.post("/api/v1/iam/users", json={}).json()["detail"], "Missing CSRF header")
+
+
 class KeycloakAudienceTests(unittest.TestCase):
     def test_accepts_this_client(self):
         self.assertTrue(keycloak_token_is_for_this_client({"aud": [settings.KEYCLOAK_CLIENT_ID]}))

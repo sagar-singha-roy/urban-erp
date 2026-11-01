@@ -68,6 +68,7 @@ services:
       ENVIRONMENT: development
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
       AUDIT_SIGNING_KEY: ${AUDIT_SIGNING_KEY:-}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-}
       CORS_ORIGINS: http://localhost:4200
       PORT: 8000
       DATABASE_URL: postgresql+asyncpg://urban_app:${APP_DB_PASSWORD:?Set it in .env}@postgres:5432/urban_erp

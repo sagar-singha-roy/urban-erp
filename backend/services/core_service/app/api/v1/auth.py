@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
@@ -11,9 +11,9 @@ from app.schemas.auth import (
 )
 from app.core import rate_limit
 from app.core.auth import BLOCKED_ACCOUNT_STATUSES
-from app.core.security import hash_password, verify_password, create_access_token, decode_access_token
+from app.core.security import clear_session_cookie, hash_password, set_session_cookie, verify_password, create_access_token, decode_access_token
 from app.core.auth import get_current_user
-from app.core.config import settings
+from app.core.config import PLATFORM_ULB_TYPE, settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication & SSO"])
 
@@ -201,7 +201,7 @@ ROLE_DEFAULT_MODULES: Dict[str, str] = {
 }
 
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-async def signup(payload: SignUpRequest, db: AsyncSession = Depends(get_write_db)):
+async def signup(payload: SignUpRequest, response: Response, db: AsyncSession = Depends(get_write_db)):
     # Check duplicate
     existing = await db.scalar(
         select(User).where(or_(User.username == payload.username, User.email == payload.email))
@@ -246,6 +246,7 @@ async def signup(payload: SignUpRequest, db: AsyncSession = Depends(get_write_db
         "assigned_modules": user.assigned_modules.split(",")
     }
     accessToken = create_access_token(token_claims)
+    set_session_cookie(response, accessToken)
 
     userProfile = UserProfileResponse(
         id=user.id,
@@ -277,7 +278,7 @@ async def _get_accessible_tenants(
     No hardcoded fallbacks.
     """
     state_tenants = (await db.scalars(select(StateTenant).order_by(StateTenant.state_name))).all()
-    all_ulbs = (await db.scalars(select(Tenant).order_by(Tenant.name))).all()
+    all_ulbs = (await db.scalars(select(Tenant).where(Tenant.ulb_type != PLATFORM_ULB_TYPE).order_by(Tenant.name))).all()
 
     ulbs_by_state: Dict[str, List[AccessibleUlb]] = {}
     for u in all_ulbs:
@@ -332,7 +333,7 @@ async def _get_accessible_tenants(
     return accessible_tenants
 
 @router.post("/signin", response_model=AuthResponse)
-async def signin(payload: SignInRequest, request: Request, db: AsyncSession = Depends(get_write_db)):
+async def signin(payload: SignInRequest, request: Request, response: Response, db: AsyncSession = Depends(get_write_db)):
     identifier = payload.identifier
     if not identifier:
         raise HTTPException(
@@ -340,7 +341,7 @@ async def signin(payload: SignInRequest, request: Request, db: AsyncSession = De
             detail="Official Email or Username is required."
         )
     throttle_key = f"{request.client.host if request.client else 'unknown'}:{identifier.lower()}"
-    wait = rate_limit.retry_after(throttle_key)
+    wait = await rate_limit.check(throttle_key)
     if wait:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -352,7 +353,7 @@ async def signin(payload: SignInRequest, request: Request, db: AsyncSession = De
     )
 
     if not user or not verify_password(payload.password, user.password_hash):
-        rate_limit.record_failure(throttle_key)
+        await rate_limit.fail(throttle_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials. Please verify your username/email and password."
@@ -364,7 +365,7 @@ async def signin(payload: SignInRequest, request: Request, db: AsyncSession = De
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is deactivated. Contact Municipal Administrator."
         )
-    rate_limit.clear(throttle_key)
+    await rate_limit.reset(throttle_key)
 
     effective_tenant = user.tenant_id
     if gup_rec:
@@ -385,6 +386,7 @@ async def signin(payload: SignInRequest, request: Request, db: AsyncSession = De
         "assigned_modules": modulesList
     }
     accessToken = create_access_token(token_claims)
+    set_session_cookie(response, accessToken)
 
     userProfile = UserProfileResponse(
         id=user.id,
@@ -400,6 +402,12 @@ async def signin(payload: SignInRequest, request: Request, db: AsyncSession = De
 
     accessible_tenants = await _get_accessible_tenants(db, user.role, effective_tenant)
     return AuthResponse(accessToken=accessToken, user=userProfile, accessibleTenants=accessible_tenants)
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(response: Response):
+    clear_session_cookie(response)
+    response.status_code = status.HTTP_204_NO_CONTENT
+
 
 @router.get("/me", response_model=UserProfileResponse)
 async def get_me(user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_read_db)):

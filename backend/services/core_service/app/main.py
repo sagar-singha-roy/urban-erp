@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -10,6 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.db.rls import app_role_bypasses_rls, apply_rls
 from app.db.session import engine, Base
+from app.api.v1.iam import _seed_standard_roles_if_empty
+from app.core.backup_runner import scheduler_loop
+from app.core.request_metrics import record_response
 from app.db.seed import seed_initial_data
 from app.api.v1.properties import router as properties_router
 from app.api.v1.boundaries import router as boundaries_router
@@ -35,6 +39,7 @@ async def lifespan(app: FastAPI):
             await apply_rls(conn)
         async with AsyncSession(admin_engine, expire_on_commit=False) as session:
             await seed_initial_data(session)
+            await _seed_standard_roles_if_empty(session)
     except Exception as e:
         logger.exception("Database bootstrap failed: %s", e)
         if not settings.is_development:
@@ -49,7 +54,11 @@ async def lifespan(app: FastAPI):
                 raise RuntimeError(message)
             logger.error(message)
 
+    scheduler = asyncio.create_task(scheduler_loop())
+
     yield
+
+    scheduler.cancel()
 
     # Cleanup
     await redis_client.close()
@@ -78,7 +87,9 @@ class ServerErrorResponder:
 
         async def tracking_send(message):
             nonlocal started
-            started = started or message["type"] == "http.response.start"
+            if message["type"] == "http.response.start":
+                started = True
+                record_response(message["status"])
             await send(message)
 
         try:
@@ -87,6 +98,7 @@ class ServerErrorResponder:
             logger.exception("Unhandled error on %s %s", scope.get("method"), scope.get("path"))
             if started:
                 raise
+            record_response(500)
             response = JSONResponse({"detail": "The server could not complete this request."}, status_code=500)
             await response(scope, receive, send)
 

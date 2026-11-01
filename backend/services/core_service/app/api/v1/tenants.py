@@ -12,6 +12,7 @@ from app.schemas.tenant import (
     StateTenantCreate, StateTenantUpdate, StateTenantResponse, TenantAuditLogResponse,
     MasterStateResponse, DistrictResponse, CityResponse
 )
+from app.core.config import PLATFORM_ULB_TYPE
 from app.core.auth import get_current_user, get_current_tenant, is_super_admin, require_roles, tenant_scope_filter
 from app.core.redis import redis_client
 
@@ -39,6 +40,7 @@ async def list_tenants(
         .outerjoin(PropertyParcel, PropertyParcel.tenant_id == Tenant.tenant_id)
         .outerjoin(Ward, Ward.tenant_id == Tenant.tenant_id)
     )
+    stmt = stmt.where(Tenant.ulb_type != PLATFORM_ULB_TYPE)
     if not is_super_admin(user):
         stmt = stmt.where(tenant_scope_filter(user))
     if search:

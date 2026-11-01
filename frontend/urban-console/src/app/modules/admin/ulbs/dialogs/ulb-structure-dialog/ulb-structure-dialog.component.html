@@ -90,7 +90,8 @@
             </div>
 
             <!-- Zones Table -->
-            <div class="structure-table-wrap">
+            <app-table-search [state]="pagers" key="t1"></app-table-search>
+<div class="structure-table-wrap">
               <table class="suvidha-table mini-table">
                 <thead>
                   <tr>
@@ -101,7 +102,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (z of (zones()) | slice:pagers.start('t1', (zones()).length):pagers.end('t1', (zones()).length); track z.id) {
+                  @for (z of (zones() | rowSearch:pagers.search('t1')) | slice:pagers.start('t1', (zones() | rowSearch:pagers.search('t1')).length):pagers.end('t1', (zones() | rowSearch:pagers.search('t1')).length); track z.id) {
                     <tr>
                       <td>
                         <span class="code-pill">{{ z.code }}</span>
@@ -135,7 +136,7 @@
                 </tbody>
               </table>
             </div>
-<app-table-pager [state]="pagers" key="t1" [total]="(zones()).length"></app-table-pager>
+<app-table-pager [state]="pagers" key="t1" [total]="(zones() | rowSearch:pagers.search('t1')).length"></app-table-pager>
           </div>
         }
 
@@ -202,7 +203,8 @@
             </div>
 
             <!-- Wards Table -->
-            <div class="structure-table-wrap">
+            <app-table-search [state]="pagers" key="t2"></app-table-search>
+<div class="structure-table-wrap">
               <table class="suvidha-table mini-table">
                 <thead>
                   <tr>
@@ -216,7 +218,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (w of (wards()) | slice:pagers.start('t2', (wards()).length):pagers.end('t2', (wards()).length); track w.id) {
+                  @for (w of (wards() | rowSearch:pagers.search('t2')) | slice:pagers.start('t2', (wards() | rowSearch:pagers.search('t2')).length):pagers.end('t2', (wards() | rowSearch:pagers.search('t2')).length); track w.id) {
                     <tr>
                       <td>
                         <span class="code-pill">#{{ w.wardNumber }}</span>
@@ -263,7 +265,7 @@
                 </tbody>
               </table>
             </div>
-<app-table-pager [state]="pagers" key="t2" [total]="(wards()).length"></app-table-pager>
+<app-table-pager [state]="pagers" key="t2" [total]="(wards() | rowSearch:pagers.search('t2')).length"></app-table-pager>
           </div>
         }
       </div>

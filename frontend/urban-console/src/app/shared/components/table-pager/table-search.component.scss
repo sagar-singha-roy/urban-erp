@@ -1,0 +1,25 @@
+.table-search {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 0.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+@media (min-width: 768px) {
+  .table-search {
+    max-width: 320px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .table-search {
+    min-height: 38px;
+  }
+}

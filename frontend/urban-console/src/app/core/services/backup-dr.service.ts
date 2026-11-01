@@ -131,6 +131,14 @@ export class BackupDrService {
       .pipe(map(unwrapResponse));
   }
 
+  runDrill(drillId: string): Observable<unknown> {
+    return this.http
+      .post<ApiResponse<unknown>>(`${this.baseUrl}/drills/${drillId}/run`, {}, {
+        headers: this.getHeaders(),
+      })
+      .pipe(map(unwrapResponse));
+  }
+
   approveRestore(restoreId: string): Observable<unknown> {
     return this.http
       .post<ApiResponse<unknown>>(`${this.baseUrl}/restores/${restoreId}/approve`, {}, {

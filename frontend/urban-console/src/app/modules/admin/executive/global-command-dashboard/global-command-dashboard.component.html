@@ -283,7 +283,8 @@
             <span class="badge badge-success">Audited Data</span>
           </div>
 
-          <div class="trends-table-wrapper">
+          <app-table-search [state]="pagers" key="t1"></app-table-search>
+<div class="trends-table-wrapper">
             <table class="data-table">
               <thead>
                 <tr>
@@ -296,7 +297,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (tr of (overview.macroTrends) | slice:pagers.start('t1', (overview.macroTrends).length):pagers.end('t1', (overview.macroTrends).length); track tr.period) {
+                @for (tr of (overview.macroTrends | rowSearch:pagers.search('t1')) | slice:pagers.start('t1', (overview.macroTrends | rowSearch:pagers.search('t1')).length):pagers.end('t1', (overview.macroTrends | rowSearch:pagers.search('t1')).length); track tr.period) {
                   <tr>
                     <td><strong>{{ show(tr.period) }}</strong></td>
                     <td class="text-success font-mono font-bold">₹{{ formatNumber(tr.revenueCr) }} Cr</td>
@@ -320,7 +321,7 @@
               </tbody>
             </table>
           </div>
-<app-table-pager [state]="pagers" key="t1" [total]="(overview.macroTrends).length"></app-table-pager>
+<app-table-pager [state]="pagers" key="t1" [total]="(overview.macroTrends | rowSearch:pagers.search('t1')).length"></app-table-pager>
         </div>
 
         <!-- D. State Benchmark League Table -->
@@ -556,7 +557,8 @@
             <span class="badge badge-outline">{{ revenueFilters().financialYear }}</span>
           </div>
 
-          <div class="table-responsive">
+          <app-table-search [state]="pagers" key="t3"></app-table-search>
+<div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
@@ -569,7 +571,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (item of (rev.breakdown) | slice:pagers.start('t3', (rev.breakdown).length):pagers.end('t3', (rev.breakdown).length); track item.name) {
+                @for (item of (rev.breakdown | rowSearch:pagers.search('t3')) | slice:pagers.start('t3', (rev.breakdown | rowSearch:pagers.search('t3')).length):pagers.end('t3', (rev.breakdown | rowSearch:pagers.search('t3')).length); track item.name) {
                   <tr>
                     <td><strong>{{ show(item.name) }}</strong></td>
                     <td class="font-mono">{{ formatInr(item.demand) }}</td>
@@ -591,7 +593,7 @@
               </tbody>
             </table>
           </div>
-<app-table-pager [state]="pagers" key="t3" [total]="(rev.breakdown).length"></app-table-pager>
+<app-table-pager [state]="pagers" key="t3" [total]="(rev.breakdown | rowSearch:pagers.search('t3')).length"></app-table-pager>
         </div>
 
         <!-- D. Monthly Velocity Card -->
@@ -603,7 +605,8 @@
             </div>
           </div>
 
-          <div class="table-responsive">
+          <app-table-search [state]="pagers" key="t4"></app-table-search>
+<div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
@@ -614,7 +617,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (m of (rev.monthlyTrend) | slice:pagers.start('t4', (rev.monthlyTrend).length):pagers.end('t4', (rev.monthlyTrend).length); track m.month) {
+                @for (m of (rev.monthlyTrend | rowSearch:pagers.search('t4')) | slice:pagers.start('t4', (rev.monthlyTrend | rowSearch:pagers.search('t4')).length):pagers.end('t4', (rev.monthlyTrend | rowSearch:pagers.search('t4')).length); track m.month) {
                   <tr>
                     <td><strong>{{ show(m.month) }}</strong></td>
                     <td class="font-mono">₹{{ show(m.demandCr) }} Cr</td>
@@ -632,7 +635,7 @@
               </tbody>
             </table>
           </div>
-<app-table-pager [state]="pagers" key="t4" [total]="(rev.monthlyTrend).length"></app-table-pager>
+<app-table-pager [state]="pagers" key="t4" [total]="(rev.monthlyTrend | rowSearch:pagers.search('t4')).length"></app-table-pager>
         </div>
       }
     </section>
@@ -781,7 +784,8 @@
             </div>
           </div>
 
-          <div class="table-responsive">
+          <app-table-search [state]="pagers" key="t5"></app-table-search>
+<div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
@@ -792,7 +796,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (s of (p.surveyDistribution) | slice:pagers.start('t5', (p.surveyDistribution).length):pagers.end('t5', (p.surveyDistribution).length); track s.method) {
+                @for (s of (p.surveyDistribution | rowSearch:pagers.search('t5')) | slice:pagers.start('t5', (p.surveyDistribution | rowSearch:pagers.search('t5')).length):pagers.end('t5', (p.surveyDistribution | rowSearch:pagers.search('t5')).length); track s.method) {
                   <tr>
                     <td><strong>{{ show(s.method) }}</strong></td>
                     <td class="font-mono">{{ formatNumber(s.count) }}</td>
@@ -817,7 +821,7 @@
               </tbody>
             </table>
           </div>
-<app-table-pager [state]="pagers" key="t5" [total]="(p.surveyDistribution).length"></app-table-pager>
+<app-table-pager [state]="pagers" key="t5" [total]="(p.surveyDistribution | rowSearch:pagers.search('t5')).length"></app-table-pager>
         </div>
 
         <!-- D. Property Category Contribution -->
@@ -829,7 +833,8 @@
             </div>
           </div>
 
-          <div class="table-responsive">
+          <app-table-search [state]="pagers" key="t6"></app-table-search>
+<div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
@@ -840,7 +845,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (c of (p.categoryBreakdown) | slice:pagers.start('t6', (p.categoryBreakdown).length):pagers.end('t6', (p.categoryBreakdown).length); track c.category) {
+                @for (c of (p.categoryBreakdown | rowSearch:pagers.search('t6')) | slice:pagers.start('t6', (p.categoryBreakdown | rowSearch:pagers.search('t6')).length):pagers.end('t6', (p.categoryBreakdown | rowSearch:pagers.search('t6')).length); track c.category) {
                   <tr>
                     <td><strong>{{ show(c.category) }}</strong></td>
                     <td class="font-mono">{{ formatNumber(c.count) }}</td>
@@ -858,7 +863,7 @@
               </tbody>
             </table>
           </div>
-<app-table-pager [state]="pagers" key="t6" [total]="(p.categoryBreakdown).length"></app-table-pager>
+<app-table-pager [state]="pagers" key="t6" [total]="(p.categoryBreakdown | rowSearch:pagers.search('t6')).length"></app-table-pager>
         </div>
       }
     </section>
@@ -1017,7 +1022,8 @@
             </div>
           </div>
 
-          <div class="table-responsive">
+          <app-table-search [state]="pagers" key="t7"></app-table-search>
+<div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
@@ -1030,7 +1036,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (c of (g.categoryBreakdown) | slice:pagers.start('t7', (g.categoryBreakdown).length):pagers.end('t7', (g.categoryBreakdown).length); track c.category) {
+                @for (c of (g.categoryBreakdown | rowSearch:pagers.search('t7')) | slice:pagers.start('t7', (g.categoryBreakdown | rowSearch:pagers.search('t7')).length):pagers.end('t7', (g.categoryBreakdown | rowSearch:pagers.search('t7')).length); track c.category) {
                   <tr>
                     <td><strong>{{ show(c.category) }}</strong></td>
                     <td class="font-mono">{{ formatNumber(c.total) }}</td>
@@ -1050,7 +1056,7 @@
               </tbody>
             </table>
           </div>
-<app-table-pager [state]="pagers" key="t7" [total]="(g.categoryBreakdown).length"></app-table-pager>
+<app-table-pager [state]="pagers" key="t7" [total]="(g.categoryBreakdown | rowSearch:pagers.search('t7')).length"></app-table-pager>
         </div>
 
         <!-- D. Priority Breakdown & Department Matrix -->
@@ -1062,7 +1068,8 @@
             </div>
           </div>
 
-          <div class="table-responsive">
+          <app-table-search [state]="pagers" key="t8"></app-table-search>
+<div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
@@ -1073,7 +1080,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (p of (g.priorityBreakdown) | slice:pagers.start('t8', (g.priorityBreakdown).length):pagers.end('t8', (g.priorityBreakdown).length); track p.priority) {
+                @for (p of (g.priorityBreakdown | rowSearch:pagers.search('t8')) | slice:pagers.start('t8', (g.priorityBreakdown | rowSearch:pagers.search('t8')).length):pagers.end('t8', (g.priorityBreakdown | rowSearch:pagers.search('t8')).length); track p.priority) {
                   <tr>
                     <td><strong>{{ show(p.priority) }}</strong></td>
                     <td class="font-mono">{{ formatNumber(p.count) }}</td>
@@ -1091,7 +1098,7 @@
               </tbody>
             </table>
           </div>
-<app-table-pager [state]="pagers" key="t8" [total]="(g.priorityBreakdown).length"></app-table-pager>
+<app-table-pager [state]="pagers" key="t8" [total]="(g.priorityBreakdown | rowSearch:pagers.search('t8')).length"></app-table-pager>
         </div>
       }
     </section>
@@ -1241,7 +1248,8 @@
             </div>
           </div>
 
-          <div class="table-responsive">
+          <app-table-search [state]="pagers" key="t9"></app-table-search>
+<div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
@@ -1253,7 +1261,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (ch of (c.channelBreakdown) | slice:pagers.start('t9', (c.channelBreakdown).length):pagers.end('t9', (c.channelBreakdown).length); track ch.channel) {
+                @for (ch of (c.channelBreakdown | rowSearch:pagers.search('t9')) | slice:pagers.start('t9', (c.channelBreakdown | rowSearch:pagers.search('t9')).length):pagers.end('t9', (c.channelBreakdown | rowSearch:pagers.search('t9')).length); track ch.channel) {
                   <tr>
                     <td><strong>{{ show(ch.channel) }}</strong></td>
                     <td class="font-mono">{{ formatNumber(ch.users) }}</td>
@@ -1272,7 +1280,7 @@
               </tbody>
             </table>
           </div>
-<app-table-pager [state]="pagers" key="t9" [total]="(c.channelBreakdown).length"></app-table-pager>
+<app-table-pager [state]="pagers" key="t9" [total]="(c.channelBreakdown | rowSearch:pagers.search('t9')).length"></app-table-pager>
         </div>
 
         <!-- D. Digital Service Adoption Table -->
@@ -1284,7 +1292,8 @@
             </div>
           </div>
 
-          <div class="table-responsive">
+          <app-table-search [state]="pagers" key="t10"></app-table-search>
+<div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
@@ -1295,7 +1304,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (srv of (c.serviceAdoption) | slice:pagers.start('t10', (c.serviceAdoption).length):pagers.end('t10', (c.serviceAdoption).length); track srv.service) {
+                @for (srv of (c.serviceAdoption | rowSearch:pagers.search('t10')) | slice:pagers.start('t10', (c.serviceAdoption | rowSearch:pagers.search('t10')).length):pagers.end('t10', (c.serviceAdoption | rowSearch:pagers.search('t10')).length); track srv.service) {
                   <tr>
                     <td><strong>{{ show(srv.service) }}</strong></td>
                     <td class="font-mono">{{ formatNumber(srv.onlineTransactions) }}</td>
@@ -1317,7 +1326,7 @@
               </tbody>
             </table>
           </div>
-<app-table-pager [state]="pagers" key="t10" [total]="(c.serviceAdoption).length"></app-table-pager>
+<app-table-pager [state]="pagers" key="t10" [total]="(c.serviceAdoption | rowSearch:pagers.search('t10')).length"></app-table-pager>
         </div>
       }
     </section>

@@ -7,6 +7,7 @@ from jose import jwt, JWTError
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
+from app.core.security import CSRF_HEADER, SESSION_COOKIE
 from app.core.tenant_context import SET_RLS_CONTEXT_SQL, rls_params, set_rls_context
 from app.db.models import GlobalUserProfile, RoleModel, RolePermission, StateTenant, Tenant, User
 from app.db.session import AsyncReadSessionLocal, get_read_db
@@ -50,9 +51,14 @@ async def get_keycloak_jwks() -> Dict:
     return {}
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Security(security)
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
 ) -> Dict:
-    user = await _authenticate(credentials)
+    token = credentials.credentials if credentials else request.cookies.get(SESSION_COOKIE)
+    # Browsers attach cookies by themselves, so state changes must also carry a header other sites cannot set.
+    if not credentials and token and request.method not in ("GET", "HEAD", "OPTIONS") and not request.headers.get(CSRF_HEADER):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing CSRF header")
+    user = await _authenticate(token)
     set_rls_context(user_tenant_scope(user), bypass=is_super_admin(user))
     return user
 
@@ -81,15 +87,14 @@ async def _apply_current_account_state(payload: Dict) -> Dict:
     return {**payload, "realm_access": {"roles": [user.role]}}
 
 
-async def _authenticate(credentials: Optional[HTTPAuthorizationCredentials]) -> Dict:
-    if not credentials:
+async def _authenticate(token: Optional[str]) -> Dict:
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing Authorization header",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = credentials.credentials
     # 1. First check if token is signed with our internal SSO secret
     from app.core.security import decode_access_token
     internal_payload = decode_access_token(token)

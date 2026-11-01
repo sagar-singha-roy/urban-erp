@@ -13,6 +13,7 @@ from app.db.models import (
     TenantLifecycleEvent,
     TenantMaintenanceConfig
 )
+from app.core.config import PLATFORM_ULB_TYPE
 from app.core.auth import ensure_tenant_access, get_current_user, require_roles
 from app.schemas.tenant import (
     ApiResponse,
@@ -101,7 +102,7 @@ async def list_lifecycle_directory(
 
     # 2. ULB Tenants (Level 2)
     if not tenant_level or tenant_level.upper() in ["ALL", "ULB"]:
-        ulb_stmt = select(Tenant)
+        ulb_stmt = select(Tenant).where(Tenant.ulb_type != PLATFORM_ULB_TYPE)
         if search:
             q = f"%{search.strip().lower()}%"
             ulb_stmt = ulb_stmt.where(

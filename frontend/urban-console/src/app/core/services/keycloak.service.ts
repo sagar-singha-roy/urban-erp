@@ -90,7 +90,8 @@ export class KeycloakAuthService {
   public userModules = signal<ModuleMetadata[]>([]);
 
   init(): void {
-    const savedToken = localStorage.getItem('urban_token');
+    // Sessions live in an httpOnly cookie. Remove tokens stored by earlier versions.
+    localStorage.removeItem('urban_token');
     const savedUser = localStorage.getItem('urban_user');
     const savedTenant = localStorage.getItem('urban_tenant');
     const savedTenantName = localStorage.getItem('urban_tenant_name');
@@ -110,7 +111,7 @@ export class KeycloakAuthService {
       this.activeSubTenantName.set(savedSubTenantName);
     }
 
-    if (savedToken && savedUser) {
+    if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
         this.isAuthenticated.set(true);
@@ -119,7 +120,6 @@ export class KeycloakAuthService {
         }
         this.userProfile.set({
           ...parsed,
-          token: savedToken,
           roles: [parsed.role],
         });
       } catch (e) {
@@ -127,7 +127,7 @@ export class KeycloakAuthService {
       }
     }
 
-    if (savedToken) {
+    if (savedUser) {
       this.refreshModules();
       this.loadTenants();
     }
@@ -190,7 +190,7 @@ export class KeycloakAuthService {
   }
 
   getToken(): string | undefined {
-    return localStorage.getItem('urban_token') || undefined;
+    return undefined;
   }
 
   getHeaders(): HttpHeaders {
@@ -215,7 +215,6 @@ export class KeycloakAuthService {
       tap((res) => {
         const token = res?.accessToken;
         if (token && res?.user) {
-          localStorage.setItem('urban_token', token);
           localStorage.setItem('urban_user', JSON.stringify(res.user));
 
           this.isAuthenticated.set(true);
@@ -263,7 +262,6 @@ export class KeycloakAuthService {
       tap((res) => {
         const token = res?.accessToken || res?.access_token;
         if (token && res?.user) {
-          localStorage.setItem('urban_token', token);
           localStorage.setItem('urban_user', JSON.stringify(res.user));
 
           this.isAuthenticated.set(true);
@@ -287,7 +285,7 @@ export class KeycloakAuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('urban_token');
+    this.http.post(`${this.apiUrl}/auth/logout`, {}).pipe(catchError(() => of(null))).subscribe();
     localStorage.removeItem('urban_user');
     localStorage.removeItem('urban_tenant');
     localStorage.removeItem('urban_tenant_name');
