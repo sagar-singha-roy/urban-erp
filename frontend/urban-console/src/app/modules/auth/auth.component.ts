@@ -9,6 +9,7 @@ import {
   AccessibleUlb,
 } from '../../core/services/keycloak.service';
 import { LoadingService } from '../../core/services/loading.service';
+import { BrandingThemeService } from '../../core/services/branding-theme.service';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { APP_VERSION } from '../../core/constants/version';
 
@@ -28,6 +29,7 @@ export interface DemoPersona {
   styleUrl: './auth.component.scss',
 })
 export class AuthComponent {
+  readonly branding = inject(BrandingThemeService).branding;
   private authService = inject(KeycloakAuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);

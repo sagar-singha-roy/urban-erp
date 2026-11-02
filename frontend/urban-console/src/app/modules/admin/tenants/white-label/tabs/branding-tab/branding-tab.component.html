@@ -1,0 +1,38 @@
+<div class="wl-toolbar">
+  <input class="wl-search" type="search" placeholder="Search profiles or tenants" aria-label="Search profiles or tenants" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+  <button type="button" class="btn btn-primary" (click)="open(null)">
+    <app-icon name="ri-add-line" [size]="16"></app-icon>
+    <span>New Branding Profile</span>
+  </button>
+</div>
+
+<div class="wl-card">
+  <div class="wl-scroll">
+    <table class="wl-table">
+      <thead>
+        <tr><th>Profile</th><th>Tenant</th><th>Colours</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        @for (p of items(); track p.id) {
+          <tr>
+            <td>{{ p.profileName }}<span class="wl-sub">{{ p.displayName }}</span></td>
+            <td>{{ p.tenantId }}<span class="wl-sub">{{ p.tenantLevel }}</span></td>
+            <td>
+              <span class="wl-swatch" [style.background]="p.primaryColour" [title]="p.primaryColour"></span>
+              <span class="wl-swatch" [style.background]="p.secondaryColour" [title]="p.secondaryColour"></span>
+            </td>
+            <td><span class="wl-status" [ngClass]="statusClass(p.brandingStatus)">{{ p.brandingStatus }}</span></td>
+            <td><div class="wl-actions"><button type="button" class="wl-link" (click)="open(p)">Edit</button></div></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="5" class="wl-empty">{{ isLoading() ? 'Loading...' : 'No branding profiles yet.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-wl-pagination [page]="page()" [limit]="limit()" [total]="total()" (pageChange)="onPage($event)" (limitChange)="onLimit($event)"></app-wl-pagination>
+</div>
+
+@if (isDialogOpen()) {
+  <app-branding-form-dialog [profile]="selected()" [options]="options()" [tenants]="tenants()" (saved)="onSaved()" (closed)="isDialogOpen.set(false)"></app-branding-form-dialog>
+}

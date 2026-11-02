@@ -8,6 +8,7 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
 import { KeycloakAuthService } from './core/services/keycloak.service';
+import { BrandingThemeService } from './core/services/branding-theme.service';
 import { loadingInterceptor } from './core/interceptors/loading.interceptor';
 import { authHeaderInterceptor } from './core/interceptors/auth-header.interceptor';
 
@@ -20,5 +21,6 @@ export const appConfig: ApplicationConfig = {
       const auth = inject(KeycloakAuthService);
       return auth.init();
     }),
+    provideAppInitializer(() => inject(BrandingThemeService).init()),
   ],
 };

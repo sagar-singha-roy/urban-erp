@@ -101,6 +101,16 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         icon: 'ri-loop-right-line',
         description: 'Manage lifecycle of State & ULB tenants: activation, suspension, locking, maintenance & archival',
       },
+      {
+        id: 'TH-04',
+        code: 'ADM-T04',
+        title: 'White-Labelling & Domain Management',
+        route: '/admin/tenancy/white-label',
+        badge: 'Branding',
+        count: 5,
+        icon: 'ri-palette-line',
+        description: 'Configure tenant branding, official emblems, custom domains, SSL certificates and domain routing',
+      },
     ],
   },
   {

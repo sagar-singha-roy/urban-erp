@@ -1,0 +1,96 @@
+<div class="dialog-overlay" (click)="closed.emit()">
+  <div class="dialog-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="dialog-header">
+      <div>
+        <h3>{{ mapping ? 'Edit' : 'New' }} Domain Mapping</h3>
+        <p>A mapping can go live only on a verified, active domain with a valid certificate.</p>
+      </div>
+      <button type="button" class="close-btn" (click)="closed.emit()" title="Close dialog" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+    <form class="dialog-form" (ngSubmit)="submit()">
+      <div class="dialog-body">
+        <div class="field">
+          <label for="mappingName">Mapping Name <span class="required">*</span></label>
+          <input id="mappingName" type="text" name="mappingName" [(ngModel)]="form.mappingName" />
+        </div>
+        <div class="field">
+          <label for="tenantId">Tenant <span class="required">*</span></label>
+          <input id="tenantId" type="text" list="tenantIdList" name="tenantId" [(ngModel)]="form.tenantId" placeholder="Type to search" (ngModelChange)="form.tenantId = $event; onTenantChange()" />
+          <datalist id="tenantIdList">
+            @for (t of tenants; track t.tenantId) {
+              <option [value]="t.tenantId">{{ t.name }}</option>
+            }
+          </datalist>
+        </div>
+        <div class="field">
+          <label for="domainId">Domain <span class="required">*</span></label>
+          <select id="domainId" name="domainId" [(ngModel)]="form.domainId">
+            <option value="">Select a domain</option>
+            @for (d of domains(); track d.id) {
+              <option [value]="d.id">{{ d.domainName }} ({{ d.domainStatus }})</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="targetApplication">Target Application <span class="required">*</span></label>
+          <select id="targetApplication" name="targetApplication" [(ngModel)]="form.targetApplication">
+            @for (o of options.targetApplications; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="targetService">Target Service <span class="required">*</span></label>
+          <select id="targetService" name="targetService" [(ngModel)]="form.targetService">
+            @for (o of options.targetServices; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="targetRoute">Target Route / Path</label>
+          <input id="targetRoute" type="text" name="targetRoute" [(ngModel)]="form.targetRoute" />
+          <span class="hint">A path on this site, such as /login. Required for a root redirect.</span>
+        </div>
+        <div class="field">
+          <label for="routingStrategy">Routing Strategy <span class="required">*</span></label>
+          <select id="routingStrategy" name="routingStrategy" [(ngModel)]="form.routingStrategy">
+            @for (o of options.routingStrategies; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label class="toggle"><input type="checkbox" name="sslRequired" [(ngModel)]="form.sslRequired" /> SSL Required</label>
+        </div>
+        <div class="field">
+          <label class="toggle"><input type="checkbox" name="forceHttps" [(ngModel)]="form.forceHttps" /> Force HTTPS</label>
+        </div>
+        <div class="field">
+          <label class="toggle"><input type="checkbox" name="isPrimary" [(ngModel)]="form.isPrimary" /> Primary Mapping</label>
+        </div>
+        <div class="field">
+          <label for="mappingStatus">Mapping Status <span class="required">*</span></label>
+          <select id="mappingStatus" name="mappingStatus" [(ngModel)]="form.mappingStatus">
+            @for (o of options.recordStatuses; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="effectiveFrom">Effective From</label>
+          <input id="effectiveFrom" type="date" name="effectiveFrom" [(ngModel)]="form.effectiveFrom" />
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="closed.emit()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          <app-icon name="ri-check-line" [size]="16"></app-icon>
+          <span>Save Mapping</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

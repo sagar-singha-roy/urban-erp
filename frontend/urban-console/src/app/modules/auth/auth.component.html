@@ -11,11 +11,15 @@
 
       <div class="brand-hero">
         <div class="brand-logo-badge">
-          <span class="logo-text">S</span>
+          @if (branding()?.assets?.['logo']; as logo) {
+            <img class="brand-logo-image" [src]="logo" [alt]="branding()?.altText || branding()?.displayName" />
+          } @else {
+            <span class="logo-text">{{ (branding()?.displayName || 'S').charAt(0) }}</span>
+          }
         </div>
         <div class="brand-titles">
-          <h1 class="brand-name">SUVIDHA</h1>
-          <p class="brand-tagline">Integrated Municipal Enterprise Resource Planning (ERP)</p>
+          <h1 class="brand-name">{{ branding()?.loginPageTitle || branding()?.displayName || 'SUVIDHA' }}</h1>
+          <p class="brand-tagline">{{ branding()?.loginPageMessage || branding()?.tagline || 'Integrated Municipal Enterprise Resource Planning (ERP)' }}</p>
         </div>
       </div>
       <div class="brand-accent-line"></div>
@@ -437,7 +441,7 @@
     <!-- Brand Footer -->
     <div class="auth-card-footer">
       <div class="footer-copy">
-        SUVIDHA Integrated Municipal Platform · Version {{ appVersion.version }}
+        {{ branding()?.footerText || 'SUVIDHA Integrated Municipal Platform' }} · Version {{ appVersion.version }}
       </div>
       <div class="footer-security-note">
         <app-icon name="ri-lock-2-line" [size]="12"></app-icon>

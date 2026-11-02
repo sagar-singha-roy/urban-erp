@@ -27,6 +27,15 @@ class Settings(BaseSettings):
     BACKUP_DIR: str = os.getenv("BACKUP_DIR", "backups")
     GIS_CUSTOM_BASEMAP_URL: str = os.getenv("GIS_CUSTOM_BASEMAP_URL", "")
     BACKUP_ENCRYPTION_KEY: str = os.getenv("BACKUP_ENCRYPTION_KEY", "")
+    # ADM-T04: encrypts uploaded certificate private keys. Uploads are refused without it.
+    CERT_ENCRYPTION_KEY: str = os.getenv("CERT_ENCRYPTION_KEY", "")
+    # Comma-separated domains tenants may never claim, such as the platform's own.
+    PLATFORM_RESERVED_DOMAINS: str = os.getenv("PLATFORM_RESERVED_DOMAINS", "")
+    # Hostname that tenants point CNAME records at.
+    PLATFORM_CNAME_TARGET: str = os.getenv("PLATFORM_CNAME_TARGET", "")
+    GATEWAY_GENERATED_DIR: str = os.getenv("GATEWAY_GENERATED_DIR", "../../../gateway/generated")
+    LETSENCRYPT_DIR: str = os.getenv("LETSENCRYPT_DIR", "/etc/letsencrypt")
+    ACME_WEBROOT: str = os.getenv("ACME_WEBROOT", "/var/www/acme")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
     WRITE_DATABASE_URL: str = os.getenv("WRITE_DATABASE_URL", "")
     READ_DATABASE_URL: str = os.getenv("READ_DATABASE_URL", "")

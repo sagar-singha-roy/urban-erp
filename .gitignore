@@ -73,3 +73,7 @@ redis_data/
 # Database backups contain citizen data
 backend/services/core_service/backups/
 !.env.example
+
+# Generated gateway hosts and certificates
+gateway/generated/*
+!gateway/generated/.gitkeep

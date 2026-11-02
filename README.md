@@ -157,3 +157,20 @@ All 19 municipal modules anchor to the core land and building hierarchy:
       └── **Building** (`Building Type`, `Floors`, `Permission No`)
           └── **Property Unit** (`PTIN`, `Carpet Area`, `Occupancy`, `Demand Status`)
               └── **Owners** (`Name`, `Mobile`, `Aadhaar Vault Ref`)
+
+## White-labelling and custom domains (ADM-T04)
+
+Super admins manage this under **Tenancy & Hierarchy > White-Labelling & Domain Management**.
+
+Set these in `.env` before using it (see `.env.example`):
+
+| Setting | Purpose |
+|---|---|
+| `CERT_ENCRYPTION_KEY` | Encrypts uploaded private keys. Uploads are refused without it |
+| `PLATFORM_RESERVED_DOMAINS` | Domains tenants can never claim |
+| `PLATFORM_CNAME_TARGET` | Hostname tenants point CNAME records at |
+| `ACME_EMAIL` | Let's Encrypt account. The certificate manager stays idle without it |
+
+Add each deployment's own hostname to `gateway/platform_hosts.conf`. The gateway refuses any other hostname unless an active domain mapping generated it.
+
+A domain goes live in this order: claim it, publish the verification record, verify, activate, add a certificate, then create an active mapping. `core-service` writes the host configuration, and `gateway/start_gateway.sh` applies it only if `nginx -t` passes. If NGINX rejects it, the last working configuration stays, and the Domain Mapping tab shows the error.

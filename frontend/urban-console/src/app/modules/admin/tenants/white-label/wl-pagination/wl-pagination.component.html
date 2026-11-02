@@ -1,0 +1,24 @@
+<div class="suvidha-pagination-bar">
+  <div class="pagination-info">
+    Showing <strong>{{ first() }}</strong> to <strong>{{ last() }}</strong> of <strong>{{ total() }}</strong> entries
+  </div>
+  <div class="pagination-controls">
+    <div class="page-size-picker">
+      <label>Rows per page:</label>
+      <select [ngModel]="limit()" (ngModelChange)="limitChange.emit(+$event)" aria-label="Rows per page">
+        @for (size of limits; track size) {
+          <option [value]="size">{{ size }}</option>
+        }
+      </select>
+    </div>
+    <div class="pagination-buttons">
+      <button type="button" class="btn-page-nav" [disabled]="page() <= 1" (click)="pageChange.emit(page() - 1)" title="Previous page" aria-label="Previous page">
+        <app-icon name="chevron-left" [size]="14"></app-icon>
+      </button>
+      <span class="page-index">{{ page() }} / {{ totalPages() }}</span>
+      <button type="button" class="btn-page-nav" [disabled]="page() >= totalPages()" (click)="pageChange.emit(page() + 1)" title="Next page" aria-label="Next page">
+        <app-icon name="chevron-right" [size]="14"></app-icon>
+      </button>
+    </div>
+  </div>
+</div>

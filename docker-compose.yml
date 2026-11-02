@@ -100,6 +100,10 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
       AUDIT_SIGNING_KEY: ${AUDIT_SIGNING_KEY:-}
       BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-}
+      CERT_ENCRYPTION_KEY: ${CERT_ENCRYPTION_KEY:-}
+      PLATFORM_RESERVED_DOMAINS: ${PLATFORM_RESERVED_DOMAINS:-}
+      PLATFORM_CNAME_TARGET: ${PLATFORM_CNAME_TARGET:-}
+      GATEWAY_GENERATED_DIR: /gateway-generated
       CORS_ORIGINS: http://localhost:4200
       FORWARDED_ALLOW_IPS: "*"
       PORT: 8000
@@ -118,6 +122,8 @@ services:
     volumes:
       - ./backend/services/core_service/app:/app/app
       - backup_data:/backups
+      - gateway_generated:/gateway-generated
+      - letsencrypt:/etc/letsencrypt:ro
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       postgres:
@@ -363,18 +369,41 @@ services:
     image: nginx:1.27-alpine
     container_name: urban-api-gateway
     restart: always
-    command: ["nginx", "-g", "daemon off;", "-c", "/etc/nginx/urban/nginx.docker.conf"]
+    command: ["sh", "/etc/nginx/urban/start_gateway.sh"]
     ports:
       - "4200:8088"
       - "8088:8088"
+      - "80:8088"
+      - "443:8443"
     volumes:
       - ./gateway:/etc/nginx/urban:ro
+      - gateway_generated:/etc/nginx/urban/generated
+      - acme_webroot:/var/www/acme:ro
     depends_on:
       - urban-console
       - core-service
       - ptx-service
 
+  # Issues and renews Let's Encrypt certificates for domains listed by core-service. Idle until ACME_EMAIL is set.
+  cert-manager:
+    image: certbot/certbot:v3.1.0
+    container_name: urban-cert-manager
+    restart: always
+    entrypoint: ["sh", "/gateway/cert_manager.sh"]
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./gateway/cert_manager.sh:/gateway/cert_manager.sh:ro
+      - gateway_generated:/etc/nginx/urban/generated:ro
+      - acme_webroot:/var/www/acme
+      - letsencrypt:/etc/letsencrypt
+    depends_on:
+      - api-gateway
+
 volumes:
+  gateway_generated:
+  acme_webroot:
+  letsencrypt:
   backup_data:
   postgres_data:
   valkey_data:

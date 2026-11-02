@@ -1,0 +1,38 @@
+<div class="white-label-wrapper">
+  <header class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="Level 0 Multi-Tenant Governance — Branding, Domains & Routing"
+        title="Level 0 Multi-Tenant Governance — Branding, Domains & Routing"
+      >
+        White-Labelling &amp; Domain Management
+      </h1>
+      <p class="page-subtitle">Configure tenant branding, official emblems, custom domains, SSL certificates and domain routing.</p>
+    </div>
+    <div class="header-actions">
+      <app-refresh-button subject="white-labelling" (refresh)="refresh()"></app-refresh-button>
+    </div>
+  </header>
+
+  <div class="tabs-bar" role="tablist">
+    @for (tab of tabs; track tab.id) {
+      <button type="button" class="tab-btn" role="tab" [class.active]="activeTab() === tab.id" [attr.aria-selected]="activeTab() === tab.id" (click)="activeTab.set(tab.id)">
+        <app-icon [name]="tab.icon" [size]="16"></app-icon>
+        <span>{{ tab.label }}</span>
+      </button>
+    }
+  </div>
+
+  @if (options(); as opts) {
+    <section class="tab-panel" role="tabpanel">
+      @switch (activeTab()) {
+        @case ('branding') { <app-wl-branding-tab [options]="opts" [tenants]="tenants()"></app-wl-branding-tab> }
+        @case ('assets') { <app-wl-assets-tab [options]="opts" [tenants]="tenants()"></app-wl-assets-tab> }
+        @case ('domains') { <app-wl-domains-tab [options]="opts" [tenants]="tenants()"></app-wl-domains-tab> }
+        @case ('certificates') { <app-wl-certificates-tab [options]="opts" [tenants]="tenants()"></app-wl-certificates-tab> }
+        @case ('mappings') { <app-wl-mappings-tab [options]="opts" [tenants]="tenants()"></app-wl-mappings-tab> }
+      }
+    </section>
+  }
+</div>

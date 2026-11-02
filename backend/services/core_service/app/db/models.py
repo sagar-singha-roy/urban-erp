@@ -1,7 +1,7 @@
 import datetime
 import uuid
 from sqlalchemy import (
-    Column, String, Integer, BigInteger, Float, DateTime, ForeignKey, Boolean, Text, Numeric, JSON
+    Column, String, Integer, BigInteger, Float, DateTime, ForeignKey, Boolean, Text, Numeric, JSON, LargeBinary
 )
 from sqlalchemy import func, text
 from sqlalchemy.orm import relationship
@@ -1094,3 +1094,141 @@ class EventInbox(Base):
     consumer_service = Column(String(40), primary_key=True)
     event_id = Column(String(36), primary_key=True)
     processed_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class BrandingProfile(Base):
+    """ADM-T04 branding for a State or ULB. Each tenant has at most one Active profile."""
+    __tablename__ = "branding_profiles"
+    __table_args__ = (
+        Index("uq_branding_active_tenant", "tenant_id", unique=True, postgresql_where=text("branding_status = 'Active'")),
+    )
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    tenant_level = Column(String(20), nullable=False)
+    state_tenant_id = Column(String(50), nullable=False)
+    ulb_tenant_id = Column(String(50), nullable=True)
+    profile_name = Column(String(150), nullable=False)
+    display_name = Column(String(150), nullable=False)
+    tagline = Column(String(255), nullable=True)
+    primary_colour = Column(String(7), nullable=False)
+    secondary_colour = Column(String(7), nullable=False)
+    accent_colour = Column(String(7), nullable=True)
+    header_background_colour = Column(String(7), nullable=True)
+    sidebar_background_colour = Column(String(7), nullable=True)
+    font_family = Column(String(50), nullable=True)
+    login_page_title = Column(String(150), nullable=True)
+    login_page_message = Column(Text, nullable=True)
+    footer_text = Column(Text, nullable=True)
+    custom_css = Column(Text, nullable=True)
+    branding_status = Column(String(20), nullable=False, default="Draft")
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class BrandingAssetSet(Base):
+    __tablename__ = "branding_asset_sets"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    logo_type = Column(String(50), nullable=False)
+    alt_text = Column(String(255), nullable=False)
+    effective_from = Column(DateTime, nullable=True)
+    asset_status = Column(String(20), nullable=False, default="Draft")
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class BrandingAssetFile(Base):
+    __tablename__ = "branding_asset_files"
+    __table_args__ = (UniqueConstraint("asset_set_id", "file_kind", name="uq_branding_asset_kind"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    asset_set_id = Column(String(36), ForeignKey("branding_asset_sets.id", ondelete="CASCADE"), nullable=False, index=True)
+    file_kind = Column(String(30), nullable=False)
+    content_type = Column(String(50), nullable=False)
+    size_bytes = Column(Integer, nullable=False)
+    sha256 = Column(String(64), nullable=False)
+    data = deferred(Column(LargeBinary, nullable=False))
+
+
+class TenantDomain(Base):
+    """A pending claim is private to its tenant; the first tenant to prove ownership holds the name."""
+    __tablename__ = "tenant_domains"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "domain_name", name="uq_tenant_domain_claim"),
+        Index("uq_domain_verified_owner", "domain_name", unique=True, postgresql_where=text("verification_status = 'Verified'")),
+        Index("uq_domain_primary_tenant", "tenant_id", unique=True, postgresql_where=text("is_primary")),
+    )
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    domain_name = Column(String(253), nullable=False, index=True)
+    domain_type = Column(String(30), nullable=False)
+    subdomain = Column(String(63), nullable=True)
+    root_domain = Column(String(253), nullable=True)
+    dns_provider = Column(String(50), nullable=True)
+    dns_record_type = Column(String(10), nullable=False)
+    dns_host = Column(String(253), nullable=False)
+    dns_target = Column(String(253), nullable=False)
+    verification_method = Column(String(20), nullable=False)
+    verification_status = Column(String(20), nullable=False, default="Pending")
+    verification_token = Column(String(64), nullable=False)
+    claim_expires_at = Column(DateTime, nullable=True)
+    last_checked_at = Column(DateTime, nullable=True)
+    last_check_message = Column(String(255), nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    is_primary = Column(Boolean, nullable=False, default=False)
+    domain_status = Column(String(20), nullable=False, default="Pending")
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class TenantCertificate(Base):
+    __tablename__ = "tenant_certificates"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    domain_id = Column(String(36), ForeignKey("tenant_domains.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider = Column(String(30), nullable=False)
+    certificate_type = Column(String(30), nullable=False)
+    certificate_pem = Column(Text, nullable=True)
+    certificate_chain_pem = Column(Text, nullable=True)
+    private_key_encrypted = deferred(Column(LargeBinary, nullable=True))
+    auto_renewal = Column(Boolean, nullable=False, default=False)
+    renewal_notification_days = Column(Integer, nullable=False, default=30)
+    expiry_date = Column(DateTime, nullable=True)
+    certificate_status = Column(String(20), nullable=False, default="Pending Issuance")
+    status_message = Column(String(255), nullable=True)
+    last_validation_at = Column(DateTime, nullable=True)
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class DomainMapping(Base):
+    __tablename__ = "domain_mappings"
+    __table_args__ = (
+        Index("uq_mapping_active_domain", "domain_id", unique=True, postgresql_where=text("mapping_status = 'Active'")),
+    )
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    domain_id = Column(String(36), ForeignKey("tenant_domains.id", ondelete="CASCADE"), nullable=False, index=True)
+    mapping_name = Column(String(150), nullable=False)
+    target_application = Column(String(50), nullable=False)
+    target_service = Column(String(50), nullable=False)
+    target_route = Column(String(255), nullable=True)
+    routing_strategy = Column(String(30), nullable=False)
+    ssl_required = Column(Boolean, nullable=False, default=True)
+    force_https = Column(Boolean, nullable=False, default=True)
+    is_primary = Column(Boolean, nullable=False, default=False)
+    mapping_status = Column(String(20), nullable=False, default="Draft")
+    effective_from = Column(DateTime, nullable=True)
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

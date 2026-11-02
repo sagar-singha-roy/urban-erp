@@ -1,0 +1,120 @@
+<div class="dialog-overlay" (click)="closed.emit()">
+  <div class="dialog-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="dialog-header">
+      <div>
+        <h3>{{ domain ? 'Edit Domain' : 'Claim Domain' }}</h3>
+        <p>A domain can go active only after ownership is verified.</p>
+      </div>
+      <button type="button" class="close-btn" (click)="closed.emit()" title="Close dialog" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+    <form class="dialog-form" (ngSubmit)="submit()">
+      <div class="dialog-body">
+        @if (domain) {
+        <div class="field">
+          <label>Tenant</label>
+          <input type="text" readonly [value]="domain.tenantId" [attr.aria-label]="'Tenant'" />
+        </div>
+        <div class="field">
+          <label>Domain Name</label>
+          <input type="text" readonly [value]="domain.domainName" [attr.aria-label]="'Domain Name'" />
+        </div>
+        <div class="field">
+          <label>Verification Status</label>
+          <input type="text" readonly [value]="domain.verificationStatus" [attr.aria-label]="'Verification Status'" />
+        </div>
+        <div class="field wide">
+          <label>Verification Token</label>
+          <input type="text" readonly [value]="domain.verificationToken" [attr.aria-label]="'Verification Token'" />
+        </div>
+        } @else {
+        <div class="field">
+          <label for="tenantId">Tenant <span class="required">*</span></label>
+          <input id="tenantId" type="text" list="tenantIdList" name="tenantId" [(ngModel)]="form.tenantId" placeholder="Type to search" />
+          <datalist id="tenantIdList">
+            @for (t of tenants; track t.tenantId) {
+              <option [value]="t.tenantId">{{ t.name }}</option>
+            }
+          </datalist>
+        </div>
+        <div class="field">
+          <label for="domainName">Domain Name <span class="required">*</span></label>
+          <input id="domainName" type="text" name="domainName" [(ngModel)]="form.domainName" />
+          <span class="hint">For example portal.example.gov.in</span>
+        </div>
+        <div class="field">
+          <label for="domainType">Domain Type <span class="required">*</span></label>
+          <select id="domainType" name="domainType" [(ngModel)]="form.domainType">
+            @for (o of options.domainTypes; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="subdomain">Subdomain</label>
+          <input id="subdomain" type="text" name="subdomain" [(ngModel)]="form.subdomain" />
+        </div>
+        <div class="field">
+          <label for="rootDomain">Root Domain</label>
+          <input id="rootDomain" type="text" name="rootDomain" [(ngModel)]="form.rootDomain" />
+          <span class="hint">Required for a subdomain</span>
+        </div>
+        }
+        <div class="field">
+          <label for="dnsProvider">DNS Provider</label>
+          <select id="dnsProvider" name="dnsProvider" [(ngModel)]="form.dnsProvider">
+            <option [ngValue]="null">Select</option>
+            @for (o of options.dnsProviders; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="dnsRecordType">DNS Record Type <span class="required">*</span></label>
+          <select id="dnsRecordType" name="dnsRecordType" [(ngModel)]="form.dnsRecordType">
+            @for (o of options.dnsRecordTypes; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="dnsHost">DNS Host / Name <span class="required">*</span></label>
+          <input id="dnsHost" type="text" name="dnsHost" [(ngModel)]="form.dnsHost" />
+        </div>
+        <div class="field">
+          <label for="dnsTarget">DNS Target / Value <span class="required">*</span></label>
+          <input id="dnsTarget" type="text" name="dnsTarget" [(ngModel)]="form.dnsTarget" />
+        </div>
+        <div class="field">
+          <label for="verificationMethod">Domain Verification Method <span class="required">*</span></label>
+          <select id="verificationMethod" name="verificationMethod" [(ngModel)]="form.verificationMethod">
+            @for (o of options.verificationMethods; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label class="toggle"><input type="checkbox" name="isPrimary" [(ngModel)]="form.isPrimary" /> Primary Domain</label>
+        </div>
+        @if (domain) {
+        <div class="field">
+          <label for="domainStatus">Domain Status <span class="required">*</span></label>
+          <select id="domainStatus" name="domainStatus" [(ngModel)]="form.domainStatus">
+            @for (o of options.domainStatuses; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+        }
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="closed.emit()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          <app-icon name="ri-check-line" [size]="16"></app-icon>
+          <span>Save Domain</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

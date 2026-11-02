@@ -1,0 +1,49 @@
+@if (routing()?.lastError; as error) {
+  <div class="wl-notice bad" role="alert">
+    <app-icon name="ri-error-warning-line" [size]="16"></app-icon>
+    <span>The gateway rejected the latest routing change and kept the last working configuration: {{ error }}</span>
+  </div>
+} @else if (routing()?.pendingVersion) {
+  <div class="wl-notice">
+    <app-icon name="ri-time-line" [size]="16"></app-icon>
+    <span>A routing change is waiting for the gateway to apply it.</span>
+  </div>
+}
+
+<div class="wl-toolbar">
+  <input class="wl-search" type="search" placeholder="Search mappings, domains or tenants" aria-label="Search mappings, domains or tenants" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+  <button type="button" class="btn btn-primary" (click)="open(null)">
+    <app-icon name="ri-add-line" [size]="16"></app-icon>
+    <span>New Mapping</span>
+  </button>
+</div>
+
+<div class="wl-card">
+  <div class="wl-scroll">
+    <table class="wl-table">
+      <thead>
+        <tr><th>Mapping</th><th>Domain</th><th>Target</th><th>Routing</th><th>HTTPS</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        @for (m of items(); track m.id) {
+          <tr>
+            <td>{{ m.mappingName }}@if (m.isPrimary) { <span class="wl-status good">Primary</span> }<span class="wl-sub">{{ m.tenantId }}</span></td>
+            <td>{{ m.domainName }}</td>
+            <td>{{ m.targetApplication }}<span class="wl-sub">{{ m.targetService }}{{ m.targetRoute }}</span></td>
+            <td>{{ m.routingStrategy }}</td>
+            <td>{{ m.forceHttps ? 'Forced' : m.sslRequired ? 'Required' : 'Optional' }}</td>
+            <td><span class="wl-status" [ngClass]="statusClass(m.mappingStatus)">{{ m.mappingStatus }}</span></td>
+            <td><div class="wl-actions"><button type="button" class="wl-link" (click)="open(m)">Edit</button></div></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7" class="wl-empty">{{ isLoading() ? 'Loading...' : 'No domain mappings yet.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-wl-pagination [page]="page()" [limit]="limit()" [total]="total()" (pageChange)="onPage($event)" (limitChange)="onLimit($event)"></app-wl-pagination>
+</div>
+
+@if (isDialogOpen()) {
+  <app-mapping-form-dialog [mapping]="selected()" [options]="options()" [tenants]="tenants()" (saved)="onSaved()" (closed)="isDialogOpen.set(false)"></app-mapping-form-dialog>
+}

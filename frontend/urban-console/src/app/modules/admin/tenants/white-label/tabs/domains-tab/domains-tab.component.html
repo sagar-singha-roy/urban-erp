@@ -1,0 +1,53 @@
+<div class="wl-toolbar">
+  <input class="wl-search" type="search" placeholder="Search domains or tenants" aria-label="Search domains or tenants" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+  <button type="button" class="btn btn-primary" (click)="open(null)">
+    <app-icon name="ri-add-line" [size]="16"></app-icon>
+    <span>Claim Domain</span>
+  </button>
+</div>
+
+<div class="wl-card">
+  <div class="wl-scroll">
+    <table class="wl-table">
+      <thead>
+        <tr><th>Domain</th><th>Tenant</th><th>Verification</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        @for (d of items(); track d.id) {
+          <tr>
+            <td>
+              {{ d.domainName }}@if (d.isPrimary) { <span class="wl-status good">Primary</span> }
+              <span class="wl-sub">{{ d.domainType }}</span>
+            </td>
+            <td>{{ d.tenantId }}</td>
+            <td>
+              <span class="wl-status" [ngClass]="statusClass(d.verificationStatus)">{{ d.verificationStatus }}</span>
+              @if (d.verificationStatus !== 'Verified') {
+                <span class="wl-sub">{{ d.verificationInstructions }}</span>
+              }
+              @if (d.lastCheckMessage) {
+                <span class="wl-sub">{{ d.lastCheckMessage }}</span>
+              }
+            </td>
+            <td><span class="wl-status" [ngClass]="statusClass(d.domainStatus)">{{ d.domainStatus }}</span></td>
+            <td>
+              <div class="wl-actions">
+                <button type="button" class="wl-link" [disabled]="verifyingId() === d.id" (click)="verify(d)">
+                  {{ verifyingId() === d.id ? 'Checking...' : 'Verify' }}
+                </button>
+                <button type="button" class="wl-link" (click)="open(d)">Edit</button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="5" class="wl-empty">{{ isLoading() ? 'Loading...' : 'No domains claimed yet.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-wl-pagination [page]="page()" [limit]="limit()" [total]="total()" (pageChange)="onPage($event)" (limitChange)="onLimit($event)"></app-wl-pagination>
+</div>
+
+@if (isDialogOpen()) {
+  <app-domain-form-dialog [domain]="selected()" [options]="options()" [tenants]="tenants()" (saved)="onSaved()" (closed)="isDialogOpen.set(false)"></app-domain-form-dialog>
+}

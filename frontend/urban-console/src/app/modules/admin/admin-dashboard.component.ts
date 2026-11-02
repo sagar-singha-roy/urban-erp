@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { TenantManagementComponent } from './tenants/tenant-management.component';
 import { UlbManagementComponent } from './ulbs/ulb-management.component';
 import { TenantLifecycleComponent } from './tenants/tenant-lifecycle/tenant-lifecycle.component';
+import { WhiteLabelComponent } from './tenants/white-label/white-label.component';
 import { ModuleCatalogueComponent } from './modules/module-catalogue/module-catalogue.component';
 import { ComponentRegistryComponent } from './modules/component-registry/component-registry.component';
 import { ActionDependencyRegistryComponent } from './modules/action-dependency-registry/action-dependency-registry.component';
@@ -36,6 +37,7 @@ import { SUPER_ADMIN_SECTIONS, SuperAdminSection } from '../../core/models/super
     TenantManagementComponent,
     UlbManagementComponent,
     TenantLifecycleComponent,
+    WhiteLabelComponent,
     ModuleCatalogueComponent,
     ComponentRegistryComponent,
     ActionDependencyRegistryComponent,
@@ -99,6 +101,8 @@ export class AdminDashboardComponent implements OnInit {
           'ulbs': { section: 'tenancy', item: 'TH-02' },
           'lifecycle': { section: 'tenancy', item: 'TH-03' },
           'tenant-lifecycle': { section: 'tenancy', item: 'TH-03' },
+          'white-label': { section: 'tenancy', item: 'TH-04' },
+          'domains': { section: 'tenancy', item: 'TH-04' },
           'catalogue': { section: 'modules', item: 'MS-01' },
           'components': { section: 'modules', item: 'MS-02' },
           'dependencies': { section: 'modules', item: 'MS-03' },

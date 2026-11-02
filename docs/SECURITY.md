@@ -41,3 +41,13 @@ Multi-tenant isolation is enforced at 3 separate architectural layers:
 - **Sensitive Citizen Data**:
   - Masked in UI outputs (Aadhaar/PAN last 4 digits only).
   - Passwords hashed using PBKDF2-HMAC-SHA256 (100,000 rounds) or Keycloak Argon2/bcrypt.
+
+## Tenant domains and certificates (ADM-T04)
+
+- A domain cannot activate until a DNS or HTTP check proves ownership. Verified domains are re-checked every 6 hours and suspended if the proof is gone. DNS outages never revoke a domain.
+- A unique database index allows one verified owner per domain. A tenant also cannot take a parent of, or a host beneath, another tenant's domain.
+- Pending claims hold nothing and expire after 7 days, so a name cannot be reserved by typing it in.
+- Private keys are encrypted with `CERT_ENCRYPTION_KEY`. No response schema has a field for them. They are written unencrypted only to the gateway's private generated folder, with owner-only permissions, because NGINX needs them.
+- Logo uploads are judged by their content, not their name. SVG is refused because it can carry scripts.
+- Tenant Custom CSS cannot use `url()`, `@import`, escapes or HTML. It can still change how pages look, so only super admins may set it.
+- HTTP verification refuses domains that resolve to private addresses.

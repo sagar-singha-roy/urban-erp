@@ -10,7 +10,7 @@
 /* Header */
 .app-header {
   height: 64px;
-  background: var(--hake-sidebar, #071532);
+  background: var(--brand-header-bg, var(--hake-sidebar, #071532));
   color: #ffffff;
   display: flex;
   align-items: center;

@@ -15,6 +15,7 @@ from app.db.session import engine, Base
 from app.api.v1.iam import _seed_standard_roles_if_empty
 from app.core.backup_runner import scheduler_loop
 from app.core.request_metrics import record_response
+from app.core.white_label_worker import white_label_loop
 from app.db.seed import seed_initial_data
 from app.api.v1.boundaries import router as boundaries_router
 from app.api.v1.auth import router as auth_router
@@ -56,10 +57,12 @@ async def lifespan(app: FastAPI):
             logger.error(message)
 
     scheduler = asyncio.create_task(scheduler_loop())
+    white_label = asyncio.create_task(white_label_loop())
 
     yield
 
     scheduler.cancel()
+    white_label.cancel()
 
     # Cleanup
     await valkey_client.close()
@@ -128,6 +131,8 @@ from app.api.v1.fleet import router as fleet_router
 from app.api.v1.backup_dr import router as backup_dr_router
 from app.api.v1.executive import router as executive_router
 from app.api.v1.gis import router as gis_router
+from app.api.v1.white_label import public_router as white_label_public_router, router as white_label_router
+from app.api.v1.white_label_domains import router as white_label_domains_router
 
 # Include Routers
 app.include_router(auth_router, prefix=settings.API_V1_STR)
@@ -143,6 +148,9 @@ app.include_router(audit_vault_router, prefix=settings.API_V1_STR)
 app.include_router(fleet_router, prefix=settings.API_V1_STR)
 app.include_router(backup_dr_router, prefix=settings.API_V1_STR)
 app.include_router(gis_router, prefix=settings.API_V1_STR)
+app.include_router(white_label_public_router, prefix=settings.API_V1_STR)
+app.include_router(white_label_router, prefix=settings.API_V1_STR)
+app.include_router(white_label_domains_router, prefix=settings.API_V1_STR)
 app.include_router(executive_router, prefix=settings.API_V1_STR)
 app.include_router(boundaries_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)
