@@ -89,7 +89,7 @@ if ! ENVIRONMENT=test JWT_SECRET_KEY=hook-only AUDIT_SIGNING_KEY=hook-only "$PYT
   echo -e "${RED}[ERROR] Backend tests failed. Push rejected.${NC}"
   exit 1
 fi
-MODULE_PYTHON="$(command -v "$PYTHON_BIN" || echo "$PWD/$PYTHON_BIN")"
+if [[ "$PYTHON_BIN" == */* ]]; then MODULE_PYTHON="$PWD/$PYTHON_BIN"; else MODULE_PYTHON="$(command -v "$PYTHON_BIN")"; fi
 for dir in "$REPO_ROOT/backend/libs/urban_common" "$REPO_ROOT/backend/services/ptx_service"; do
   cd "$dir"
   if ! ENVIRONMENT=test PYTHONPATH="$REPO_ROOT/backend/libs/urban_common:$dir" "$MODULE_PYTHON" -m unittest discover -s tests; then
