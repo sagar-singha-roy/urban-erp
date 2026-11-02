@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import request_metrics
 from app.core.auth import require_roles
 from app.core.config import settings
-from app.core.redis import redis_client
+from app.core.valkey import valkey_client
 from app.db.models import MicroserviceRegistryModel
 from app.db.session import get_read_db, get_write_db, read_engine, write_engine
 from app.schemas.fleet import (
@@ -49,12 +49,12 @@ async def _probe_database(db: AsyncSession) -> Tuple[str, Optional[float]]:
     return HEALTHY, round((time.perf_counter() - started) * 1000, 1)
 
 
-async def _probe_redis() -> Tuple[str, Optional[float]]:
-    if not redis_client.redis:
+async def _probe_valkey() -> Tuple[str, Optional[float]]:
+    if not valkey_client.client:
         return UNAVAILABLE, None
     started = time.perf_counter()
     try:
-        await redis_client.redis.ping()
+        await valkey_client.client.ping()
     except Exception:
         return UNAVAILABLE, None
     return HEALTHY, round((time.perf_counter() - started) * 1000, 1)
@@ -118,14 +118,14 @@ def _registered(record: MicroserviceRegistryModel, status: str, latency: Optiona
 async def _measure_builtin(db: AsyncSession) -> List[MicroserviceRegistryResponse]:
     database = make_url(settings.write_db_url)
     db_probe = await _probe_database(db)
-    redis_probe, keycloak_probe = await asyncio.gather(
-        _probe_redis(),
+    valkey_probe, keycloak_probe = await asyncio.gather(
+        _probe_valkey(),
         _probe_http(f"{settings.KEYCLOAK_URL}/realms/{settings.KEYCLOAK_REALM}", 3.0),
     )
     return [
         _service("CORE-API", settings.PROJECT_NAME, "This API instance, which is answering this request.", "Core Platform", "", "GET", "/health", HEALTHY, None, measured=True),
         _service("POSTGRES", "PostgreSQL", "Primary database connection.", "Data", f"{database.host}:{database.port or 5432}", "SQL", "SELECT 1", *db_probe),
-        _service("REDIS", "Redis Cache", "Shared cache connection.", "Data", "", "REDIS", "PING", *redis_probe),
+        _service("VALKEY", "Valkey Cache", "Shared cache connection.", "Data", "", "REDIS", "PING", *valkey_probe),
         _service("KEYCLOAK", "Keycloak", "Identity provider realm endpoint.", "Identity", settings.KEYCLOAK_URL, "GET", f"/realms/{settings.KEYCLOAK_REALM}", *keycloak_probe),
     ]
 

@@ -14,7 +14,7 @@ from app.schemas.tenant import (
 )
 from app.core.config import PLATFORM_ULB_TYPE
 from app.core.auth import get_current_user, get_current_tenant, is_super_admin, require_roles, tenant_scope_filter
-from app.core.redis import redis_client
+from app.core.valkey import valkey_client
 
 router = APIRouter(prefix="/tenants", tags=["SaaS Tenant Management"], dependencies=[Depends(get_current_user)])
 

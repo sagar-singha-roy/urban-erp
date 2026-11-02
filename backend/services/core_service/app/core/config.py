@@ -43,8 +43,8 @@ class Settings(BaseSettings):
     def read_db_url(self) -> str:
         return self.READ_DATABASE_URL or self.DATABASE_URL
     
-    # Redis
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    # Valkey
+    VALKEY_URL: str = os.getenv("VALKEY_URL", "valkey://localhost:6379/0")
     
     # Keycloak
     KEYCLOAK_URL: str = os.getenv("KEYCLOAK_URL", "http://localhost:8080")

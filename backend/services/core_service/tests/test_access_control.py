@@ -67,13 +67,28 @@ class RouteProtectionTests(unittest.TestCase):
                     with self.subTest(role=role, method=method, path=path):
                         self.assertEqual(self.client.request(method, concrete(path)).status_code, 403)
 
-    def test_citizens_cannot_read_property_records(self):
-        token_user = user_with("citizen")
+    def test_citizens_are_refused_property_records_by_authorize(self):
+        token_user = {**user_with("citizen"), "tenant_id": "GWMC"}
         app.dependency_overrides[get_current_user] = lambda: token_user
         fake_db = AsyncMock()
         fake_db.scalar.return_value = None
         app.dependency_overrides[auth.get_read_db] = lambda: fake_db
-        self.assertEqual(self.client.get("/api/v1/properties").status_code, 403)
+        response = self.client.post("/api/v1/auth/authorize", params={"component": "PTX-P01", "action": "VIEW"})
+        self.assertEqual(response.status_code, 403)
+
+    def test_super_admin_gets_the_narrowed_tenant_from_authorize(self):
+        token_user = {**user_with("super_admin"), "sub": "u1", "tenant_id": "GWMC"}
+        app.dependency_overrides[get_current_user] = lambda: token_user
+        app.dependency_overrides[auth.get_read_db] = lambda: AsyncMock()
+        response = self.client.post("/api/v1/auth/authorize", params={"component": "PTX-P01", "action": "VIEW"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["tenantId"], "GWMC")
+
+    def test_authorize_rejects_unknown_actions(self):
+        app.dependency_overrides[get_current_user] = lambda: {**user_with("super_admin"), "tenant_id": "GWMC"}
+        app.dependency_overrides[auth.get_read_db] = lambda: AsyncMock()
+        response = self.client.post("/api/v1/auth/authorize", params={"component": "PTX-P01", "action": "NOPE"})
+        self.assertEqual(response.status_code, 400)
 
     def test_token_signed_with_another_key_is_rejected(self):
         from jose import jwt

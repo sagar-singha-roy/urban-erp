@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.core.redis import redis_client
+from app.core.valkey import valkey_client
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
@@ -16,7 +16,6 @@ from app.api.v1.iam import _seed_standard_roles_if_empty
 from app.core.backup_runner import scheduler_loop
 from app.core.request_metrics import record_response
 from app.db.seed import seed_initial_data
-from app.api.v1.properties import router as properties_router
 from app.api.v1.boundaries import router as boundaries_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.tenants import router as tenants_router
@@ -27,8 +26,8 @@ logger = logging.getLogger("urban-core")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Initializing Urban Core Service...")
-    # Connect Redis
-    await redis_client.connect()
+    # Connect Valkey
+    await valkey_client.connect()
     
     # Schema, policies and seed data use the owner role. Requests never do.
     admin_engine = create_async_engine(settings.admin_db_url)
@@ -63,7 +62,7 @@ async def lifespan(app: FastAPI):
     scheduler.cancel()
 
     # Cleanup
-    await redis_client.close()
+    await valkey_client.close()
     await engine.dispose()
     logger.info("Urban Core Service shutdown complete.")
 
@@ -145,7 +144,6 @@ app.include_router(fleet_router, prefix=settings.API_V1_STR)
 app.include_router(backup_dr_router, prefix=settings.API_V1_STR)
 app.include_router(gis_router, prefix=settings.API_V1_STR)
 app.include_router(executive_router, prefix=settings.API_V1_STR)
-app.include_router(properties_router, prefix=settings.API_V1_STR)
 app.include_router(boundaries_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)
 

@@ -1,7 +1,7 @@
 {
   "name": "suvidha-console",
-  "version": "1.5.0",
-  "versionCode": 112,
+  "version": "1.6.0",
+  "versionCode": 113,
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -18,8 +18,9 @@
     "@angular/forms": "^22.2.0",
     "@angular/platform-browser": "^22.2.0",
     "@angular/router": "^22.2.0",
+    "cesium": "^1.133.0",
     "keycloak-js": "^26.2.5",
-    "leaflet": "^1.9.4",
+    "maplibre-gl": "^5.24.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -27,7 +28,7 @@
     "@angular/build": "^22.2.5",
     "@angular/cli": "^22.2.5",
     "@angular/compiler-cli": "^22.2.0",
-    "@types/leaflet": "^1.9.12",
+    "@types/geojson": "^7946.0.16",
     "jsdom": "^30.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",

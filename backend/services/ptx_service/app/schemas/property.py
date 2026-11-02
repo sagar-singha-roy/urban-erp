@@ -90,14 +90,6 @@ class PropertyDetailResponse(CamelModel):
     address: str
     buildings: List[BuildingResponse] = []
 
-class WardResponse(CamelModel):
-    id: str
-    zoneId: str
-    wardNumber: int
-    wardName: str
-    councilorName: Optional[str] = None
-    totalProperties: int = 0
-
 class DashboardStats(CamelModel):
     totalParcels: int
     totalUnits: int

@@ -67,7 +67,7 @@ class TenantIsolationTestCreate(CamelModel):
     sourceTenant: str
     targetTenant: str
     testScenarios: List[str]
-    databaseServices: List[str] = ["PostgreSQL Core", "Redis Cache"]
+    databaseServices: List[str] = ["PostgreSQL Core", "Valkey Cache"]
     tablesInScope: List[str] = ["properties", "water_accounts", "users"]
     testType: str = "Synthetic Penetration Test"  # Synthetic Penetration Test, Injection Audit, Concurrency Pool Leak
     executionMode: str = "Automated Batch"  # Automated Batch, Step-by-Step Interactive

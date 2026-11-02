@@ -57,7 +57,7 @@ export class PolicyDialogComponent {
   readonly availableClusters = [
     'pg-aurora-cluster-prod',
     'pg-gis-postgis-cluster',
-    'redis-cluster-ha',
+    'valkey-cluster-ha',
   ];
 
   readonly availableDatabases = [

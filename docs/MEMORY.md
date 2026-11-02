@@ -64,6 +64,6 @@ See detailed breakdown in [docs/PHASE.md](file:///Users/sagarsingharoy/Documents
 - **Frontend**: Angular 22.2 Standalone (no NgModules). Signals (`signal()`, `computed()`, `effect()`) for reactive state. Custom SCSS design tokens (no TailwindCSS).
 - **Backend**: FastAPI + Async SQLAlchemy (PostgreSQL 16 + PostGIS 3.4). All schemas inherit from `CamelModel` (`to_camel`).
 - **Tenancy Context**: Headers `X-Tenant-ID` and `X-Sub-Tenant-ID` sent on all requests; resolved via `get_current_tenant` and `get_current_sub_tenant`.
-- **Cache Isolation**: Redis keys formatted as `stats:tenant:{tenant_id}:sub:{sub_tenant_id}:{resource}`.
+- **Cache Isolation**: Valkey keys formatted as `stats:tenant:{tenant_id}:sub:{sub_tenant_id}:{resource}`.
 - **Production Standard**: No mock/demo chips, no "Protected by..." badges, clean enterprise styling.
 - **Pre-Push Validation**: Script `scripts/validate_structures.sh` and hook `.git/hooks/pre-push` enforce directory checks, python compilation, and clean Angular builds.

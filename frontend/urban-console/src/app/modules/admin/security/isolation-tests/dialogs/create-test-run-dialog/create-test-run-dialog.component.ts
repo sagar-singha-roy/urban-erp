@@ -44,8 +44,8 @@ export class CreateTestRunDialogComponent {
     "Connection-pool reuse does not leak a previous request's tenant context"
   ];
 
-  availableServices = ['PostgreSQL Core', 'Redis Scoped Cache', 'Document Storage (DMS)'];
-  selectedServices: string[] = ['PostgreSQL Core', 'Redis Scoped Cache'];
+  availableServices = ['PostgreSQL Core', 'Valkey Scoped Cache', 'Document Storage (DMS)'];
+  selectedServices: string[] = ['PostgreSQL Core', 'Valkey Scoped Cache'];
 
   availableTables = ['properties', 'water_accounts', 'users', 'trade_licences', 'financial_ledgers'];
   selectedTables: string[] = ['properties', 'users', 'financial_ledgers'];

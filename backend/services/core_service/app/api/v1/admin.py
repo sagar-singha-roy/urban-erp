@@ -6,8 +6,8 @@ from sqlalchemy import select, func
 from app.db.session import get_read_db, get_write_db
 from app.db.models import StateTenant, Tenant, Ward, PropertyParcel, PropertyUnit, User
 from app.core.auth import get_current_user, require_roles
-from app.core.redis import redis_client
-from app.schemas.property import CamelModel
+from app.core.valkey import valkey_client
+from app.schemas.tenant import CamelModel
 
 router = APIRouter(prefix="/admin", tags=["Super Admin Platform Management"])
 
@@ -81,7 +81,7 @@ async def get_cluster_health(
     """Connectivity actually measured by this service instance."""
     await db.execute(select(1))
     return {
-        "status": "HEALTHY" if redis_client.redis else "DEGRADED",
+        "status": "HEALTHY" if valkey_client.client else "DEGRADED",
         "database": "CONNECTED",
-        "redisCache": "CONNECTED" if redis_client.redis else "NOT_CONNECTED",
+        "valkeyCache": "CONNECTED" if valkey_client.client else "NOT_CONNECTED",
     }

@@ -1,18 +1,19 @@
 from typing import List, Optional, Dict
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
 from app.db.session import get_read_db, get_write_db
 from app.db.models import User, StateTenant, Tenant, GlobalUserProfile
 from app.schemas.auth import (
+    AuthorizeResponse,
     SignInRequest, SignUpRequest, AuthResponse, UserProfileResponse, ModuleMetadata,
     AccessibleTenant, AccessibleUlb
 )
 from app.core import rate_limit
 from app.core.auth import BLOCKED_ACCOUNT_STATUSES
 from app.core.security import clear_session_cookie, hash_password, set_session_cookie, verify_password, create_access_token, decode_access_token
-from app.core.auth import get_current_user
+from app.core.auth import PERMISSION_COLUMNS, get_current_sub_tenant, get_current_tenant, get_current_user, require_permission
 from app.core.config import PLATFORM_ULB_TYPE, settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication & SSO"])
@@ -477,3 +478,19 @@ async def list_modules_for_user(user: dict = Depends(get_current_user), db: Asyn
             )
         )
     return response
+
+
+@router.post("/authorize", response_model=AuthorizeResponse)
+async def authorize(
+    component: str = Query(..., min_length=1, max_length=30),
+    action: str = Query(...),
+    tenant_id: str = Depends(get_current_tenant),
+    sub_tenant_id: Optional[str] = Depends(get_current_sub_tenant),
+    user: Dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_read_db),
+):
+    """Module services call this for every request, so identity rules stay in one place."""
+    if action not in PERMISSION_COLUMNS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown action")
+    await require_permission(component, action)(user, db)
+    return AuthorizeResponse(tenantId=tenant_id, subTenantId=sub_tenant_id, userId=str(user.get("sub") or "") or None)

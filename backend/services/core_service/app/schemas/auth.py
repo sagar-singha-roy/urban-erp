@@ -65,3 +65,8 @@ class ModuleMetadata(CamelModel):
     hasAccess: bool = False
     route: str
 
+
+class AuthorizeResponse(CamelModel):
+    tenantId: str
+    subTenantId: Optional[str] = None
+    userId: Optional[str] = None

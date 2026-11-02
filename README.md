@@ -12,7 +12,7 @@ An enterprise-grade, multi-tenant municipal enterprise resource planning (ERP) p
 | **Backend** | **Python (FastAPI)** | High-performance async microservices with Pydantic v2 validation |
 | **SSO & IAM** | **Keycloak 24** | Centralized OIDC, RBAC, passkeys, and single sign-on across all 19 modules |
 | **Database** | **PostgreSQL 16 + PostGIS** | Spatial GIS queries, ULPIN property hierarchy with Row-Level Security (RLS) |
-| **Caching** | **Redis 7** | Sub-millisecond caching for KPI metrics, ward boundaries, and session tokens |
+| **Caching** | **Valkey 8** | Sub-millisecond caching for KPI metrics, ward boundaries, and session tokens |
 | **Containers** | **Docker & Docker Compose** | Multi-container reproducible stack with healthchecks |
 
 ---
@@ -94,6 +94,7 @@ docker-compose up -d --build
 ### Service Endpoints
 
 - **Urban Console (Angular 22)**: [http://localhost:4200](http://localhost:4200)
+- **API gateway (NGINX, single API address)**: [http://localhost:8088](http://localhost:8088). Without Docker, run `nginx -p gateway -c nginx.local.conf` from the repository root.
 - **FastAPI Core API & Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Keycloak IAM Admin Console**: [http://localhost:8080](http://localhost:8080) (`admin` / `admin`)
 - **PostgreSQL Database**: `localhost:5432` (`urban_admin` / `urban_password123`)

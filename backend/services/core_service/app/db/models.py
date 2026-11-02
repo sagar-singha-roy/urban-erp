@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import (
     Column, String, Integer, BigInteger, Float, DateTime, ForeignKey, Boolean, Text, Numeric, JSON
 )
+from sqlalchemy import func, text
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -854,7 +855,7 @@ class WorkerQueueModel(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     queue_name = Column(String(100), unique=True, index=True, nullable=False)
     worker_service = Column(String(100), nullable=False)
-    queue_type = Column(String(50), default="Celery / Redis", nullable=False)  # Celery / Redis, Kafka Topic, RabbitMQ, Cloud PubSub
+    queue_type = Column(String(50), default="Valkey", nullable=False)  # Valkey, Kafka Topic, RabbitMQ, Cloud PubSub
     queue_status = Column(String(30), default="Optimal", nullable=False)  # Optimal, Backlogged, Stalled, Paused
     pending_jobs = Column(Integer, default=0)
     processing_jobs = Column(Integer, default=0)
@@ -1069,3 +1070,27 @@ class GisWorkspaceModel(Base):
     refresh_interval = Column(String(30), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class EventOutbox(Base):
+    """Events written with a service's own transaction, published to Kafka by its relay."""
+    __tablename__ = "event_outbox"
+    __table_args__ = (Index("ix_event_outbox_pending", "source_service", "created_at", postgresql_where=text("published_at IS NULL")),)
+
+    id = Column(String(36), primary_key=True)
+    source_service = Column(String(40), nullable=False)
+    topic = Column(String(150), nullable=False)
+    event_key = Column(String(100), nullable=False)
+    tenant_id = Column(String(50), nullable=False)
+    payload = Column(JSON, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    published_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class EventInbox(Base):
+    """Events a consumer has already handled, which makes redelivery harmless."""
+    __tablename__ = "event_inbox"
+
+    consumer_service = Column(String(40), primary_key=True)
+    event_id = Column(String(36), primary_key=True)
+    processed_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

@@ -85,7 +85,7 @@ export interface WorkerQueueItem {
   id: string;
   queueName: string;
   workerService: string;
-  queueType: 'Celery / Redis' | 'Kafka Topic' | 'RabbitMQ' | 'Cloud PubSub' | string;
+  queueType: 'Valkey' | 'Kafka Topic' | string;
   queueStatus: 'Optimal' | 'Backlogged' | 'Stalled' | 'Paused' | string;
   pendingJobs: number;
   processingJobs: number;

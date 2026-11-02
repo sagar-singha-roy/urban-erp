@@ -1,3 +1,18 @@
+x-module-service: &module-service
+  restart: always
+  environment:
+    ENVIRONMENT: development
+    CORS_ORIGINS: http://localhost:4200
+    DATABASE_URL: postgresql+asyncpg://urban_app:${APP_DB_PASSWORD:?Set it in .env}@postgres:5432/urban_erp
+    VALKEY_URL: valkey://valkey:6379/0
+    KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    CORE_SERVICE_URL: http://core-service:8000
+    FORWARDED_ALLOW_IPS: "*"
+  depends_on:
+    - core-service
+    - valkey
+    - kafka
+
 services:
   postgres:
     image: postgis/postgis:16-3.4
@@ -18,19 +33,35 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: urban-redis
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: urban-valkey
     restart: always
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - valkey_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  kafka:
+    image: apache/kafka:3.9.1
+    container_name: urban-kafka
+    restart: always
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
 
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.5
@@ -70,19 +101,20 @@ services:
       AUDIT_SIGNING_KEY: ${AUDIT_SIGNING_KEY:-}
       BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-}
       CORS_ORIGINS: http://localhost:4200
+      FORWARDED_ALLOW_IPS: "*"
       PORT: 8000
       DATABASE_URL: postgresql+asyncpg://urban_app:${APP_DB_PASSWORD:?Set it in .env}@postgres:5432/urban_erp
       WRITE_DATABASE_URL: postgresql+asyncpg://urban_app:${APP_DB_PASSWORD:?Set it in .env}@postgres:5432/urban_erp
       READ_DATABASE_URL: postgresql+asyncpg://urban_app:${APP_DB_PASSWORD:?Set it in .env}@postgres:5432/urban_erp
       DB_ADMIN_URL: postgresql+asyncpg://urban_admin:${POSTGRES_PASSWORD:?Set it in .env}@postgres:5432/urban_erp
       BACKUP_DIR: /backups
-      REDIS_URL: redis://redis:6379/0
+      VALKEY_URL: valkey://valkey:6379/0
       KEYCLOAK_URL: http://keycloak:8080
       KEYCLOAK_REALM: urban
       KEYCLOAK_CLIENT_ID: urban-web
       DEFAULT_TENANT_ID: GWMC
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend/services/core_service/app:/app/app
       - backup_data:/backups
@@ -90,8 +122,235 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      valkey:
         condition: service_healthy
+
+  ptx-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: ptx_service
+    container_name: urban-ptx-service
+    ports:
+      - "127.0.0.1:8101:8000"
+
+  wtr-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: wtr_service
+    container_name: urban-wtr-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8102:8000"
+
+  grv-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: grv_service
+    container_name: urban-grv-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8103:8000"
+
+  fin-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: fin_service
+    container_name: urban-fin-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8104:8000"
+
+  trl-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: trl_service
+    container_name: urban-trl-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8105:8000"
+
+  uch-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: uch_service
+    container_name: urban-uch-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8106:8000"
+
+  swm-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: swm_service
+    container_name: urban-swm-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8107:8000"
+
+  hrm-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: hrm_service
+    container_name: urban-hrm-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8108:8000"
+
+  dms-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: dms_service
+    container_name: urban-dms-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8109:8000"
+
+  eng-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: eng_service
+    container_name: urban-eng-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8110:8000"
+
+  bpm-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: bpm_service
+    container_name: urban-bpm-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8111:8000"
+
+  slm-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: slm_service
+    container_name: urban-slm-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8112:8000"
+
+  tpl-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: tpl_service
+    container_name: urban-tpl-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8113:8000"
+
+  prk-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: prk_service
+    container_name: urban-prk-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8114:8000"
+
+  mpm-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: mpm_service
+    container_name: urban-mpm-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8115:8000"
+
+  lgl-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: lgl_service
+    container_name: urban-lgl-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8116:8000"
+
+  inv-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: inv_service
+    container_name: urban-inv-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8117:8000"
+
+  fnc-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: fnc_service
+    container_name: urban-fnc-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8118:8000"
+
+  gsc-service:
+    <<: *module-service
+    build:
+      context: ./backend
+      dockerfile: services/module.Dockerfile
+      args:
+        SERVICE: gsc_service
+    container_name: urban-gsc-service
+    profiles: ["modules"]
+    ports:
+      - "127.0.0.1:8119:8000"
 
   urban-console:
     build:
@@ -99,12 +358,24 @@ services:
       dockerfile: Dockerfile
     container_name: urban-console-ui
     restart: always
+
+  api-gateway:
+    image: nginx:1.27-alpine
+    container_name: urban-api-gateway
+    restart: always
+    command: ["nginx", "-g", "daemon off;", "-c", "/etc/nginx/urban/nginx.docker.conf"]
     ports:
-      - "4200:80"
+      - "4200:8088"
+      - "8088:8088"
+    volumes:
+      - ./gateway:/etc/nginx/urban:ro
     depends_on:
+      - urban-console
       - core-service
+      - ptx-service
 
 volumes:
   backup_data:
   postgres_data:
-  redis_data:
+  valkey_data:
+  kafka_data:

@@ -50,6 +50,10 @@
   }
 }
 
+.gis-map.hidden-view {
+  display: none;
+}
+
 .gis-map {
   z-index: 0;
   height: 56vh;
@@ -260,28 +264,22 @@
 }
 
 :host ::ng-deep {
-  .leaflet-control-zoom {
+  .maplibregl-ctrl-group {
     overflow: hidden;
-    border: 0 !important;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.14) !important;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.14);
 
-    a {
-      width: 44px !important;
-      height: 44px !important;
-      color: #334155;
-      line-height: 44px !important;
+    button {
+      width: 44px;
+      height: 44px;
     }
   }
 
-  .leaflet-popup-content-wrapper {
+  .maplibregl-popup-content {
+    min-width: 200px;
+    padding: 0.75rem 0.9rem;
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.22);
-  }
-
-  .leaflet-popup-content {
-    margin: 0.75rem 0.9rem;
-    min-width: 200px;
     font-family: inherit;
   }
 
@@ -749,4 +747,9 @@ button {
   .form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.map-tools button.active {
+  background: #1d4ed8;
+  color: #ffffff;
 }

@@ -39,14 +39,14 @@ class RateLimitTests(unittest.TestCase):
 
 
 class SharedRateLimitTests(unittest.IsolatedAsyncioTestCase):
-    async def test_uses_redis_when_connected(self):
+    async def test_uses_valkey_when_connected(self):
         from unittest.mock import AsyncMock
 
         fake = AsyncMock()
         fake.incr.return_value = 1
         fake.get.return_value = str(rate_limit.MAX_FAILURES)
         fake.ttl.return_value = 120
-        with patch.object(rate_limit.redis_client, "redis", fake):
+        with patch.object(rate_limit.valkey_client, "client", fake):
             await rate_limit.fail("k")
             fake.expire.assert_awaited_once()
             self.assertEqual(await rate_limit.check("k"), 120)

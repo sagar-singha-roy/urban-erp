@@ -1,9 +1,9 @@
-"""Failed sign-in throttling, shared through Redis when it is connected and per process otherwise."""
+"""Failed sign-in throttling, shared through Valkey when it is connected and per process otherwise."""
 import logging
 import time
 from typing import Dict, List
 
-from app.core.redis import redis_client
+from app.core.valkey import valkey_client
 
 logger = logging.getLogger(__name__)
 
@@ -34,38 +34,38 @@ def clear(key: str) -> None:
     _failures.pop(key, None)
 
 
-def _redis_key(key: str) -> str:
+def _cache_key(key: str) -> str:
     return f"ratelimit:signin:{key}"
 
 
 async def check(key: str) -> int:
-    if redis_client.redis:
+    if valkey_client.client:
         try:
-            count = int(await redis_client.redis.get(_redis_key(key)) or 0)
+            count = int(await valkey_client.client.get(_cache_key(key)) or 0)
             if count < MAX_FAILURES:
                 return 0
-            return max(int(await redis_client.redis.ttl(_redis_key(key))), 1)
+            return max(int(await valkey_client.client.ttl(_cache_key(key))), 1)
         except Exception as exc:
-            logger.warning("Redis rate limit check failed: %s", exc)
+            logger.warning("Valkey rate limit check failed: %s", exc)
     return retry_after(key)
 
 
 async def fail(key: str) -> None:
-    if redis_client.redis:
+    if valkey_client.client:
         try:
-            count = await redis_client.redis.incr(_redis_key(key))
+            count = await valkey_client.client.incr(_cache_key(key))
             if count == 1:
-                await redis_client.redis.expire(_redis_key(key), WINDOW_SECONDS)
+                await valkey_client.client.expire(_cache_key(key), WINDOW_SECONDS)
             return
         except Exception as exc:
-            logger.warning("Redis rate limit update failed: %s", exc)
+            logger.warning("Valkey rate limit update failed: %s", exc)
     record_failure(key)
 
 
 async def reset(key: str) -> None:
-    if redis_client.redis:
+    if valkey_client.client:
         try:
-            await redis_client.redis.delete(_redis_key(key))
+            await valkey_client.client.delete(_cache_key(key))
         except Exception as exc:
-            logger.warning("Redis rate limit reset failed: %s", exc)
+            logger.warning("Valkey rate limit reset failed: %s", exc)
     clear(key)

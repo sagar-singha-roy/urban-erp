@@ -44,7 +44,7 @@ The platform incorporates 19 standardized municipal modules across 5 domains:
 - Root: `backend/services/core_service/app/`
 - Every database query touching municipal entities MUST filter by `tenant_id` and (when in city context) `sub_tenant_id`.
 - Pydantic models must inherit from `CamelModel` (`app/schemas/`) with `to_camel` alias generator so JSON keys match frontend conventions.
-- Cache keys in Redis must follow strict scoped formatting:
+- Cache keys in Valkey must follow strict scoped formatting:
   `stats:tenant:{tenant_id}:sub:{sub_tenant_id}:{resource}`
 - Authentication must resolve active context via `get_current_tenant` and `get_current_sub_tenant` dependencies from `X-Tenant-ID` and `X-Sub-Tenant-ID` headers.
 - Mandatory Search, Limit & Skip Pagination: Every listing endpoint serving table or collection data MUST support search filtering with `search: Optional[str] = Query(None)` across primary textual columns, alongside `skip: int = Query(0, ge=0)` and `limit: int = Query(50, ge=1, le=100)`. Queries must execute `.offset(skip).limit(limit)`.
@@ -55,7 +55,7 @@ The platform incorporates 19 standardized municipal modules across 5 domains:
 - State: Use Angular **Signals** (`signal()`, `computed()`, `effect()`) for reactive state.
 - Styling: Custom SCSS adhering to [docs/TYPOGRAPHY_AND_DESIGN_SYSTEM.md](file:///Users/sagarsingharoy/Documents/urban/docs/TYPOGRAPHY_AND_DESIGN_SYSTEM.md). Do NOT introduce TailwindCSS.
 - API Services: Must pass `Authorization: Bearer <token>`, `X-Tenant-ID`, and `X-Sub-Tenant-ID` headers on every call.
-- Environment: API & Auth server URLs MUST come from `src/environments/environment.ts`, never hardcoded string literals.
+- Environment: API & Auth server URLs MUST come from `src/environments/environment.ts`, never hardcoded string literals. The frontend has one API address, the NGINX gateway (`gateway/`); never add a per-service URL. A module's API paths are added to the map in `gateway/gateway.conf`.
 - Clean Headings: Do NOT display raw visible tenancy text pills (e.g. 'Level 1', 'Level 2') in page titles. Tenancy level context must be displayed as a tooltip on hover (`data-tooltip` & `title`).
 - Modular Dialogs: Never put table listing and add/edit forms in a single component. Create separate standalone dialog components under `dialogs/` for Add/Edit and child entity management.
 - Mandatory Search & Limit/Skip Pagination: Every table component listing entities MUST implement a live search filter input and the standardized pagination bar with rows-per-page limit selector (`[5, 10, 20, 50]`), current page index (`skip = (currentPage - 1) * limit`), page navigation controls, and "Showing X to Y of Z entries" counter.

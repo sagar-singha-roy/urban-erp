@@ -4,25 +4,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import selectinload
 
-from app.db.session import get_read_db, get_write_db
+from urban_common.authz import AccessContext, require_access
+from urban_common.cache import scoped_key, valkey_client
+from urban_common.db import get_db
+from urban_common.events import add_to_outbox, topic_name
+
 from app.db.models import PropertyParcel, Building, PropertyUnit, Owner, Ward
 from app.schemas.property import (
     PropertySummary, PropertyDetailResponse, PropertyCreate, DashboardStats
 )
-from app.core.auth import get_current_tenant, require_permission
-from app.core.redis import redis_client
-from app.core.config import settings
+
+SERVICE = "ptx-service"
+PROPERTY_REGISTERED = topic_name("ptx", "property", "registered")
 
 router = APIRouter(prefix="/properties", tags=["Properties & ULPIN"])
 
 @router.get("/stats/summary", response_model=DashboardStats)
 async def get_dashboard_stats(
-    tenant_id: str = Depends(get_current_tenant),
-    db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(require_permission("PTX-P01", "VIEW"))
+    access: AccessContext = Depends(require_access("PTX-P01", "VIEW")),
+    db: AsyncSession = Depends(get_db),
 ):
-    cache_key = f"stats:summary:{tenant_id}"
-    cached = await redis_client.get(cache_key)
+    tenant_id = access.tenant_id
+    cache_key = scoped_key(tenant_id, access.sub_tenant_id, "properties")
+    cached = await valkey_client.get(cache_key)
     if cached:
         return cached
 
@@ -65,7 +69,7 @@ async def get_dashboard_stats(
         "wardCount": wards_count
     }
     
-    await redis_client.set(cache_key, stats, expire_seconds=180)
+    await valkey_client.set(cache_key, stats, expire_seconds=180)
     return stats
 
 @router.get("", response_model=List[PropertySummary])
@@ -75,10 +79,10 @@ async def list_properties(
     taxStatus: Optional[str] = Query(None, description="Filter by Tax Status (PAID/DUE/ARREARS)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    tenant_id: str = Depends(get_current_tenant),
-    db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(require_permission("PTX-P01", "VIEW"))
+    access: AccessContext = Depends(require_access("PTX-P01", "VIEW")),
+    db: AsyncSession = Depends(get_db),
 ):
+    tenant_id = access.tenant_id
     stmt = (
         select(PropertyParcel)
         .options(
@@ -152,10 +156,10 @@ async def list_properties(
 @router.get("/{ulpin}", response_model=PropertyDetailResponse)
 async def get_property_by_ulpin(
     ulpin: str,
-    tenant_id: str = Depends(get_current_tenant),
-    db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(require_permission("PTX-P01", "VIEW"))
+    access: AccessContext = Depends(require_access("PTX-P01", "VIEW")),
+    db: AsyncSession = Depends(get_db),
 ):
+    tenant_id = access.tenant_id
     stmt = (
         select(PropertyParcel)
         .options(
@@ -197,10 +201,10 @@ async def get_property_by_ulpin(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_property(
     payload: PropertyCreate,
-    tenant_id: str = Depends(get_current_tenant),
-    db: AsyncSession = Depends(get_write_db),
-    user: dict = Depends(require_permission("PTX-P01", "CREATE"))
+    access: AccessContext = Depends(require_access("PTX-P01", "CREATE")),
+    db: AsyncSession = Depends(get_db),
 ):
+    tenant_id = access.tenant_id
     # Check ULPIN duplicate
     existing = await db.scalar(
         select(PropertyParcel).where(
@@ -267,10 +271,19 @@ async def create_property(
         ownership_share=payload.owner.ownershipShare
     )
     db.add(owner)
+    await db.flush()
+    await add_to_outbox(
+        db,
+        SERVICE,
+        PROPERTY_REGISTERED,
+        key=parcel.ulpin,
+        tenant_id=tenant_id,
+        data={"parcelId": parcel.id, "ulpin": parcel.ulpin, "wardId": parcel.ward_id, "ptin": unit.ptin},
+    )
     await db.commit()
 
-    # Invalidate Redis cache for this tenant
-    await redis_client.delete(f"stats:summary:{tenant_id}")
+    await valkey_client.delete(scoped_key(tenant_id, access.sub_tenant_id, "properties"))
+    await valkey_client.delete(scoped_key(tenant_id, None, "properties"))
 
     return {"message": "Property parcel created successfully", "ulpin": parcel.ulpin, "id": parcel.id, "tenantId": tenant_id}
 

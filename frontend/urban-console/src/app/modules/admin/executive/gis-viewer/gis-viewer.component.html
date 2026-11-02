@@ -13,7 +13,8 @@
 
   <div class="gis-layout">
     <section #mapPanel class="gis-map-panel" aria-label="Map">
-      <div #mapHost class="gis-map"></div>
+      <div #mapHost class="gis-map" [class.hidden-view]="is3d()"></div>
+      <div #globeHost class="gis-map" [class.hidden-view]="!is3d()"></div>
       @if (isLoadingMap()) {
         <div class="loading-bar" role="progressbar" aria-label="Loading map data"></div>
       }
@@ -24,6 +25,7 @@
           }
         </div>
         <div class="glass map-tools">
+          <button type="button" [class.active]="is3d()" [title]="is3d() ? 'Back to 2D map' : 'Show on 3D globe'" [attr.aria-label]="is3d() ? 'Back to 2D map' : 'Show on 3D globe'" [attr.aria-pressed]="is3d()" (click)="toggle3d()"><app-icon name="ri-earth-line" [size]="18"></app-icon></button>
           <button type="button" title="Show all of India" aria-label="Show all of India" (click)="resetView()"><app-icon name="ri-global-line" [size]="18"></app-icon></button>
           <button type="button" title="Fit to what is on the map" aria-label="Fit to what is on the map" (click)="fitToData()"><app-icon name="ri-focus-3-line" [size]="18"></app-icon></button>
           <button type="button" title="Full screen" aria-label="Full screen" (click)="toggleFullscreen()"><app-icon name="ri-fullscreen-line" [size]="18"></app-icon></button>

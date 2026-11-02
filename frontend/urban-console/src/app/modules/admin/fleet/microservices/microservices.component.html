@@ -662,10 +662,8 @@
         <div class="select-filters-group">
           <select [(ngModel)]="selectedQueueType" (change)="currentPage.set(1)" class="filter-select">
             <option value="ALL">All Queue Types</option>
-            <option value="Celery / Redis">Celery / Redis</option>
+            <option value="Valkey">Valkey</option>
             <option value="Kafka Topic">Kafka Topic</option>
-            <option value="RabbitMQ">RabbitMQ</option>
-            <option value="Cloud PubSub">Cloud PubSub</option>
           </select>
 
           <select [(ngModel)]="selectedQueueStatus" (change)="currentPage.set(1)" class="filter-select">
@@ -766,7 +764,7 @@
           <select [(ngModel)]="selectedDbCluster" class="filter-select">
             <option value="ALL">All Database Clusters</option>
             <option value="pg-aurora-cluster-prod">pg-aurora-cluster-prod</option>
-            <option value="redis-cluster-ha">redis-cluster-ha</option>
+            <option value="valkey-cluster-ha">valkey-cluster-ha</option>
           </select>
 
           <select [(ngModel)]="selectedPoolStatus" class="filter-select">
