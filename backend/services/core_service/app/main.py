@@ -16,6 +16,8 @@ from app.api.v1.iam import _seed_standard_roles_if_empty
 from app.core.backup_runner import scheduler_loop
 from app.core.request_metrics import record_response
 from app.core.white_label_worker import white_label_loop
+from app.core.api_quota import ApiMeteringMiddleware
+from app.core.quota_worker import ensure_default_levels, quota_loop
 from app.db.seed import seed_initial_data
 from app.api.v1.boundaries import router as boundaries_router
 from app.api.v1.auth import router as auth_router
@@ -42,6 +44,7 @@ async def lifespan(app: FastAPI):
         async with AsyncSession(admin_engine, expire_on_commit=False) as session:
             await seed_initial_data(session)
             await _seed_standard_roles_if_empty(session)
+            await ensure_default_levels(session)
     except Exception as e:
         logger.exception("Database bootstrap failed: %s", e)
         if not settings.is_development:
@@ -58,11 +61,13 @@ async def lifespan(app: FastAPI):
 
     scheduler = asyncio.create_task(scheduler_loop())
     white_label = asyncio.create_task(white_label_loop())
+    quota = asyncio.create_task(quota_loop())
 
     yield
 
     scheduler.cancel()
     white_label.cancel()
+    quota.cancel()
 
     # Cleanup
     await valkey_client.close()
@@ -108,6 +113,7 @@ class ServerErrorResponder:
 
 
 app.add_middleware(ServerErrorResponder)
+app.add_middleware(ApiMeteringMiddleware)
 
 # CORS
 app.add_middleware(
@@ -133,6 +139,8 @@ from app.api.v1.executive import router as executive_router
 from app.api.v1.gis import router as gis_router
 from app.api.v1.white_label import public_router as white_label_public_router, router as white_label_router
 from app.api.v1.white_label_domains import router as white_label_domains_router
+from app.api.v1.quotas import public_router as quotas_public_router, router as quotas_router
+from app.api.v1.quota_alerts import router as quota_alerts_router
 
 # Include Routers
 app.include_router(auth_router, prefix=settings.API_V1_STR)
@@ -151,6 +159,9 @@ app.include_router(gis_router, prefix=settings.API_V1_STR)
 app.include_router(white_label_public_router, prefix=settings.API_V1_STR)
 app.include_router(white_label_router, prefix=settings.API_V1_STR)
 app.include_router(white_label_domains_router, prefix=settings.API_V1_STR)
+app.include_router(quotas_public_router, prefix=settings.API_V1_STR)
+app.include_router(quotas_router, prefix=settings.API_V1_STR)
+app.include_router(quota_alerts_router, prefix=settings.API_V1_STR)
 app.include_router(executive_router, prefix=settings.API_V1_STR)
 app.include_router(boundaries_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)

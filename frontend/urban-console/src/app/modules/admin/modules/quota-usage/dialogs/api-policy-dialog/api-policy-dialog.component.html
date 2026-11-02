@@ -1,0 +1,45 @@
+<div class="dialog-overlay" (click)="closed.emit()">
+  <div class="dialog-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="dialog-header">
+      <div><h3>{{ record ? 'Edit' : 'New' }} API Policy</h3><p>Requests above these limits get a 429 response. Leave API Service empty to cover all.</p></div>
+      <button type="button" class="close-btn" (click)="closed.emit()" title="Close dialog" aria-label="Close dialog"><app-icon name="ri-close-line" [size]="18"></app-icon></button>
+    </div>
+    <form class="dialog-form" (ngSubmit)="submit()">
+      <div class="dialog-body">
+        <div class="field"><label for="tenantLevel">Tenant Level <span class="required">*</span></label><select id="tenantLevel" name="tenantLevel" [(ngModel)]="form.tenantLevel">
+          @for (o of options.tenantLevels; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="stateTenantId">State Tenant <span class="required">*</span></label><input id="stateTenantId" list="stateTenantIdList" name="stateTenantId" placeholder="Type to search" [(ngModel)]="form.stateTenantId" />
+          <datalist id="stateTenantIdList">@for (t of states; track t.tenantId) { <option [value]="t.tenantId">{{ t.name }}</option> }</datalist></div>
+        @if (form.tenantLevel === 'ULB') {
+        <div class="field"><label for="ulbTenantId">ULB / City <span class="required">*</span></label><input id="ulbTenantId" list="ulbTenantIdList" name="ulbTenantId" placeholder="Type to search" [(ngModel)]="form.ulbTenantId" />
+          <datalist id="ulbTenantIdList">@for (t of ulbs; track t.tenantId) { <option [value]="t.tenantId">{{ t.name }}</option> }</datalist></div>
+        }
+        <div class="field"><label for="apiGateway">API Gateway <span class="required">*</span></label><select id="apiGateway" name="apiGateway" [(ngModel)]="form.apiGateway"><option [ngValue]="null">Select</option>
+          @for (o of options.apiGateways; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field wide"><label>API Service</label><app-check-list [options]="asOptions(options.apiServices)" [value]="form.apiServices" (valueChange)="form.apiServices = $event"></app-check-list></div>
+        <div class="field"><label for="apiCategory">API Category</label><select id="apiCategory" name="apiCategory" [(ngModel)]="form.apiCategory"><option [ngValue]="null">Select</option>
+          @for (o of options.apiCategories; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="rateLimitPerMinute">Rate Limit Per Minute <span class="required">*</span></label><input id="rateLimitPerMinute" type="number" name="rateLimitPerMinute" [(ngModel)]="form.rateLimitPerMinute" /></div>
+        <div class="field"><label for="rateLimitPerHour">Rate Limit Per Hour</label><input id="rateLimitPerHour" type="number" name="rateLimitPerHour" [(ngModel)]="form.rateLimitPerHour" /></div>
+        <div class="field"><label for="rateLimitPerDay">Rate Limit Per Day</label><input id="rateLimitPerDay" type="number" name="rateLimitPerDay" [(ngModel)]="form.rateLimitPerDay" /></div>
+        <div class="field"><label for="burstLimit">Burst Limit</label><input id="burstLimit" type="number" name="burstLimit" [(ngModel)]="form.burstLimit" /><span class="hint">Requests per second</span></div>
+        <div class="field"><label for="concurrentLimit">Concurrent Request Limit</label><input id="concurrentLimit" type="number" name="concurrentLimit" [(ngModel)]="form.concurrentLimit" /></div>
+        <div class="field"><label for="quotaPeriod">Quota Period <span class="required">*</span></label><select id="quotaPeriod" name="quotaPeriod" [(ngModel)]="form.quotaPeriod"><option [ngValue]="null">Select</option>
+          @for (o of options.quotaPeriods; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="effectiveFrom">Effective From <span class="required">*</span></label><input id="effectiveFrom" type="date" name="effectiveFrom" [ngModel]="dateOnly(form.effectiveFrom)" (ngModelChange)="form.effectiveFrom = $event" /></div>
+        <div class="field"><label for="effectiveUntil">Effective Until</label><input id="effectiveUntil" type="date" name="effectiveUntil" [ngModel]="dateOnly(form.effectiveUntil)" (ngModelChange)="form.effectiveUntil = $event" /></div>
+        <div class="field"><label for="policyStatus">Policy Status <span class="required">*</span></label><select id="policyStatus" name="policyStatus" [(ngModel)]="form.policyStatus">
+          @for (o of options.recordStatuses; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="closed.emit()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()"><app-icon name="ri-check-line" [size]="16"></app-icon><span>Save Policy</span></button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,43 @@
+@if (!options().smsConnected) {
+  <div class="wl-notice"><span>No SMS provider is connected. Allocations can be set up, and credits are enforced as soon as one is, but no messages are sent and delivery figures stay empty until then.</span></div>
+}
+
+<div class="wl-toolbar">
+  <input class="wl-search" type="search" placeholder="Search allocations, tenants or providers" aria-label="Search allocations, tenants or providers" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+  <button type="button" class="btn btn-primary" (click)="open(null)">
+    <app-icon name="ri-add-line" [size]="16"></app-icon>
+    <span>New Credit Allocation</span>
+  </button>
+</div>
+
+<div class="wl-card">
+  <div class="wl-scroll">
+    <table class="wl-table">
+      <thead><tr><th>Allocation</th><th>Tenant</th><th>Total</th><th>Consumed</th><th>Remaining</th><th>Delivered</th><th>Failed</th><th>Delivery %</th><th>Valid Until</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        @for (a of items(); track a.id) {
+          <tr>
+            <td>{{ a.allocationName }}<span class="wl-sub">{{ a.smsProvider }}</span></td>
+            <td>{{ a.tenantId }}</td>
+            <td>{{ a.creditAllocation }}</td>
+            <td>{{ a.creditsConsumed }}</td>
+            <td>{{ a.remainingCredits }}</td>
+            <td>{{ a.deliveredMessages }}</td>
+            <td>{{ a.failedMessages }}</td>
+            <td>{{ a.deliveryPercentage !== null ? a.deliveryPercentage + '%' : 'No data' }}</td>
+            <td>{{ a.validUntil | date: 'mediumDate' }}</td>
+            <td><span class="wl-status" [ngClass]="statusClass(a.allocationStatus)">{{ a.allocationStatus }}</span></td>
+            <td><div class="wl-actions"><button type="button" class="wl-link" (click)="open(a)">Edit</button></div></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="11" class="wl-empty">{{ isLoading() ? 'Loading...' : 'No SMS credit allocations yet.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-wl-pagination [page]="page()" [limit]="limit()" [total]="total()" (pageChange)="onPage($event)" (limitChange)="onLimit($event)"></app-wl-pagination>
+</div>
+
+@if (isDialogOpen()) {
+  <app-sms-allocation-dialog [record]="selected()" [options]="options()" [tenants]="tenants()" [recipients]="recipients()" (saved)="onSaved()" (closed)="isDialogOpen.set(false)"></app-sms-allocation-dialog>
+}

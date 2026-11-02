@@ -70,3 +70,5 @@ class AuthorizeResponse(CamelModel):
     tenantId: str
     subTenantId: Optional[str] = None
     userId: Optional[str] = None
+    quotaTenantId: Optional[str] = None
+    concurrentLimit: Optional[int] = None

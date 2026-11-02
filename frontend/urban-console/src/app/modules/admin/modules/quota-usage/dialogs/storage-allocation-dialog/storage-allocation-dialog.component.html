@@ -1,0 +1,58 @@
+<div class="dialog-overlay" (click)="closed.emit()">
+  <div class="dialog-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="dialog-header">
+      <div><h3>{{ record ? 'Edit' : 'New' }} Storage Allocation</h3><p>Uploads are refused once an active allocation is full.</p></div>
+      <button type="button" class="close-btn" (click)="closed.emit()" title="Close dialog" aria-label="Close dialog"><app-icon name="ri-close-line" [size]="18"></app-icon></button>
+    </div>
+    <form class="dialog-form" (ngSubmit)="submit()">
+      <div class="dialog-body">
+        <div class="field"><label for="allocationName">Allocation Name <span class="required">*</span></label><input id="allocationName" type="text" name="allocationName" [(ngModel)]="form.allocationName" /></div>
+        <div class="field"><label for="tenantLevel">Tenant Level <span class="required">*</span></label><select id="tenantLevel" name="tenantLevel" [(ngModel)]="form.tenantLevel">
+          @for (o of options.tenantLevels; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="stateTenantId">State Tenant <span class="required">*</span></label><input id="stateTenantId" list="stateTenantIdList" name="stateTenantId" placeholder="Type to search" [(ngModel)]="form.stateTenantId" />
+          <datalist id="stateTenantIdList">@for (t of states; track t.tenantId) { <option [value]="t.tenantId">{{ t.name }}</option> }</datalist></div>
+        @if (form.tenantLevel === 'ULB') {
+        <div class="field"><label for="ulbTenantId">ULB / City <span class="required">*</span></label><input id="ulbTenantId" list="ulbTenantIdList" name="ulbTenantId" placeholder="Type to search" [(ngModel)]="form.ulbTenantId" />
+          <datalist id="ulbTenantIdList">@for (t of ulbs; track t.tenantId) { <option [value]="t.tenantId">{{ t.name }}</option> }</datalist></div>
+        }
+        <div class="field"><label for="storageType">Storage Type <span class="required">*</span></label><select id="storageType" name="storageType" [(ngModel)]="form.storageType"><option [ngValue]="null">Select</option>
+          @for (o of options.storageTypes; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="storageProvider">Storage Provider <span class="required">*</span></label><select id="storageProvider" name="storageProvider" [(ngModel)]="form.storageProvider"><option [ngValue]="null">Select</option>
+          @for (o of options.storageProviders; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="storageBucket">Storage Bucket <span class="required">*</span></label><input id="storageBucket" type="text" name="storageBucket" [(ngModel)]="form.storageBucket" /></div>
+        <div class="field"><label for="allocationAmount">Storage Allocation <span class="required">*</span></label><input id="allocationAmount" type="number" name="allocationAmount" [(ngModel)]="form.allocationAmount" /></div>
+        <div class="field"><label for="storageUnit">Storage Unit <span class="required">*</span></label><select id="storageUnit" name="storageUnit" [(ngModel)]="form.storageUnit">
+          @for (o of options.storageUnits; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="maxFileSizeMb">Maximum File Size (MB) <span class="required">*</span></label><input id="maxFileSizeMb" type="number" name="maxFileSizeMb" [(ngModel)]="form.maxFileSizeMb" /></div>
+        <div class="field wide"><label>Allowed File Types <span class="required">*</span></label><app-check-list [options]="asOptions(options.fileTypes)" [value]="form.allowedFileTypes" (valueChange)="form.allowedFileTypes = $event"></app-check-list></div>
+        <div class="field wide">
+          <label>Module-wise Allocation</label>
+          @for (row of moduleRows; track $index) {
+            <div class="module-row">
+              <select [name]="'module' + $index" [(ngModel)]="row.moduleCode" aria-label="Module"><option value="">Select module</option>
+                @for (m of options.modules; track m) { <option [value]="m">{{ m }}</option> }
+              </select>
+              <input type="number" min="0" step="any" placeholder="GB" aria-label="Allocation in GB" [name]="'moduleGb' + $index" [(ngModel)]="row.gb" />
+              <button type="button" class="wl-link" (click)="removeModule($index)">Remove</button>
+            </div>
+          }
+          <button type="button" class="wl-link add-module" (click)="addModule()">Add Module</button>
+        </div>
+        <div class="field"><label for="effectiveFrom">Effective From <span class="required">*</span></label><input id="effectiveFrom" type="date" name="effectiveFrom" [ngModel]="dateOnly(form.effectiveFrom)" (ngModelChange)="form.effectiveFrom = $event" /></div>
+        <div class="field"><label for="effectiveUntil">Effective Until</label><input id="effectiveUntil" type="date" name="effectiveUntil" [ngModel]="dateOnly(form.effectiveUntil)" (ngModelChange)="form.effectiveUntil = $event" /></div>
+        <div class="field"><label for="allocationStatus">Allocation Status <span class="required">*</span></label><select id="allocationStatus" name="allocationStatus" [(ngModel)]="form.allocationStatus">
+          @for (o of options.recordStatuses; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field wide"><label for="remarks">Allocation Remarks</label><textarea id="remarks" name="remarks" [(ngModel)]="form.remarks"></textarea></div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="closed.emit()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()"><app-icon name="ri-check-line" [size]="16"></app-icon><span>Save Allocation</span></button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     GATEWAY_GENERATED_DIR: str = os.getenv("GATEWAY_GENERATED_DIR", "../../../gateway/generated")
     LETSENCRYPT_DIR: str = os.getenv("LETSENCRYPT_DIR", "/etc/letsencrypt")
     ACME_WEBROOT: str = os.getenv("ACME_WEBROOT", "/var/www/acme")
+    # ADM-S04: signs SMS delivery reports. Reports are refused until it is set.
+    SMS_WEBHOOK_SECRET: str = os.getenv("SMS_WEBHOOK_SECRET", "")
+    # Alert email. The Email channel cannot be selected until a host is set.
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "25"))
+    SMTP_FROM: str = os.getenv("SMTP_FROM", "")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
     WRITE_DATABASE_URL: str = os.getenv("WRITE_DATABASE_URL", "")
     READ_DATABASE_URL: str = os.getenv("READ_DATABASE_URL", "")

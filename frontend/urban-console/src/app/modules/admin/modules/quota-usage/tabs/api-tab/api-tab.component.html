@@ -1,0 +1,39 @@
+<div class="wl-toolbar">
+  <input class="wl-search" type="search" placeholder="Search by tenant" aria-label="Search by tenant" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+  <button type="button" class="btn btn-primary" (click)="open(null)">
+    <app-icon name="ri-add-line" [size]="16"></app-icon>
+    <span>New API Policy</span>
+  </button>
+</div>
+
+<div class="wl-card">
+  <div class="wl-scroll">
+    <table class="wl-table">
+      <thead><tr><th>Tenant</th><th>Limits</th><th>Requests Today</th><th>Successful</th><th>Failed</th><th>Throttled</th><th>Avg Response</th><th>Peak / Min</th><th>Remaining</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        @for (p of items(); track p.id) {
+          <tr>
+            <td>{{ p.tenantId }}<span class="wl-sub">{{ p.tenantLevel }} · {{ p.apiGateway }}</span></td>
+            <td>{{ p.rateLimitPerMinute }}/min<span class="wl-sub">{{ p.quotaPeriod }}</span></td>
+            <td>{{ p.totalRequests }}</td>
+            <td>{{ p.successfulRequests }}</td>
+            <td>{{ p.failedRequests }}</td>
+            <td>{{ p.throttledRequests }}</td>
+            <td>{{ p.averageResponseMs !== null ? p.averageResponseMs + ' ms' : 'No data' }}</td>
+            <td>{{ p.peakRequestsPerMinute }}</td>
+            <td>{{ p.remainingQuota ?? 'Unavailable' }}</td>
+            <td><span class="wl-status" [ngClass]="statusClass(p.policyStatus)">{{ p.policyStatus }}</span></td>
+            <td><div class="wl-actions"><button type="button" class="wl-link" (click)="open(p)">Edit</button></div></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="11" class="wl-empty">{{ isLoading() ? 'Loading...' : 'No API policies yet.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-wl-pagination [page]="page()" [limit]="limit()" [total]="total()" (pageChange)="onPage($event)" (limitChange)="onLimit($event)"></app-wl-pagination>
+</div>
+
+@if (isDialogOpen()) {
+  <app-api-policy-dialog [record]="selected()" [options]="options()" [tenants]="tenants()" (saved)="onSaved()" (closed)="isDialogOpen.set(false)"></app-api-policy-dialog>
+}

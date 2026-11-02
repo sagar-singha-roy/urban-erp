@@ -1,11 +1,11 @@
 import { Directive, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
-import { DialogService } from '../../../../core/services/dialog.service';
-import { PageQuery, PagedResponse, apiError } from '../../../../core/models/white-label.model';
+import { DialogService } from '../../../core/services/dialog.service';
+import { PageQuery, PagedResponse, apiError } from '../../../core/models/white-label.model';
 
 const SEARCH_DELAY_MS = 300;
 
-/** Server-side search and paging shared by the five ADM-T04 tables. */
+/** Server-side search and paging shared by admin tables. */
 @Directive()
 export abstract class PagedTab<T> implements OnInit, OnDestroy {
   protected dialogs = inject(DialogService);

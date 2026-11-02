@@ -263,6 +263,8 @@ button.wl-link {
     background: #ffffff;
   }
 
+  // The global select style is smaller than the 44px touch target and uses !important.
+  select { height: 44px !important; min-height: 44px !important; }
   textarea { min-height: 5rem; resize: vertical; }
   textarea.code { font-family: var(--font-mono, monospace); min-height: 8rem; }
   input[readonly] { background: #f1f5f9; color: #475569; }

@@ -51,3 +51,10 @@ Multi-tenant isolation is enforced at 3 separate architectural layers:
 - Logo uploads are judged by their content, not their name. SVG is refused because it can carry scripts.
 - Tenant Custom CSS cannot use `url()`, `@import`, escapes or HTML. It can still change how pages look, so only super admins may set it.
 - HTTP verification refuses domains that resolve to private addresses.
+
+## Quotas (ADM-S04)
+
+- The tenant whose API limit applies comes from the signed token, so `X-Tenant-ID` cannot change it.
+- Storage and SMS checks lock their allocation rows, so simultaneous requests cannot overshoot.
+- SMS delivery reports have no signed-in user. They need an HMAC-SHA256 signature, and are refused until `SMS_WEBHOOK_SECRET` is set.
+- The SMS ledger holds no phone numbers or message text.

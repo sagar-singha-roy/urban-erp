@@ -1,0 +1,35 @@
+@use '../../../../../../shared/styles/admin-table';
+
+.usage-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+
+  .wide { grid-column: 1 / -1; }
+}
+
+.filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+
+  .wl-search {
+    flex: 1 1 14rem;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+  }
+}
+
+.usage-detail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}

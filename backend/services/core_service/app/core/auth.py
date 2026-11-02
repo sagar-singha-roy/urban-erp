@@ -7,6 +7,7 @@ from jose import jwt, JWTError
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
+from app.core.api_quota import enforce as enforce_api_quota
 from app.core.security import CSRF_HEADER, SESSION_COOKIE
 from app.core.tenant_context import SET_RLS_CONTEXT_SQL, rls_params, set_rls_context
 from app.db.models import GlobalUserProfile, RoleModel, RolePermission, StateTenant, Tenant, User
@@ -60,6 +61,7 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing CSRF header")
     user = await _authenticate(token)
     set_rls_context(user_tenant_scope(user), bypass=is_super_admin(user))
+    await enforce_api_quota(request, user)
     return user
 
 

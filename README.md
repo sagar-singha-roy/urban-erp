@@ -174,3 +174,20 @@ Set these in `.env` before using it (see `.env.example`):
 Add each deployment's own hostname to `gateway/platform_hosts.conf`. The gateway refuses any other hostname unless an active domain mapping generated it.
 
 A domain goes live in this order: claim it, publish the verification record, verify, activate, add a certificate, then create an active mapping. `core-service` writes the host configuration, and `gateway/start_gateway.sh` applies it only if `nginx -t` passes. If NGINX rejects it, the last working configuration stays, and the Domain Mapping tab shows the error.
+
+## Quotas and usage (ADM-S04)
+
+Super admins manage this under **Module & Subscription Management > Quota & Usage Management**.
+
+| Resource | Enforced by | Figures come from |
+|---|---|---|
+| API requests | Valkey counters on every signed-in request, in core and through module services' authorization call | Each service's own request outcomes, saved each minute |
+| Storage | `reserve_storage`, inside the transaction that stores the file | The `storage_objects` ledger |
+| SMS credits | `consume_sms_credits`, before anything is sent | The `sms_messages` ledger and signed delivery reports |
+
+Current limits of this version:
+
+- **Storage:** only logos and emblems reach the ledger, because document storage is not built. Any new upload path must call `reserve_storage`. Providers other than Platform Database show as not connected.
+- **SMS:** no provider is connected, so nothing is sent. Call `register_sms_provider` with an adapter, and set `SMS_WEBHOOK_SECRET` so reports can be sent to `POST /api/v1/public/quotas/sms/delivery-reports`, signed in `X-Urban-Signature` with HMAC-SHA256 of the body.
+- **Email alerts:** the channel cannot be selected until `SMTP_HOST` and `SMTP_FROM` are set.
+- **API limits:** each tenant has its own counters, so a state policy gives each of its ULBs that limit rather than one shared pool. API Category is stored but does not change what is limited. Super admins are exempt. Limits stop applying while Valkey is down.

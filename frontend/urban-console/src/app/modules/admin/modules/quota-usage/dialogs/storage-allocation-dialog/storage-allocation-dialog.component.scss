@@ -1,0 +1,13 @@
+@use '../../../../../../shared/styles/admin-table';
+
+.module-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+
+  select, input { flex: 1 1 8rem; min-width: 0; }
+}
+
+.add-module { align-self: flex-start; }

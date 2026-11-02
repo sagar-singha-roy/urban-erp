@@ -6,6 +6,7 @@ import { TenantManagementComponent } from './tenants/tenant-management.component
 import { UlbManagementComponent } from './ulbs/ulb-management.component';
 import { TenantLifecycleComponent } from './tenants/tenant-lifecycle/tenant-lifecycle.component';
 import { WhiteLabelComponent } from './tenants/white-label/white-label.component';
+import { QuotaUsageComponent } from './modules/quota-usage/quota-usage.component';
 import { ModuleCatalogueComponent } from './modules/module-catalogue/module-catalogue.component';
 import { ComponentRegistryComponent } from './modules/component-registry/component-registry.component';
 import { ActionDependencyRegistryComponent } from './modules/action-dependency-registry/action-dependency-registry.component';
@@ -38,6 +39,7 @@ import { SUPER_ADMIN_SECTIONS, SuperAdminSection } from '../../core/models/super
     UlbManagementComponent,
     TenantLifecycleComponent,
     WhiteLabelComponent,
+    QuotaUsageComponent,
     ModuleCatalogueComponent,
     ComponentRegistryComponent,
     ActionDependencyRegistryComponent,
@@ -110,6 +112,8 @@ export class AdminDashboardComponent implements OnInit {
           'state-subscriptions': { section: 'modules', item: 'MS-04' },
           'delegation': { section: 'modules', item: 'MS-05' },
           'cascade-delegation': { section: 'modules', item: 'MS-05' },
+          'quotas': { section: 'modules', item: 'MS-06' },
+          'quota-usage': { section: 'modules', item: 'MS-06' },
           'idp-sso': { section: 'iam-sso', item: 'IAM-01' },
           'sso': { section: 'iam-sso', item: 'IAM-01' },
           'federation': { section: 'iam-sso', item: 'IAM-02' },

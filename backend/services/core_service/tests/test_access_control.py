@@ -16,6 +16,7 @@ from app.main import app
 from app.schemas.auth import SignUpRequest
 
 PUBLIC_ROUTES = {
+    ("POST", "/api/v1/public/quotas/sms/delivery-reports"),
     ("GET", "/api/v1/white-label/public/branding"),
     ("GET", "/api/v1/white-label/public/assets/{file_id}"),
     ("POST", "/api/v1/auth/signin"), ("POST", "/api/v1/auth/signup"), ("POST", "/api/v1/auth/logout"), ("GET", "/health")}

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import white_label_rules as rules
 from app.core.auth import ensure_tenant_access, require_roles
 from app.core.config import PLATFORM_ULB_TYPE, settings
+from app.core.quota_service import QuotaExceeded, reserve_storage
 from app.core.tenant_context import set_rls_context
 from app.db.models import (
     BrandingAssetFile, BrandingAssetSet, BrandingProfile, MicroserviceRegistryModel, StateTenant, Tenant,
@@ -25,6 +26,8 @@ from app.schemas.white_label import (
 SUPER_ADMIN = Depends(require_roles(["super_admin"]))
 router = APIRouter(prefix="/white-label", tags=["ADM-T04 White-Labelling & Domain Management"], dependencies=[SUPER_ADMIN])
 public_router = APIRouter(prefix="/white-label/public", tags=["ADM-T04 Public Branding"])
+
+_FILE_TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/x-icon": "ico"}
 
 # Gateway targets that exist on every deployment; module services come from the fleet registry.
 PLATFORM_SERVICES = ["console", "core"]
@@ -234,6 +237,12 @@ async def create_asset_set(
         except ValueError as exc:
             await db.rollback()
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{kind.replace('_', ' ').title()}: {exc}")
+        try:
+            await reserve_storage(db, tenant_id=tenant, storage_type="Image Storage", module_code="ADM", object_name=upload.filename or kind,
+                                  size_bytes=len(data), file_type=_FILE_TYPES[content_type])
+        except QuotaExceeded as exc:
+            await db.rollback()
+            raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(exc))
         db.add(BrandingAssetFile(tenant_id=tenant, asset_set_id=asset_set.id, file_kind=kind, content_type=content_type,
                                  size_bytes=len(data), sha256=digest, data=data))
     add_audit(db, tenant, "BRANDING_ASSET_UPLOADED", user, f"{logo_type} assets uploaded as {asset_status}.")

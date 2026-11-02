@@ -1232,3 +1232,178 @@ class DomainMapping(Base):
     created_by = Column(String(150), nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class StorageAllocation(Base):
+    """ADM-S04 storage quota for a State or ULB."""
+    __tablename__ = "storage_allocations"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    tenant_level = Column(String(20), nullable=False)
+    state_tenant_id = Column(String(50), nullable=False)
+    ulb_tenant_id = Column(String(50), nullable=True)
+    allocation_name = Column(String(150), nullable=False)
+    storage_type = Column(String(50), nullable=False)
+    storage_provider = Column(String(50), nullable=False)
+    storage_bucket = Column(String(100), nullable=False)
+    allocation_amount = Column(Float, nullable=False)
+    storage_unit = Column(String(5), nullable=False)
+    allocation_bytes = Column(BigInteger, nullable=False)
+    max_file_size_mb = Column(Float, nullable=False)
+    allowed_file_types = Column(JSON, nullable=False)
+    module_allocations = Column(JSON, nullable=False, default=list)
+    effective_from = Column(DateTime, nullable=False)
+    effective_until = Column(DateTime, nullable=True)
+    allocation_status = Column(String(20), nullable=False, default="Draft")
+    remarks = Column(Text, nullable=True)
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class StorageObject(Base):
+    """Ledger of stored files. Quota checks and usage figures both read it."""
+    __tablename__ = "storage_objects"
+    __table_args__ = (Index("ix_storage_objects_usage", "tenant_id", "storage_type"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False)
+    storage_type = Column(String(50), nullable=False)
+    module_code = Column(String(20), nullable=False)
+    object_name = Column(String(255), nullable=False)
+    size_bytes = Column(BigInteger, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class SmsCreditAllocation(Base):
+    __tablename__ = "sms_credit_allocations"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    state_tenant_id = Column(String(50), nullable=False)
+    ulb_tenant_id = Column(String(50), nullable=True)
+    allocation_name = Column(String(150), nullable=False)
+    sms_provider = Column(String(50), nullable=False)
+    dlt_entity_id = Column(String(30), nullable=True)
+    sender_id = Column(String(11), nullable=True)
+    dlt_template_id = Column(String(30), nullable=True)
+    credit_allocation = Column(BigInteger, nullable=False)
+    credits_consumed = Column(BigInteger, nullable=False, default=0)
+    valid_from = Column(DateTime, nullable=False)
+    valid_until = Column(DateTime, nullable=False)
+    sms_categories = Column(JSON, nullable=False, default=list)
+    low_credit_threshold = Column(BigInteger, nullable=True)
+    low_credit_notified = Column(Boolean, nullable=False, default=False)
+    notification_recipients = Column(JSON, nullable=False, default=list)
+    allocation_status = Column(String(20), nullable=False, default="Draft")
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class SmsMessage(Base):
+    """Delivery ledger. Holds no phone numbers or message text."""
+    __tablename__ = "sms_messages"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    allocation_id = Column(String(36), ForeignKey("sms_credit_allocations.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(50), nullable=True)
+    credits = Column(Integer, nullable=False, default=1)
+    delivery_status = Column(String(20), nullable=False, default="Queued")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class ApiQuotaPolicy(Base):
+    __tablename__ = "api_quota_policies"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    tenant_level = Column(String(20), nullable=False)
+    state_tenant_id = Column(String(50), nullable=False)
+    ulb_tenant_id = Column(String(50), nullable=True)
+    api_gateway = Column(String(50), nullable=False)
+    api_services = Column(JSON, nullable=False, default=list)
+    api_category = Column(String(50), nullable=True)
+    rate_limit_per_minute = Column(Integer, nullable=False)
+    rate_limit_per_hour = Column(Integer, nullable=True)
+    rate_limit_per_day = Column(Integer, nullable=True)
+    burst_limit = Column(Integer, nullable=True)
+    concurrent_limit = Column(Integer, nullable=True)
+    quota_period = Column(String(20), nullable=False)
+    effective_from = Column(DateTime, nullable=False)
+    effective_until = Column(DateTime, nullable=True)
+    policy_status = Column(String(20), nullable=False, default="Draft")
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class ApiUsageMinute(Base):
+    __tablename__ = "api_usage_minutes"
+    __table_args__ = (UniqueConstraint("tenant_id", "service", "bucket", name="uq_api_usage_minute"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    service = Column(String(50), nullable=False)
+    bucket = Column(DateTime, nullable=False, index=True)
+    total_requests = Column(BigInteger, nullable=False, default=0)
+    successful_requests = Column(BigInteger, nullable=False, default=0)
+    failed_requests = Column(BigInteger, nullable=False, default=0)
+    throttled_requests = Column(BigInteger, nullable=False, default=0)
+    latency_ms_total = Column(BigInteger, nullable=False, default=0)
+
+
+class UsageThresholdLevel(Base):
+    """Configurable levels such as 70% Warning. Platform-wide, so it has no tenant."""
+    __tablename__ = "usage_threshold_levels"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    level_name = Column(String(30), unique=True, nullable=False)
+    percentage = Column(Float, nullable=False)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class UsageAlertRule(Base):
+    __tablename__ = "usage_alert_rules"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    tenant_level = Column(String(20), nullable=False)
+    state_tenant_id = Column(String(50), nullable=False)
+    ulb_tenant_id = Column(String(50), nullable=True)
+    alert_name = Column(String(150), nullable=False)
+    alert_code = Column(String(50), unique=True, nullable=False)
+    resource_type = Column(String(30), nullable=False)
+    alert_condition = Column(String(30), nullable=False)
+    threshold_percentage = Column(Float, nullable=True)
+    threshold_value = Column(Float, nullable=True)
+    comparison_operator = Column(String(5), nullable=False)
+    alert_severity = Column(String(20), nullable=False)
+    notification_channels = Column(JSON, nullable=False)
+    notification_recipients = Column(JSON, nullable=False)
+    repeat_interval_minutes = Column(Integer, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    description = Column(Text, nullable=True)
+    is_firing = Column(Boolean, nullable=False, default=False)
+    last_notified_at = Column(DateTime, nullable=True)
+    last_value = Column(Float, nullable=True)
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class UsageAlertEvent(Base):
+    __tablename__ = "usage_alert_events"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    rule_id = Column(String(36), ForeignKey("usage_alert_rules.id", ondelete="CASCADE"), nullable=True, index=True)
+    severity = Column(String(20), nullable=False)
+    message = Column(String(500), nullable=False)
+    delivery_summary = Column(String(255), nullable=True)
+    acknowledged_by = Column(String(150), nullable=True)
+    acknowledged_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)

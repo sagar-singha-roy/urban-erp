@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { IconComponent } from '../../../../../../shared/components/icon/icon.component';
 import { WhiteLabelService } from '../../../../../../core/services/white-label.service';
-import { PagedTab } from '../../paged-tab';
-import { WlPaginationComponent } from '../../wl-pagination/wl-pagination.component';
+import { PagedTab } from '../../../../../../shared/components/paged-tab/paged-tab';
+import { WlPaginationComponent } from '../../../../../../shared/components/wl-pagination/wl-pagination.component';
 import { PageQuery, PagedResponse, TenantDomain, TenantOption, WhiteLabelOptions, apiError } from '../../../../../../core/models/white-label.model';
 import { DomainFormDialogComponent } from '../../dialogs/domain-form-dialog/domain-form-dialog.component';
 

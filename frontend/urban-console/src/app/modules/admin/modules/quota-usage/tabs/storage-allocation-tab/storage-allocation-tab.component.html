@@ -1,0 +1,36 @@
+<div class="wl-toolbar">
+  <input class="wl-search" type="search" placeholder="Search allocations, tenants or buckets" aria-label="Search allocations, tenants or buckets" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+  <button type="button" class="btn btn-primary" (click)="open(null)">
+    <app-icon name="ri-add-line" [size]="16"></app-icon>
+    <span>New Allocation</span>
+  </button>
+</div>
+
+<div class="wl-card">
+  <div class="wl-scroll">
+    <table class="wl-table">
+      <thead><tr><th>Allocation</th><th>Tenant</th><th>Type</th><th>Provider</th><th>Size</th><th>Effective</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        @for (a of items(); track a.id) {
+          <tr>
+            <td>{{ a.allocationName }}<span class="wl-sub">{{ a.storageBucket }}</span></td>
+            <td>{{ a.tenantId }}<span class="wl-sub">{{ a.tenantLevel }}</span></td>
+            <td>{{ a.storageType }}</td>
+            <td>{{ a.storageProvider }}</td>
+            <td>{{ a.allocationAmount }} {{ a.storageUnit }}<span class="wl-sub">Max file {{ a.maxFileSizeMb }} MB</span></td>
+            <td>{{ a.effectiveFrom | date: 'mediumDate' }}<span class="wl-sub">{{ a.effectiveUntil ? 'to ' + (a.effectiveUntil | date: 'mediumDate') : 'No end date' }}</span></td>
+            <td><span class="wl-status" [ngClass]="statusClass(a.allocationStatus)">{{ a.allocationStatus }}</span></td>
+            <td><div class="wl-actions"><button type="button" class="wl-link" (click)="open(a)">Edit</button></div></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="8" class="wl-empty">{{ isLoading() ? 'Loading...' : 'No storage allocations yet.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-wl-pagination [page]="page()" [limit]="limit()" [total]="total()" (pageChange)="onPage($event)" (limitChange)="onLimit($event)"></app-wl-pagination>
+</div>
+
+@if (isDialogOpen()) {
+  <app-storage-allocation-dialog [record]="selected()" [options]="options()" [tenants]="tenants()" (saved)="onSaved()" (closed)="isDialogOpen.set(false)"></app-storage-allocation-dialog>
+}

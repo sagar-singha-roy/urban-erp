@@ -167,6 +167,16 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         icon: 'ri-shield-keyhole-line',
         description: 'Control how a state tenant delegates subscribed modules and component permissions to child ULBs',
       },
+      {
+        id: 'MS-06',
+        code: 'ADM-S04',
+        title: 'Quota & Usage Management',
+        route: '/admin/modules/quotas',
+        badge: 'Usage',
+        count: 5,
+        icon: 'ri-pie-chart-line',
+        description: 'Allocate and monitor tenant storage, SMS/DLT credits and API usage',
+      },
     ],
   },
   {

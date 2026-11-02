@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { IconComponent } from '../../../../../shared/components/icon/icon.component';
+import { IconComponent } from '../icon/icon.component';
 
 @Component({
   selector: 'app-wl-pagination',

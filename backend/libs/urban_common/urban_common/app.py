@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from urban_common.cache import valkey_client
 from urban_common.db import engine
 from urban_common.events import relay_loop
+from urban_common.metering import ApiMeteringMiddleware
 from urban_common.settings import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -64,6 +65,7 @@ def create_service_app(module_code: str, module_name: str, routers: Optional[Ite
         lifespan=lifespan,
     )
     app.add_middleware(ServerErrorResponder)
+    app.add_middleware(ApiMeteringMiddleware, service=module_code.lower())
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,

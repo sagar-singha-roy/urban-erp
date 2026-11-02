@@ -482,6 +482,7 @@ async def list_modules_for_user(user: dict = Depends(get_current_user), db: Asyn
 
 @router.post("/authorize", response_model=AuthorizeResponse)
 async def authorize(
+    request: Request,
     component: str = Query(..., min_length=1, max_length=30),
     action: str = Query(...),
     tenant_id: str = Depends(get_current_tenant),
@@ -493,4 +494,9 @@ async def authorize(
     if action not in PERMISSION_COLUMNS:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown action")
     await require_permission(component, action)(user, db)
-    return AuthorizeResponse(tenantId=tenant_id, subTenantId=sub_tenant_id, userId=str(user.get("sub") or "") or None)
+    return AuthorizeResponse(
+        tenantId=tenant_id, subTenantId=sub_tenant_id, userId=str(user.get("sub") or "") or None,
+        # The tenant whose limits apply comes from the token. The service holds its concurrency slot with these.
+        quotaTenantId=getattr(request.state, "quota_tenant", None),
+        concurrentLimit=getattr(request.state, "quota_concurrent_limit", None),
+    )

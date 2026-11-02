@@ -12,7 +12,8 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 RLS_TABLES = ("zones", "wards", "localities", "property_parcels", "buildings", "property_units", "owners", "gis_layers", "gis_features",
-              "branding_profiles", "branding_asset_sets", "branding_asset_files", "tenant_domains", "tenant_certificates", "domain_mappings")
+              "branding_profiles", "branding_asset_sets", "branding_asset_files", "tenant_domains", "tenant_certificates", "domain_mappings",
+              "storage_allocations", "storage_objects", "sms_credit_allocations", "sms_messages", "api_quota_policies", "api_usage_minutes", "usage_alert_rules", "usage_alert_events")
 POLICY_NAME = "tenant_isolation"
 _SCOPE = "string_to_array(current_setting('app.tenant_ids', true), ',')"
 
