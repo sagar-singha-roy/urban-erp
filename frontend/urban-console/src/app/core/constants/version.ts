@@ -3,8 +3,8 @@
  */
 export const APP_VERSION = {
   name: 'SUVIDHA',
-  version: '1.8.0',
-  versionCode: 116,
+  version: '1.9.0',
+  versionCode: 117,
   releaseDate: 'November 2026',
   developer: 'Sagar',
   location: 'Tripura',
