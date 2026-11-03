@@ -47,9 +47,9 @@ from app.schemas.iam import (
     ResetUserPasswordPayload,
 )
 from app.schemas.tenant import ApiResponse
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, require_roles
 
-router = APIRouter(prefix="/iam", tags=["Identity & Access Management"], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix="/iam", tags=["Identity & Access Management"], dependencies=[Depends(require_roles(["super_admin"]))])
 
 def _to_sso_response(cfg: SSOConfiguration) -> SSOConfigurationResponse:
     discovery = cfg.discovery_url
@@ -306,7 +306,7 @@ async def list_identity_providers(
     search: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    db: AsyncSession = Depends(get_read_db)
+    db: AsyncSession = Depends(get_write_db)
 ):
     query = select(IdentityProviderFederation).order_by(IdentityProviderFederation.created_at.asc())
     result = await db.scalars(query)
@@ -794,7 +794,7 @@ async def get_roles(
     search: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    db: AsyncSession = Depends(get_read_db)
+    db: AsyncSession = Depends(get_write_db)
 ):
     await _seed_standard_roles_if_empty(db)
     query = select(RoleModel).order_by(RoleModel.created_at.asc())
@@ -831,7 +831,7 @@ async def get_roles(
     )
 
 @router.get("/roles/templates", response_model=ApiResponse[List[RoleResponse]])
-async def get_role_templates(db: AsyncSession = Depends(get_read_db)):
+async def get_role_templates(db: AsyncSession = Depends(get_write_db)):
     await _seed_standard_roles_if_empty(db)
     query = select(RoleModel).where(RoleModel.is_template == True).order_by(RoleModel.created_at.asc())
     result = await db.scalars(query)
@@ -1400,7 +1400,7 @@ async def get_users(
     search: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    db: AsyncSession = Depends(get_read_db)
+    db: AsyncSession = Depends(get_write_db)
 ):
     await _seed_initial_users_if_empty(db)
     query = select(GlobalUserProfile).order_by(desc(GlobalUserProfile.created_at))
@@ -1772,7 +1772,7 @@ async def get_invitations(
     search: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    db: AsyncSession = Depends(get_read_db)
+    db: AsyncSession = Depends(get_write_db)
 ):
     await _seed_initial_invitations_if_empty(db)
     query = select(UserInvitation).order_by(desc(UserInvitation.created_at))

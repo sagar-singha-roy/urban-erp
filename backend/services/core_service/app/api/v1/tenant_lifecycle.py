@@ -13,7 +13,8 @@ from app.db.models import (
     TenantLifecycleEvent,
     TenantMaintenanceConfig
 )
-from app.core.auth import get_current_user, require_roles
+from app.core.config import PLATFORM_ULB_TYPE
+from app.core.auth import ensure_tenant_access, get_current_user, require_roles
 from app.schemas.tenant import (
     ApiResponse,
     TenantDirectoryItem,
@@ -38,7 +39,7 @@ async def list_lifecycle_directory(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_roles(["super_admin"])),
 ):
     items: List[TenantDirectoryItem] = []
 
@@ -101,7 +102,7 @@ async def list_lifecycle_directory(
 
     # 2. ULB Tenants (Level 2)
     if not tenant_level or tenant_level.upper() in ["ALL", "ULB"]:
-        ulb_stmt = select(Tenant)
+        ulb_stmt = select(Tenant).where(Tenant.ulb_type != PLATFORM_ULB_TYPE)
         if search:
             q = f"%{search.strip().lower()}%"
             ulb_stmt = ulb_stmt.where(
@@ -172,6 +173,7 @@ async def update_tenant_status(
     user: dict = Depends(require_roles(["super_admin", "state_director"])),
 ):
     tenant_id = payload.tenantId.strip()
+    await ensure_tenant_access(tenant_id, user, db)
     is_state = payload.tenantLevel.upper() == "STATE"
     operator = user.get("preferred_username") or user.get("email") or "system"
 
@@ -284,7 +286,7 @@ async def update_tenant_status(
 async def get_tenant_maintenance(
     tenant_id: str,
     db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_roles(["super_admin"])),
 ):
     res = await db.execute(
         select(TenantMaintenanceConfig).where(TenantMaintenanceConfig.tenant_id == tenant_id)
@@ -330,6 +332,7 @@ async def update_tenant_maintenance(
     user: dict = Depends(require_roles(["super_admin", "state_director"])),
 ):
     tenant_id = payload.tenantId.strip()
+    await ensure_tenant_access(tenant_id, user, db)
     is_state = payload.tenantLevel.upper() == "STATE"
     operator = user.get("preferred_username") or user.get("email") or "system"
 
@@ -433,7 +436,7 @@ async def list_suspension_history(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_roles(["super_admin"])),
 ):
     stmt = select(TenantLifecycleEvent).order_by(desc(TenantLifecycleEvent.created_at))
 
@@ -478,6 +481,7 @@ async def archive_tenant(
     user: dict = Depends(require_roles(["super_admin"])),
 ):
     tenant_id = payload.tenantId.strip()
+    await ensure_tenant_access(tenant_id, user, db)
     is_state = payload.tenantLevel.upper() == "STATE"
     operator = user.get("preferred_username") or user.get("email") or "system"
 

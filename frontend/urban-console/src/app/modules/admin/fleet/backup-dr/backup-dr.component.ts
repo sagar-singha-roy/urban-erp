@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { BackupDrService } from '../../../../core/services/backup-dr.service';
 import { DialogService } from '../../../../core/services/dialog.service';
 import {
@@ -16,6 +17,7 @@ import {
   DrillExecutionPayload,
 } from '../../../../core/models/backup-dr.model';
 import { PolicyDialogComponent } from './dialogs/policy-dialog/policy-dialog.component';
+import { DataNoticeComponent } from '../../../../shared/components/data-notice/data-notice.component';
 import { RestoreDialogComponent } from './dialogs/restore-dialog/restore-dialog.component';
 import { DrillDialogComponent } from './dialogs/drill-dialog/drill-dialog.component';
 
@@ -25,9 +27,10 @@ import { DrillDialogComponent } from './dialogs/drill-dialog/drill-dialog.compon
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     PolicyDialogComponent,
     RestoreDialogComponent,
+    DataNoticeComponent,
     DrillDialogComponent,
   ],
   templateUrl: './backup-dr.component.html',
@@ -62,15 +65,6 @@ export class BackupDrComponent implements OnInit {
   // Filters: Policies
   policyStatusFilter: string = 'ALL';
 
-  // PITR Form Controls
-  pitrTargetTime: string = '';
-  pitrPointType: string = 'Transaction Timestamp';
-  pitrTargetEnv: string = 'Staging Recovery Sandbox';
-  pitrReason: string = '';
-  pitrApprovalRef: string = 'CR-2026-PITR-011';
-  pitrValidationRequired: boolean = true;
-  isSimulatingPitr = signal(false);
-  pitrSimResult = signal<string | null>(null);
 
   // Pagination for Jobs
   readonly currentPage = signal<number>(1);
@@ -209,6 +203,34 @@ export class BackupDrComponent implements OnInit {
     this.activeDialog.set('policy');
   }
 
+  runDrill(drill: { id: string }): void {
+    this.backupService.runDrill(drill.id).subscribe({
+      next: () => {
+        this.dialogs.showToast('Drill started. Use Refresh to see its result.', 'success');
+        this.loadDrills();
+      },
+      error: (err) => this.dialogs.showToast(err?.error?.detail || 'The drill could not be started.', 'error'),
+    });
+  }
+
+  async approveRestore(restore: RestoreJobItem): Promise<void> {
+    const confirmed = await this.dialogs.confirm({
+      title: 'Approve restore',
+      message: `Restore '${restore.sourceBackupId}' into a new scratch database? Existing databases are not changed.`,
+      confirmText: 'Approve and Run',
+      cancelText: 'Cancel',
+      variant: 'primary',
+    });
+    if (!confirmed) return;
+    this.backupService.approveRestore(restore.id).subscribe({
+      next: () => {
+        this.dialogs.showToast('Restore started. Use Refresh to see its result.', 'success');
+        this.loadRestores();
+      },
+      error: (err) => this.dialogs.showToast(err?.error?.detail || 'The restore could not be approved.', 'error'),
+    });
+  }
+
   openRestoreDialog(): void {
     this.activeDialog.set('restore');
   }
@@ -239,7 +261,7 @@ export class BackupDrComponent implements OnInit {
     this.dialogs.showToast(`Initiating on-demand backup for policy '${policy.policyCode}'...`, 'info');
     this.backupService.triggerOnDemandBackup(policy.policyCode).subscribe({
       next: (job) => {
-        this.dialogs.showToast(`Snapshot '${job.jobId}' created and verified (${job.fileSizeFormatted}).`, 'success');
+        this.dialogs.showToast(`Backup '${job.jobId}' started. Use Refresh to see its result.`, 'info');
         this.refreshAll();
       },
       error: (err) => {
@@ -253,7 +275,7 @@ export class BackupDrComponent implements OnInit {
     this.backupService.initiateRestore(payload).subscribe({
       next: (job) => {
         this.closeDialog();
-        this.dialogs.showToast(`Restore job '${job.restoreJobName}' executed and validated.`, 'success');
+        this.dialogs.showToast(`Restore request '${job.restoreJobName}' recorded. A second administrator must approve it.`, 'info');
         this.refreshAll();
       },
       error: (err) => {
@@ -275,23 +297,6 @@ export class BackupDrComponent implements OnInit {
         this.dialogs.showToast(msg, 'error');
       },
     });
-  }
-
-  simulatePitr(): void {
-    if (!this.pitrTargetTime) {
-      this.dialogs.showToast('Please select a recovery target time.', 'warning');
-      return;
-    }
-    this.isSimulatingPitr.set(true);
-    this.pitrSimResult.set(null);
-
-    setTimeout(() => {
-      this.isSimulatingPitr.set(false);
-      this.pitrSimResult.set(
-        `WAL replay simulation complete. Exactly 84 WAL segments required from archive. Estimated recovery time: 4m 12s. Zero checksum divergence detected against Aurora primary LSN.`
-      );
-      this.dialogs.showToast('PITR simulation validation passed.', 'success');
-    }, 1200);
   }
 }
 

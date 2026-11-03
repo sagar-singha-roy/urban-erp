@@ -25,10 +25,7 @@
         <span>Test Brokers</span>
       </button>
 
-      <button class="btn btn-refresh" (click)="loadIdps()" title="Refresh Identity Providers">
-        <app-icon name="ri-refresh-line" [size]="16"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="identity providers" (refresh)="loadIdps()"></app-refresh-button>
 
       <button class="btn btn-primary" (click)="openCreateDialog()" title="Add Identity Provider">
         <app-icon name="ri-add-line" [size]="16"></app-icon>

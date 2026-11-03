@@ -1,0 +1,1177 @@
+<div class="benchmarking-container">
+  <!-- 1. Page Header -->
+  <header class="page-header">
+    <div class="header-titles">
+      <div class="title-with-badge">
+        <h1
+          class="page-title"
+          data-tooltip="Comparative Multi-Tier Performance Matrix — Level 0 Analytics"
+          title="Comparative Multi-Tier Performance Matrix — Level 0 Analytics"
+        >
+          <app-icon name="ri-bar-chart-grouped-line" class="title-icon"></app-icon>
+          State & City Benchmarking Matrix
+        </h1>
+        <span class="pulse-indicator" title="Live Audited Analytical Stream"></span>
+      </div>
+      <p class="page-subtitle">
+        Compare state and ULB performance using revenue recovery, grievance SLA compliance, and official Swachh rankings.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="openNotesModal()"
+        title="Record Executive Directives"
+      >
+        <app-icon name="ri-file-edit-line"></app-icon>
+        <span>Directive Notes</span>
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="exportReport()"
+        [disabled]="isExporting()"
+        title="Export Current Benchmarking Matrix"
+      >
+        <app-icon name="ri-download-2-line"></app-icon>
+        <span>{{ isExporting() ? 'Exporting...' : 'Export Matrix' }}</span>
+      </button>
+
+      <app-refresh-button subject="benchmarking matrix" (refresh)="refreshData()"></app-refresh-button>
+    </div>
+  </header>
+
+  <!-- 2. Segmented Navigation Bar -->
+  <nav class="nav-segment-bar" aria-label="Benchmarking Matrix Tabs">
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'state'"
+      (click)="setTab('state')"
+    >
+      <app-icon name="ri-government-line"></app-icon>
+      <span>State Comparison</span>
+    </button>
+
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'city'"
+      (click)="setTab('city')"
+    >
+      <app-icon name="ri-community-line"></app-icon>
+      <span>City Comparison</span>
+    </button>
+
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'dcb'"
+      (click)="setTab('dcb')"
+    >
+      <app-icon name="ri-money-rupee-circle-line"></app-icon>
+      <span>DCB Recovery</span>
+    </button>
+
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'sla'"
+      (click)="setTab('sla')"
+    >
+      <app-icon name="ri-customer-service-2-line"></app-icon>
+      <span>SLA Compliance</span>
+    </button>
+
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'swachh'"
+      (click)="setTab('swachh')"
+    >
+      <app-icon name="ri-medal-line"></app-icon>
+      <span>Swachh Rankings</span>
+    </button>
+  </nav>
+
+  <!-- ========================================================================= -->
+  <!-- TAB 1: STATE COMPARISON                                                   -->
+  <!-- ========================================================================= -->
+  @if (dataNotice()) {
+    <app-data-notice [message]="dataNotice()"></app-data-notice>
+  }
+
+  @if (activeTab() === 'state') {
+    <section class="tab-content" aria-label="State Comparison Tab">
+      <!-- Filter Card -->
+      <div class="filter-card">
+        <div class="filter-card-header">
+          <div class="filter-title">
+            <app-icon name="ri-filter-3-line"></app-icon>
+            <span>State Comparison Controls & Thresholds</span>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn btn-sm btn-outline" (click)="resetFilters()">
+              <app-icon name="ri-restart-line"></app-icon>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" (click)="applyFilters()">
+              <app-icon name="ri-check-line"></app-icon>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-grid">
+          <div class="form-group">
+            <label class="form-label">Benchmark Name</label>
+            <input type="text" class="form-control" [(ngModel)]="stateFilters().benchmarkName" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Financial Year</label>
+            <select class="form-select" [(ngModel)]="stateFilters().financialYear">
+              @for (fy of filterOptions().financialYears; track fy) {
+                <option [value]="fy">{{ show(fy) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Benchmark Period</label>
+            <select class="form-select" [(ngModel)]="stateFilters().benchmarkPeriod">
+              <option value="Q1 (Apr - Jun)">Q1 (Apr - Jun)</option>
+              <option value="Q2 (Jul - Sep)">Q2 (Jul - Sep)</option>
+              <option value="Q3 (Oct - Dec)">Q3 (Oct - Dec)</option>
+              <option value="Q4 (Jan - Mar)">Q4 (Jan - Mar)</option>
+              <option value="Full Year (FY)">Full Year (FY)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Selected States</label>
+            <select class="form-select" [(ngModel)]="stateFilters().selectedStates">
+              <option value="">All Configured States (8)</option>
+              <option value="TG,MH,KA,GJ,TN">Top 5 Economic States</option>
+              <option value="TG,MP,MH">Top Swachh Performers</option>
+              @for (st of filterOptions().states; track st.code) {
+                <option [value]="st.code">{{ show(st.name) }} ({{ show(st.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Performance Indicators</label>
+            <select class="form-select" [(ngModel)]="stateFilters().performanceIndicators">
+              <option value="All Standard Indicators">All Standard Indicators</option>
+              <option value="DCB Recovery & Revenue">DCB Recovery & Revenue Only</option>
+              <option value="Citizen Grievance SLA">Citizen Grievance SLA Only</option>
+              <option value="Swachh & Sanitation">Swachh & Sanitation Only</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Comparison Method</label>
+            <select class="form-select" [(ngModel)]="stateFilters().comparisonMethod">
+              @for (m of filterOptions().rankingMethods; track m) {
+                <option [value]="m">{{ show(m) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Ranking Metric</label>
+            <select class="form-select" [(ngModel)]="stateFilters().rankingMetric">
+              <option value="Composite Score">Weighted Composite Score</option>
+              <option value="Recovery %">DCB Recovery Percentage</option>
+              <option value="SLA Compliance %">Grievance SLA Compliance %</option>
+              <option value="Swachh Total">Swachh Survekshan Score</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Min Threshold (Score)</label>
+            <input
+              type="number"
+              class="form-control"
+              placeholder="e.g. 75"
+              [(ngModel)]="stateFilters().minThreshold"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards (Vertical Reference Design) -->
+      @if (stateData(); as stateRes) {
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-parcels">
+              <app-icon name="ri-award-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Top Performer</span>
+              <strong class="kpi-value text-primary">{{ show(stateRes.summary.topPerformer) }}</strong>
+              <span class="kpi-subtext">Composite: {{ show(stateRes.summary.topScore) }} pts</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-sla">
+              <app-icon name="ri-speed-up-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">National Median Score</span>
+              <strong class="kpi-value">{{ show(stateRes.summary.medianScore) }}</strong>
+              <span class="kpi-subtext">Across {{ show(stateRes.summary.evaluatedStatesCount) }} Evaluated States</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-revenue">
+              <app-icon name="ri-money-rupee-circle-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Average DCB Recovery</span>
+              <strong class="kpi-value text-success">{{ formatPct(stateRes.summary.avgRecoveryPct) }}</strong>
+              <span class="kpi-subtext">Collection vs Demand</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-grievance">
+              <app-icon name="ri-shield-check-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Average Grievance SLA</span>
+              <strong class="kpi-value text-warning">{{ formatPct(stateRes.summary.avgSlaCompliance) }}</strong>
+              <span class="kpi-subtext">Citizen Escalation Standard</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- League Ranking Table -->
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Inter-State Municipal Performance League</h3>
+              <p class="card-subtitle">
+                Normalized comparative ranking across fiscal recovery, operational SLA adherence, and verified clean city ratings.
+              </p>
+            </div>
+
+            <div class="search-input-box">
+              <app-icon name="ri-search-line"></app-icon>
+              <input
+                type="text"
+                placeholder="Search state name or tier..."
+                [(ngModel)]="tableSearch"
+              />
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>State Name</th>
+                  <th>Code</th>
+                  <th>Composite Score</th>
+                  <th>DCB Recovery</th>
+                  <th>SLA Compliance</th>
+                  <th>Avg SLA Turnaround</th>
+                  <th>Digital Penetration</th>
+                  <th>Swachh Rank</th>
+                  <th>Enrolled ULBs</th>
+                  <th>Performance Tier</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (st of (filteredStates()) | slice:pagers.start('t1', (filteredStates()).length):pagers.end('t1', (filteredStates()).length); track st.stateCode) {
+                  <tr>
+                    <td>
+                      <span class="rank-badge" [class.gold]="st.rank === 1" [class.silver]="st.rank === 2" [class.bronze]="st.rank === 3">
+                        #{{ show(st.rank) }}
+                      </span>
+                    </td>
+                    <td>
+                      <strong>{{ show(st.stateName) }}</strong>
+                    </td>
+                    <td><span class="badge badge-outline">{{ show(st.stateCode) }}</span></td>
+                    <td>
+                      <div class="inline-progress">
+                        <span class="font-bold">{{ show(st.compositeScore) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="st.compositeScore"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="font-bold text-success">{{ formatPct(st.recoveryPct) }}</span>
+                    </td>
+                    <td>
+                      <span class="font-bold" [class.text-success]="st.slaCompliancePct >= 92" [class.text-warning]="st.slaCompliancePct < 92">
+                        {{ formatPct(st.slaCompliancePct) }}
+                      </span>
+                    </td>
+                    <td>{{ show(st.avgResolutionHours) }} hrs</td>
+                    <td>{{ formatPct(st.digitalAdoptionPct) }}</td>
+                    <td>
+                      <span class="badge badge-swachh">Rank #{{ show(st.swachhRank) }}</span>
+                    </td>
+                    <td class="font-mono">{{ show(st.ulbCount) }}</td>
+                    <td>
+                      <span
+                        class="badge"
+                        [class.badge-success]="st.performanceTier.includes('Exemplary')"
+                        [class.badge-primary]="st.performanceTier.includes('Fast')"
+                        [class.badge-outline]="st.performanceTier.includes('Average')"
+                        [class.badge-danger]="st.performanceTier.includes('Attention')"
+                      >
+                        {{ show(st.performanceTier) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t1" [total]="(filteredStates()).length"></app-table-pager>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 2: CITY COMPARISON                                                    -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'city') {
+    <section class="tab-content" aria-label="City Comparison Tab">
+      <div class="filter-card">
+        <div class="filter-card-header">
+          <div class="filter-title">
+            <app-icon name="ri-community-line"></app-icon>
+            <span>City & ULB Comparison Controls</span>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn btn-sm btn-outline" (click)="resetFilters()">
+              <app-icon name="ri-restart-line"></app-icon>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" (click)="applyFilters()">
+              <app-icon name="ri-check-line"></app-icon>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-grid">
+          <div class="form-group">
+            <label class="form-label">State Tenant</label>
+            <select class="form-select" [(ngModel)]="cityFilters().stateTenant">
+              <option value="all">All States</option>
+              @for (st of filterOptions().states; track st.code) {
+                <option [value]="st.code">{{ show(st.name) }} ({{ show(st.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Selected ULBs</label>
+            <select class="form-select" [(ngModel)]="cityFilters().selectedUlbs">
+              <option value="">All Regional ULBs</option>
+              @for (u of filterOptions().ulbs; track u.code) {
+                <option [value]="u.code">{{ show(u.name) }} ({{ show(u.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Financial Year</label>
+            <select class="form-select" [(ngModel)]="cityFilters().financialYear">
+              @for (fy of filterOptions().financialYears; track fy) {
+                <option [value]="fy">{{ show(fy) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Comparison Period</label>
+            <select class="form-select" [(ngModel)]="cityFilters().comparisonPeriod">
+              <option value="Year to Date (YTD)">Year to Date (YTD)</option>
+              <option value="Quarterly (Q2)">Quarterly (Q2)</option>
+              <option value="Annual Trajectory">Annual Trajectory</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ULB Category</label>
+            <select class="form-select" [(ngModel)]="cityFilters().ulbCategory">
+              <option value="">All ULB Categories</option>
+              @for (cat of filterOptions().ulbCategories; track cat) {
+                <option [value]="cat">{{ show(cat) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Ranking Method</label>
+            <select class="form-select" [(ngModel)]="cityFilters().rankingMethod">
+              @for (m of filterOptions().rankingMethods; track m) {
+                <option [value]="m">{{ show(m) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </div>
+
+      @if (cityData(); as cityRes) {
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-parcels">
+              <app-icon name="ri-building-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Top Ranked ULB</span>
+              <strong class="kpi-value text-primary">{{ show(cityRes.summary.bestUlb) }}</strong>
+              <span class="kpi-subtext">Composite: {{ show(cityRes.summary.topScore) }} pts</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-revenue">
+              <app-icon name="ri-percent-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Average DCB Recovery</span>
+              <strong class="kpi-value text-success">{{ formatPct(cityRes.summary.avgRecoveryPct) }}</strong>
+              <span class="kpi-subtext">Realized / Assessed Demand</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-grievance">
+              <app-icon name="ri-checkbox-circle-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Average Grievance SLA</span>
+              <strong class="kpi-value text-warning">{{ formatPct(cityRes.summary.avgSlaCompliance) }}</strong>
+              <span class="kpi-subtext">Resolution Within Timelines</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-tenants">
+              <app-icon name="ri-map-pin-user-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Parcels Evaluated</span>
+              <strong class="kpi-value">{{ formatNumber(cityRes.summary.totalParcelsCovered) }}</strong>
+              <span class="kpi-subtext">Across {{ show(cityRes.summary.totalCities) }} Corporations</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Urban Local Body (ULB) Cross-Comparison</h3>
+              <p class="card-subtitle">Multi-dimensional operational matrix across population tiers and district jurisdictions.</p>
+            </div>
+
+            <div class="search-input-box">
+              <app-icon name="ri-search-line"></app-icon>
+              <input
+                type="text"
+                placeholder="Search ULB or district..."
+                [(ngModel)]="tableSearch"
+              />
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>ULB Corporation</th>
+                  <th>Category</th>
+                  <th>District</th>
+                  <th>Demand (INR)</th>
+                  <th>Collected (INR)</th>
+                  <th>Recovery %</th>
+                  <th>SLA Compliance</th>
+                  <th>Swachh Rank</th>
+                  <th>GFC Rating</th>
+                  <th>Digital %</th>
+                  <th>Trajectory</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of (filteredCities()) | slice:pagers.start('t2', (filteredCities()).length):pagers.end('t2', (filteredCities()).length); track c.ulbCode) {
+                  <tr>
+                    <td>
+                      <span class="rank-badge" [class.gold]="c.rank === 1" [class.silver]="c.rank === 2" [class.bronze]="c.rank === 3">
+                        #{{ show(c.rank) }}
+                      </span>
+                    </td>
+                    <td>
+                      <strong>{{ show(c.ulbName) }}</strong>
+                      <div class="subtext-code">{{ show(c.ulbCode) }} &bull; {{ show(c.stateCode) }}</div>
+                    </td>
+                    <td><span class="badge badge-outline">{{ show(c.category) }}</span></td>
+                    <td>{{ show(c.district) }}</td>
+                    <td class="font-mono">{{ formatInr(c.dcbDemand) }}</td>
+                    <td class="font-mono text-success font-bold">{{ formatInr(c.dcbCollection) }}</td>
+                    <td>
+                      <div class="inline-progress">
+                        <span class="font-bold text-success">{{ formatPct(c.dcbRecoveryPct) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="c.dcbRecoveryPct"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="font-bold" [class.text-success]="c.grievanceSlaPct >= 92" [class.text-warning]="c.grievanceSlaPct < 92">
+                        {{ formatPct(c.grievanceSlaPct) }}
+                      </span>
+                    </td>
+                    <td><span class="badge badge-swachh">#{{ show(c.swachhNationalRank) }}</span></td>
+                    <td><span class="badge badge-outline">{{ show(c.gfcStarRating) }}</span></td>
+                    <td>{{ formatPct(c.digitalPenetrationPct) }}</td>
+                    <td>
+                      <span class="badge badge-success">
+                        <app-icon name="ri-arrow-right-up-line"></app-icon> {{ show(c.growthTrajectory) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t2" [total]="(filteredCities()).length"></app-table-pager>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 3: DCB RECOVERY (DEMAND, COLLECTION, BALANCE)                         -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'dcb') {
+    <section class="tab-content" aria-label="DCB Recovery Tab">
+      <div class="filter-card">
+        <div class="filter-card-header">
+          <div class="filter-title">
+            <app-icon name="ri-money-rupee-circle-line"></app-icon>
+            <span>Demand, Collection & Balance (DCB) Parameters</span>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn btn-sm btn-outline" (click)="resetFilters()">
+              <app-icon name="ri-restart-line"></app-icon>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" (click)="applyFilters()">
+              <app-icon name="ri-check-line"></app-icon>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-grid">
+          <div class="form-group">
+            <label class="form-label">Financial Year</label>
+            <select class="form-select" [(ngModel)]="dcbFilters().financialYear">
+              @for (fy of filterOptions().financialYears; track fy) {
+                <option [value]="fy">{{ show(fy) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">State Tenant</label>
+            <select class="form-select" [(ngModel)]="dcbFilters().stateTenant">
+              <option value="">All State Tenants</option>
+              @for (st of filterOptions().states; track st.code) {
+                <option [value]="st.code">{{ show(st.name) }} ({{ show(st.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ULB / City</label>
+            <select class="form-select" [(ngModel)]="dcbFilters().ulbTenant">
+              <option value="">All Municipal Corporations</option>
+              @for (u of filterOptions().ulbs; track u.code) {
+                <option [value]="u.code">{{ show(u.name) }} ({{ show(u.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Revenue Module</label>
+            <select class="form-select" [(ngModel)]="dcbFilters().revenueModule">
+              <option value="">All 6 Revenue Modules</option>
+              @for (mod of filterOptions().revenueModules; track mod.code) {
+                <option [value]="mod.code">{{ show(mod.name) }} ({{ show(mod.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Revenue Category</label>
+            <select class="form-select" [(ngModel)]="dcbFilters().revenueCategory">
+              <option value="">All Categories</option>
+              @for (cat of filterOptions().revenueCategories; track cat) {
+                <option [value]="cat">{{ show(cat) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Comparison Period</label>
+            <select class="form-select" [(ngModel)]="dcbFilters().comparisonPeriod">
+              <option value="Previous Period">vs Previous Period</option>
+              <option value="Same Period Last Year">vs Same Period Last Year</option>
+              <option value="Target Budget Baseline">vs Target Budget Baseline</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- DCB Calculation Callout Badge -->
+      <div class="formula-notice-banner">
+        <app-icon name="ri-information-line"></app-icon>
+        <span>
+          <strong>Statutory DCB Ledger Calculation:</strong>
+          Recovery Percentage = (Realized Collection / Assessed Total Demand) &times; 100
+        </span>
+      </div>
+
+      @if (dcbData(); as dcb) {
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-parcels">
+              <app-icon name="ri-file-list-3-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Total Assessed Demand</span>
+              <strong class="kpi-value">{{ formatInr(dcb.totalDemand) }}</strong>
+              <span class="kpi-subtext">Cumulative Billing Target</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-revenue">
+              <app-icon name="ri-money-rupee-circle-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Realized Collection</span>
+              <strong class="kpi-value text-success">{{ formatInr(dcb.totalCollection) }}</strong>
+              <span class="kpi-subtext">Audited Treasury Inflows</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-warning">
+              <app-icon name="ri-alert-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Outstanding Balance</span>
+              <strong class="kpi-value text-warning">{{ formatInr(dcb.totalBalance) }}</strong>
+              <span class="kpi-subtext">Arrears & Current Dues</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-sla">
+              <app-icon name="ri-percent-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Net Recovery %</span>
+              <strong class="kpi-value text-success">{{ formatPct(dcb.recoveryPercentage) }}</strong>
+              <span class="kpi-subtext">Collection Efficiency</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Revenue Module DCB Ledger Reconciliation</h3>
+              <p class="card-subtitle">Demand, collection, balance and collection efficiency across platform revenue modules.</p>
+            </div>
+
+            <div class="search-input-box">
+              <app-icon name="ri-search-line"></app-icon>
+              <input
+                type="text"
+                placeholder="Search module..."
+                [(ngModel)]="tableSearch"
+              />
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Module</th>
+                  <th>Revenue Head</th>
+                  <th>Assessed Demand</th>
+                  <th>Realized Collection</th>
+                  <th>Outstanding Balance</th>
+                  <th>Recovery Rate</th>
+                  <th>YoY Trajectory</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of (filteredDcbModules()) | slice:pagers.start('t3', (filteredDcbModules()).length):pagers.end('t3', (filteredDcbModules()).length); track m.moduleCode) {
+                  <tr>
+                    <td><span class="badge badge-outline">{{ show(m.moduleCode) }}</span></td>
+                    <td><strong>{{ show(m.moduleName) }}</strong></td>
+                    <td class="font-mono">{{ formatInr(m.demand) }}</td>
+                    <td class="font-mono text-success font-bold">{{ formatInr(m.collection) }}</td>
+                    <td class="font-mono text-warning">{{ formatInr(m.balance) }}</td>
+                    <td>
+                      <div class="inline-progress">
+                        <span class="font-bold text-success">{{ formatPct(m.recoveryPct) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="m.recoveryPct"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge badge-success">{{ show(m.trend) }}</span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t3" [total]="(filteredDcbModules()).length"></app-table-pager>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 4: SLA COMPLIANCE                                                     -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'sla') {
+    <section class="tab-content" aria-label="SLA Compliance Tab">
+      <div class="filter-card">
+        <div class="filter-card-header">
+          <div class="filter-title">
+            <app-icon name="ri-customer-service-2-line"></app-icon>
+            <span>Citizen Grievance & SLA Target Controls</span>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn btn-sm btn-outline" (click)="resetFilters()">
+              <app-icon name="ri-restart-line"></app-icon>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" (click)="applyFilters()">
+              <app-icon name="ri-check-line"></app-icon>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-grid">
+          <div class="form-group">
+            <label class="form-label">State Tenant</label>
+            <select class="form-select" [(ngModel)]="slaFilters().stateTenant">
+              <option value="">All State Tenants</option>
+              @for (st of filterOptions().states; track st.code) {
+                <option [value]="st.code">{{ show(st.name) }} ({{ show(st.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ULB / City</label>
+            <select class="form-select" [(ngModel)]="slaFilters().ulbTenant">
+              <option value="">All Municipal Corporations</option>
+              @for (u of filterOptions().ulbs; track u.code) {
+                <option [value]="u.code">{{ show(u.name) }} ({{ show(u.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <select class="form-select" [(ngModel)]="slaFilters().department">
+              <option value="">All Departments</option>
+              @for (dept of filterOptions().departments; track dept) {
+                <option [value]="dept">{{ show(dept) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Grievance Category</label>
+            <select class="form-select" [(ngModel)]="slaFilters().grievanceCategory">
+              <option value="">All Grievance Categories</option>
+              @for (cat of filterOptions().grievanceCategories; track cat) {
+                <option [value]="cat">{{ show(cat) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">SLA Target (Hours)</label>
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="slaFilters().slaTarget"
+              placeholder="e.g. 48"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Reporting Period</label>
+            <select class="form-select" [(ngModel)]="slaFilters().reportingPeriod">
+              <option value="this_month">This Month</option>
+              <option value="last_month">Last Month</option>
+              <option value="this_quarter">This Quarter</option>
+              <option value="year_to_date">Year to Date (YTD)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Compliance Target (%)</label>
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="slaFilters().complianceThreshold"
+              placeholder="e.g. 85"
+            />
+          </div>
+        </div>
+      </div>
+
+      @if (slaData(); as sla) {
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-parcels">
+              <app-icon name="ri-inbox-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Total Grievances</span>
+              <strong class="kpi-value">{{ formatNumber(sla.totalCases) }}</strong>
+              <span class="kpi-subtext">Cases Logged</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-revenue">
+              <app-icon name="ri-checkbox-circle-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Within Mandated SLA</span>
+              <strong class="kpi-value text-success">{{ formatNumber(sla.casesWithinSla) }}</strong>
+              <span class="kpi-subtext">Timely Resolutions</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-warning">
+              <app-icon name="ri-alarm-warning-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Breached SLA</span>
+              <strong class="kpi-value text-danger">{{ formatNumber(sla.casesBeyondSla) }}</strong>
+              <span class="kpi-subtext">Overdue Cases</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-sla">
+              <app-icon name="ri-shield-check-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">SLA Compliance %</span>
+              <strong class="kpi-value text-primary">{{ formatPct(sla.slaCompliancePercentage) }}</strong>
+              <span class="kpi-subtext">Avg Turnaround: {{ show(sla.averageResolutionTime) }} hrs</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Department SLA Adherence Matrix</h3>
+              <p class="card-subtitle">Granular resolution throughput, average turnaround times, and breach risk categorization.</p>
+            </div>
+
+            <div class="search-input-box">
+              <app-icon name="ri-search-line"></app-icon>
+              <input
+                type="text"
+                placeholder="Search department..."
+                [(ngModel)]="tableSearch"
+              />
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Department</th>
+                  <th>Total Cases</th>
+                  <th>Within SLA</th>
+                  <th>Beyond SLA</th>
+                  <th>Compliance %</th>
+                  <th>Avg Resolution</th>
+                  <th>Risk Tier</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of (filteredSlaDepartments()) | slice:pagers.start('t4', (filteredSlaDepartments()).length):pagers.end('t4', (filteredSlaDepartments()).length); track d.department) {
+                  <tr>
+                    <td><strong>{{ show(d.department) }}</strong></td>
+                    <td class="font-mono">{{ formatNumber(d.totalCases) }}</td>
+                    <td class="font-mono text-success">{{ formatNumber(d.casesWithin) }}</td>
+                    <td class="font-mono text-danger">{{ formatNumber(d.casesBeyond) }}</td>
+                    <td>
+                      <div class="inline-progress">
+                        <span class="font-bold" [class.text-success]="d.compliancePct >= 92" [class.text-warning]="d.compliancePct < 92">
+                          {{ formatPct(d.compliancePct) }}
+                        </span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="d.compliancePct"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{{ show(d.avgHours) }} hrs</td>
+                    <td>
+                      <span
+                        class="badge"
+                        [class.badge-success]="d.breachRisk.includes('Low')"
+                        [class.badge-warning]="d.breachRisk.includes('Moderate')"
+                        [class.badge-danger]="d.breachRisk.includes('High')"
+                      >
+                        {{ show(d.breachRisk) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t4" [total]="(filteredSlaDepartments()).length"></app-table-pager>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 5: SWACHH RANKINGS                                                    -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'swachh') {
+    <section class="tab-content" aria-label="Swachh Rankings Tab">
+      <div class="filter-card">
+        <div class="filter-card-header">
+          <div class="filter-title">
+            <app-icon name="ri-medal-line"></app-icon>
+            <span>Verified Official Swachh Survekshan Parameters</span>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn btn-sm btn-outline" (click)="resetFilters()">
+              <app-icon name="ri-restart-line"></app-icon>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" (click)="applyFilters()">
+              <app-icon name="ri-check-line"></app-icon>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-grid">
+          <div class="form-group">
+            <label class="form-label">Assessment Year</label>
+            <select class="form-select" [(ngModel)]="swachhFilters().assessmentYear">
+              <option value="2026">2026 (Current National Cycle)</option>
+              <option value="2025">2025 (Prior Year)</option>
+              <option value="2024">2024 (Historical Baseline)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Assessment Cycle</label>
+            <select class="form-select" [(ngModel)]="swachhFilters().assessmentCycle">
+              <option value="Annual National Assessment">Annual National Assessment</option>
+              <option value="Quarterly Swachh League">Quarterly Swachh League</option>
+              <option value="Garbage Free City (GFC)">Garbage Free City (GFC Star Rating)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Ranking Category</label>
+            <select class="form-select" [(ngModel)]="swachhFilters().rankingCategory">
+              @for (cat of filterOptions().swachhCategories; track cat) {
+                <option [value]="cat">{{ show(cat) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">External Ranking Source</label>
+            <select class="form-select" [(ngModel)]="swachhFilters().externalRankingSource">
+              @for (src of filterOptions().swachhSources; track src) {
+                <option [value]="src">{{ show(src) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mandatory External Verified Data Compliance Notice -->
+      <div class="official-notice-banner">
+        <div class="notice-icon">
+          <app-icon name="ri-shield-star-line"></app-icon>
+        </div>
+        <div class="notice-text">
+          <strong>Official National Data Source Attributed:</strong>
+          <span>
+            Rankings and star scores are imported directly from verified Ministry of Housing & Urban Affairs (MoHUA) & Quality Council of India (QCI) assessment audits. In compliance with statutory ERP laws, external Swachh rankings are not internally calculated.
+          </span>
+        </div>
+        <span class="badge badge-verified">
+          <app-icon name="ri-check-double-line"></app-icon> MoHUA Verified
+        </span>
+      </div>
+
+      @if (swachhData(); as swachh) {
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-parcels">
+              <app-icon name="ri-trophy-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">#1 Cleanest National City</span>
+              <strong class="kpi-value text-primary">Indore (MP)</strong>
+              <span class="kpi-subtext">9,840 pts &bull; 7-Star GFC &bull; Water+</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-revenue">
+              <app-icon name="ri-community-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">#1 Cleanest State</span>
+              <strong class="kpi-value text-success">Madhya Pradesh</strong>
+              <span class="kpi-subtext">Avg City Score: 9,350 pts</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-sla">
+              <app-icon name="ri-truck-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Door-to-Door Collection</span>
+              <strong class="kpi-value text-success">{{ formatPct(swachh.indicatorScores['doorToDoorCollection']) }}</strong>
+              <span class="kpi-subtext">National Benchmark Average</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-grievance">
+              <app-icon name="ri-recycle-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Source Segregation</span>
+              <strong class="kpi-value text-warning">{{ formatPct(swachh.indicatorScores['sourceSegregation']) }}</strong>
+              <span class="kpi-subtext">Wet &bull; Dry &bull; Hazardous Segregation</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Official Swachh Survekshan National League Table</h3>
+              <p class="card-subtitle">Verified national rankings, Garbage Free City (GFC) star ratings, and processing capacities.</p>
+            </div>
+
+            <div class="search-input-box">
+              <app-icon name="ri-search-line"></app-icon>
+              <input
+                type="text"
+                placeholder="Search city or state..."
+                [(ngModel)]="tableSearch"
+              />
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>ULB Corporation</th>
+                  <th>State</th>
+                  <th>Total Score</th>
+                  <th>GFC Rating</th>
+                  <th>Water+ Status</th>
+                  <th>Door-to-Door %</th>
+                  <th>Source Segregation %</th>
+                  <th>Waste Processing %</th>
+                  <th>Audit Date</th>
+                  <th>Verification</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (u of (filteredSwachhUlbs()) | slice:pagers.start('t5', (filteredSwachhUlbs()).length):pagers.end('t5', (filteredSwachhUlbs()).length); track u.rank) {
+                  <tr>
+                    <td>
+                      <span class="rank-badge" [class.gold]="u.rank === 1" [class.silver]="u.rank === 2" [class.bronze]="u.rank === 3">
+                        #{{ show(u.rank) }}
+                      </span>
+                    </td>
+                    <td><strong>{{ show(u.ulbName) }}</strong></td>
+                    <td><span class="badge badge-outline">{{ show(u.stateName) }}</span></td>
+                    <td class="font-mono font-bold text-primary">{{ formatNumber(u.totalScore) }}</td>
+                    <td><span class="badge badge-swachh">{{ show(u.gfcStar) }}</span></td>
+                    <td>
+                      <span class="badge badge-success">{{ show(u.waterPlus) }}</span>
+                    </td>
+                    <td>{{ formatPct(u.doorToDoorPct) }}</td>
+                    <td>{{ formatPct(u.sourceSegregationPct) }}</td>
+                    <td>{{ formatPct(u.processingCapacityPct) }}</td>
+                    <td>{{ show(u.verifiedDate) }}</td>
+                    <td>
+                      <span class="badge badge-verified">
+                        <app-icon name="ri-shield-check-line"></app-icon> MoHUA Verified
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t5" [total]="(filteredSwachhUlbs()).length"></app-table-pager>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Modal: Directive Notes -->
+  @if (showNotesModal()) {
+    <app-benchmark-notes-dialog
+      [title]="'Record Comparison Directive — ' + activeTab().toUpperCase()"
+      [subtitle]="'Attach strategic observations and executive decisions to current snapshot'"
+      (save)="handleSaveNotes()"
+      (cancel)="showNotesModal.set(false)"
+    ></app-benchmark-notes-dialog>
+  }
+</div>
+

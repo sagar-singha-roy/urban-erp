@@ -1,0 +1,49 @@
+<div class="dialog-overlay" (click)="closed.emit()">
+  <div class="dialog-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="dialog-header">
+      <div><h3>{{ record ? 'Edit' : 'New' }} Alert Rule</h3><p>Only channels that are set up on this platform can be selected.</p></div>
+      <button type="button" class="close-btn" (click)="closed.emit()" title="Close dialog" aria-label="Close dialog"><app-icon name="ri-close-line" [size]="18"></app-icon></button>
+    </div>
+    <form class="dialog-form" (ngSubmit)="submit()">
+      <div class="dialog-body">
+        <div class="field"><label for="alertName">Alert Name <span class="required">*</span></label><input id="alertName" type="text" name="alertName" [(ngModel)]="form.alertName" /></div>
+        <div class="field"><label for="alertCode">Alert Code <span class="required">*</span></label><input id="alertCode" type="text" name="alertCode" [(ngModel)]="form.alertCode" /></div>
+        <div class="field"><label for="tenantLevel">Tenant Level <span class="required">*</span></label><select id="tenantLevel" name="tenantLevel" [(ngModel)]="form.tenantLevel">
+          @for (o of options.tenantLevels; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="stateTenantId">State Tenant <span class="required">*</span></label><input id="stateTenantId" list="stateTenantIdList" name="stateTenantId" placeholder="Type to search" [(ngModel)]="form.stateTenantId" />
+          <datalist id="stateTenantIdList">@for (t of states; track t.tenantId) { <option [value]="t.tenantId">{{ t.name }}</option> }</datalist></div>
+        @if (form.tenantLevel === 'ULB') {
+        <div class="field"><label for="ulbTenantId">ULB / City <span class="required">*</span></label><input id="ulbTenantId" list="ulbTenantIdList" name="ulbTenantId" placeholder="Type to search" [(ngModel)]="form.ulbTenantId" />
+          <datalist id="ulbTenantIdList">@for (t of ulbs; track t.tenantId) { <option [value]="t.tenantId">{{ t.name }}</option> }</datalist></div>
+        }
+        <div class="field"><label for="resourceType">Resource Type <span class="required">*</span></label><select id="resourceType" name="resourceType" [(ngModel)]="form.resourceType"><option [ngValue]="null">Select</option>
+          @for (o of options.resourceTypes; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="alertCondition">Alert Condition <span class="required">*</span></label><select id="alertCondition" name="alertCondition" [(ngModel)]="form.alertCondition">
+          @for (o of options.alertConditions; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        @if (form.alertCondition === 'Usage Percentage') {
+        <div class="field"><label for="thresholdPercentage">Threshold Percentage <span class="required">*</span></label><input id="thresholdPercentage" type="number" name="thresholdPercentage" [(ngModel)]="form.thresholdPercentage" /></div>
+        } @else {
+        <div class="field"><label for="thresholdValue">Threshold Value <span class="required">*</span></label><input id="thresholdValue" type="number" name="thresholdValue" [(ngModel)]="form.thresholdValue" /></div>
+        }
+        <div class="field"><label for="comparisonOperator">Comparison Operator <span class="required">*</span></label><select id="comparisonOperator" name="comparisonOperator" [(ngModel)]="form.comparisonOperator">
+          @for (o of options.operators; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="alertSeverity">Alert Severity <span class="required">*</span></label><select id="alertSeverity" name="alertSeverity" [(ngModel)]="form.alertSeverity"><option [ngValue]="null">Select</option>
+          @for (o of options.severities; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field wide"><label>Notification Channel <span class="required">*</span></label><app-check-list [options]="asOptions(options.notificationChannels)" [value]="form.notificationChannels" (valueChange)="form.notificationChannels = $event"></app-check-list></div>
+        <div class="field wide"><label>Notification Recipients <span class="required">*</span></label><app-check-list [options]="recipientOptions" [value]="form.notificationRecipients" (valueChange)="form.notificationRecipients = $event"></app-check-list></div>
+        <div class="field"><label for="repeatIntervalMinutes">Repeat Notification Interval (minutes)</label><input id="repeatIntervalMinutes" type="number" name="repeatIntervalMinutes" [(ngModel)]="form.repeatIntervalMinutes" /></div>
+        <div class="field"><label class="toggle"><input type="checkbox" name="isActive" [(ngModel)]="form.isActive" /> Alert Status: On</label></div>
+        <div class="field wide"><label for="description">Alert Description</label><textarea id="description" name="description" [(ngModel)]="form.description"></textarea></div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="closed.emit()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()"><app-icon name="ri-check-line" [size]="16"></app-icon><span>Save Rule</span></button>
+      </div>
+    </form>
+  </div>
+</div>

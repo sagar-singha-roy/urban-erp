@@ -7,19 +7,19 @@
           <app-icon name="ri-government-line" [size]="14"></app-icon>
           <span>Government of India · MoHUA</span>
         </div>
-        <div class="status-live-pill">
-          <span class="live-dot"></span>
-          <span>Postgres RLS Enforced</span>
-        </div>
       </div>
 
       <div class="brand-hero">
         <div class="brand-logo-badge">
-          <span class="logo-text">S</span>
+          @if (branding()?.assets?.['logo']; as logo) {
+            <img class="brand-logo-image" [src]="logo" [alt]="branding()?.altText || branding()?.displayName" />
+          } @else {
+            <span class="logo-text">{{ (branding()?.displayName || 'S').charAt(0) }}</span>
+          }
         </div>
         <div class="brand-titles">
-          <h1 class="brand-name">SUVIDHA</h1>
-          <p class="brand-tagline">Integrated Municipal Enterprise Resource Planning (ERP)</p>
+          <h1 class="brand-name">{{ branding()?.loginPageTitle || branding()?.displayName || 'SUVIDHA' }}</h1>
+          <p class="brand-tagline">{{ branding()?.loginPageMessage || branding()?.tagline || 'Integrated Municipal Enterprise Resource Planning (ERP)' }}</p>
         </div>
       </div>
       <div class="brand-accent-line"></div>
@@ -252,41 +252,6 @@
               </div>
             </div>
 
-            <div class="form-field-group">
-              <label class="input-label">Designation / Operational Role</label>
-              <select [(ngModel)]="signUpData.role" name="role" class="form-input form-select">
-                <option value="citizen">Citizen / Resident / Property Owner</option>
-                <option value="revenue_officer">Revenue & Tax Officer</option>
-                <option value="town_planner">Town Planning Officer</option>
-                <option value="engineering_officer">Engineering Works Officer</option>
-                <option value="super_admin">Platform Administrator</option>
-              </select>
-            </div>
-
-            <div class="form-grid-2">
-              <div class="form-field-group">
-                <label class="input-label">Assigned Zone</label>
-                <input
-                  type="text"
-                  [(ngModel)]="signUpData.assignedZone"
-                  name="assignedZone"
-                  placeholder="e.g. Kazipet Zone"
-                  class="form-input"
-                />
-              </div>
-
-              <div class="form-field-group">
-                <label class="input-label">Assigned Ward</label>
-                <input
-                  type="text"
-                  [(ngModel)]="signUpData.assignedWard"
-                  name="assignedWard"
-                  placeholder="e.g. Ward 14 - Subedari"
-                  class="form-input"
-                />
-              </div>
-            </div>
-
             <button type="submit" class="btn-primary-action" [disabled]="isLoading()">
               @if (isLoading()) {
                 <app-icon name="ri-loader-4-line" [size]="18" class="spinning"></app-icon>
@@ -476,7 +441,7 @@
     <!-- Brand Footer -->
     <div class="auth-card-footer">
       <div class="footer-copy">
-        SUVIDHA Integrated Municipal Platform · Version {{ appVersion.version }}
+        {{ branding()?.footerText || 'SUVIDHA Integrated Municipal Platform' }} · Version {{ appVersion.version }}
       </div>
       <div class="footer-security-note">
         <app-icon name="ri-lock-2-line" [size]="12"></app-icon>

@@ -1,0 +1,41 @@
+<div class="wl-toolbar">
+  <input class="wl-search" type="search" placeholder="Search tenants, logo types or alt text" aria-label="Search tenants, logo types or alt text" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+  <button type="button" class="btn btn-primary" (click)="open(null)">
+    <app-icon name="ri-add-line" [size]="16"></app-icon>
+    <span>Upload Assets</span>
+  </button>
+</div>
+
+<div class="wl-card">
+  <div class="wl-scroll">
+    <table class="wl-table">
+      <thead>
+        <tr><th>Preview</th><th>Logo Type</th><th>Tenant</th><th>Files</th><th>Effective From</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        @for (a of items(); track a.id) {
+          <tr>
+            <td>
+              @if (a.files.length > 0) {
+                <img class="wl-thumb" [src]="previewUrl(a.files[0].id)" [alt]="a.altText" />
+              }
+            </td>
+            <td>{{ a.logoType }}<span class="wl-sub">{{ a.altText }}</span></td>
+            <td>{{ a.tenantId }}</td>
+            <td>{{ a.files.length }}</td>
+            <td>{{ a.effectiveFrom ? (a.effectiveFrom | date: 'mediumDate') : 'Immediately' }}</td>
+            <td><span class="wl-status" [ngClass]="statusClass(a.assetStatus)">{{ a.assetStatus }}</span></td>
+            <td><div class="wl-actions"><button type="button" class="wl-link" (click)="open(a)">Edit</button></div></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7" class="wl-empty">{{ isLoading() ? 'Loading...' : 'No logos or emblems yet.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-wl-pagination [page]="page()" [limit]="limit()" [total]="total()" (pageChange)="onPage($event)" (limitChange)="onLimit($event)"></app-wl-pagination>
+</div>
+
+@if (isDialogOpen()) {
+  <app-asset-form-dialog [assets]="selected()" [options]="options()" [tenants]="tenants()" (saved)="onSaved()" (closed)="isDialogOpen.set(false)"></app-asset-form-dialog>
+}

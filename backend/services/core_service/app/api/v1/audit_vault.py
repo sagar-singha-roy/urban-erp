@@ -16,7 +16,8 @@ from app.db.models import (
     AuditRetentionPolicyModel,
     AuditExportJobModel,
 )
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, require_roles
+from app.core.security import AUDIT_SIGNATURE_PREFIX, audit_signature_is_valid, sign_audit_hash
 from app.schemas.tenant import ApiResponse
 from app.schemas.audit_vault import (
     ImmutableAuditEventResponse,
@@ -31,7 +32,7 @@ from app.schemas.audit_vault import (
     AuditExportCreatePayload,
 )
 
-router = APIRouter(prefix="/compliance/audit", tags=["ADM-C06 Immutable Audit Vault"])
+router = APIRouter(prefix="/compliance/audit", tags=["ADM-C06 Immutable Audit Vault"], dependencies=[Depends(require_roles(["super_admin"]))])
 
 
 def _to_naive_utc(dt: Optional[datetime.datetime]) -> Optional[datetime.datetime]:
@@ -115,7 +116,7 @@ async def record_immutable_audit_event(
         details_str=det_str,
     )
 
-    signature = f"WORM-SIG:{hashlib.sha256((event_hash + 'MUNICIPAL-VAULT-2026').encode('utf-8')).hexdigest()[:32]}"
+    signature = sign_audit_hash(event_hash)
 
     event = ImmutableAuditEventModel(
         event_id=event_id,
@@ -147,222 +148,11 @@ async def record_immutable_audit_event(
     return event
 
 
-# Seed initial vault events & retention policies if empty
-async def _ensure_vault_seeded(db: AsyncSession):
-    # Check if events exist
-    ev_count_res = await db.execute(select(func.count(ImmutableAuditEventModel.id)))
-    ev_count = ev_count_res.scalar() or 0
-
-    if ev_count == 0:
-        seed_events = [
-            {
-                "event_category": "Configuration Changes",
-                "action": "PLATFORM_INITIALIZATION",
-                "severity": "Informational",
-                "actor_id": "system.init@urban.gov.in",
-                "actor_role": "Platform Super Admin",
-                "tenant_level": "Level 0",
-                "module_code": "SYS",
-                "result": "SUCCESS",
-                "details": {"genesis": True, "standard": "CERT-In Statutory WORM", "hash_chain": "SHA-256"},
-            },
-            {
-                "event_category": "Tenant Management",
-                "action": "TENANT_PROVISION_STATE",
-                "severity": "Medium",
-                "actor_id": "admin@urban.gov.in",
-                "actor_role": "Platform Super Admin",
-                "tenant_level": "Level 1",
-                "state_code": "TG",
-                "module_code": "ADM",
-                "component_code": "ADM-T01",
-                "result": "SUCCESS",
-                "details": {"stateName": "Telangana", "jurisdiction": "Level 1 State", "code": "TG"},
-            },
-            {
-                "event_category": "Tenant Management",
-                "action": "SUB_TENANT_ONBOARD_ULB",
-                "severity": "Medium",
-                "actor_id": "director.cdma@telangana.gov.in",
-                "actor_role": "State Admin",
-                "tenant_level": "Level 2",
-                "state_code": "TG",
-                "module_code": "ADM",
-                "component_code": "ADM-T02",
-                "result": "SUCCESS",
-                "details": {"ulbName": "Greater Warangal Municipal Corp", "ulbCode": "GWMC", "type": "Municipal Corporation"},
-            },
-            {
-                "event_category": "Subscription Changes",
-                "action": "MODULE_SUBSCRIPTION_ALLOCATE",
-                "severity": "High",
-                "actor_id": "admin@urban.gov.in",
-                "actor_role": "Platform Super Admin",
-                "tenant_level": "Level 1",
-                "state_code": "TG",
-                "module_code": "PTX",
-                "component_code": "ADM-M04",
-                "result": "SUCCESS",
-                "details": {"module": "Property Tax (PTX)", "cycle": "Yearly", "autoRenew": True},
-            },
-            {
-                "event_category": "Subscription Changes",
-                "action": "CASCADE_DELEGATION_RULE_CREATED",
-                "severity": "High",
-                "actor_id": "director.cdma@telangana.gov.in",
-                "actor_role": "State Admin",
-                "tenant_level": "Level 1",
-                "state_code": "TG",
-                "module_code": "PTX",
-                "component_code": "ADM-M05",
-                "result": "SUCCESS",
-                "details": {"ruleCode": "DEL-TG-CORP", "delegationMode": "Selective Delegation", "approvalRequired": True},
-            },
-            {
-                "event_category": "Authentication",
-                "action": "MFA_LOGIN_SUCCESS",
-                "severity": "Informational",
-                "actor_id": "commissioner@gwmc.gov.in",
-                "actor_role": "ULB Admin",
-                "tenant_level": "Level 2",
-                "state_code": "TG",
-                "module_code": "IAM",
-                "component_code": "IAM-03",
-                "result": "SUCCESS",
-                "details": {"method": "Aadhaar e-Pramaan OTP", "authBroker": "MeriPehchan OIDC"},
-            },
-            {
-                "event_category": "Authentication",
-                "action": "LOGIN_FAILURE_UNAUTHORIZED",
-                "severity": "Medium",
-                "actor_id": "intruder.probe@unknown.net",
-                "actor_role": "Anonymous",
-                "tenant_level": "Level 0",
-                "module_code": "IAM",
-                "component_code": "IAM-01",
-                "result": "FAILURE",
-                "details": {"reason": "Invalid client assertion token", "attemptCount": 3},
-            },
-            {
-                "event_category": "Authorisation",
-                "action": "ROLE_PERMISSION_MATRIX_SYNC",
-                "severity": "High",
-                "actor_id": "admin@urban.gov.in",
-                "actor_role": "Platform Super Admin",
-                "tenant_level": "Level 0",
-                "module_code": "IAM",
-                "component_code": "IAM-04",
-                "result": "SUCCESS",
-                "details": {"componentsUpdated": 405, "modules": 19, "enforcement": "Strict Component RBAC"},
-            },
-            {
-                "event_category": "Data Access",
-                "action": "POSTGRES_RLS_POLICY_AUDIT",
-                "severity": "Informational",
-                "actor_id": "sec-auditor@urban.gov.in",
-                "actor_role": "Platform Auditor",
-                "tenant_level": "Level 0",
-                "module_code": "SEC",
-                "component_code": "SEC-01",
-                "result": "SUCCESS",
-                "details": {"rlsStatus": "Enforced", "tenantBoundariesVerified": 28, "leakDetected": False},
-            },
-            {
-                "event_category": "Administrative Actions",
-                "action": "DATA_ARCHIVAL_PRE_FREEZE_SNAPSHOT",
-                "severity": "Critical",
-                "actor_id": "admin@urban.gov.in",
-                "actor_role": "Platform Super Admin",
-                "tenant_level": "Level 1",
-                "state_code": "AS",
-                "module_code": "ADM",
-                "component_code": "ADM-T03",
-                "result": "SUCCESS",
-                "details": {"tenant": "Assam", "policy": "State Government Statutory Record Retention", "legalHold": True},
-                "is_legal_hold": True,
-            },
-        ]
-
-        for s in seed_events:
-            await record_immutable_audit_event(
-                db=db,
-                event_category=s["event_category"],
-                action=s["action"],
-                actor_id=s["actor_id"],
-                actor_role=s["actor_role"],
-                tenant_level=s["tenant_level"],
-                state_code=s.get("state_code"),
-                module_code=s.get("module_code"),
-                component_code=s.get("component_code"),
-                severity=s["severity"],
-                result=s["result"],
-                details=s["details"],
-                is_legal_hold=s.get("is_legal_hold", False),
-            )
-        await db.commit()
-
-    # Check retention policies
-    pol_count_res = await db.execute(select(func.count(AuditRetentionPolicyModel.id)))
-    pol_count = pol_count_res.scalar() or 0
-
-    if pol_count == 0:
-        policies = [
-            AuditRetentionPolicyModel(
-                policy_code="RET-CERT-IN-7YR",
-                policy_name="National CERT-In Cyber Security & Audit Log Retention",
-                applicable_tenant_levels=["Level 0", "Level 1", "Level 2"],
-                event_categories=["Authentication", "Authorisation", "Configuration Changes", "Administrative Actions"],
-                retention_period=7,
-                retention_unit="Years",
-                archive_required=True,
-                archive_destination="State Government Cold Storage Vault",
-                legal_hold_enabled=False,
-                effective_date=datetime.datetime(2024, 1, 1),
-                policy_status="Active",
-                description="Statutory rule under CERT-In Directions 2022 mandating 7-year tamper-evident retention of administrative and authentication logs.",
-            ),
-            AuditRetentionPolicyModel(
-                policy_code="RET-MUNICIPAL-FIN-10YR",
-                policy_name="CAG Municipal Financial Audit & Billing Ledger Policy",
-                applicable_tenant_levels=["Level 1", "Level 2"],
-                event_categories=["Subscription Changes", "Data Access", "Administrative Actions"],
-                retention_period=10,
-                retention_unit="Years",
-                archive_required=True,
-                archive_destination="NIC National Data Vault (WORM S3)",
-                legal_hold_enabled=True,
-                effective_date=datetime.datetime(2024, 4, 1),
-                policy_status="Active",
-                description="Comptroller & Auditor General (CAG) municipal accounts retention policy for revenue demand, collections, and financial journals.",
-            ),
-            AuditRetentionPolicyModel(
-                policy_code="RET-LEGAL-DISPUTE-HOLD",
-                policy_name="High Court & Civil Dispute Statutory Legal Hold",
-                applicable_tenant_levels=["Level 0", "Level 1", "Level 2"],
-                event_categories=["Tenant Management", "User Management", "Administrative Actions"],
-                retention_period=30,
-                retention_unit="Years",
-                archive_required=True,
-                archive_destination="Judicial Legal Hold Vault (Immutable)",
-                legal_hold_enabled=True,
-                effective_date=datetime.datetime(2025, 1, 1),
-                policy_status="Active",
-                description="Perpetual non-expiring hold for municipal jurisdictions subject to active judicial scrutiny or public interest litigation.",
-            ),
-        ]
-        for p in policies:
-            db.add(p)
-        await db.commit()
-
-
-# 1. Dashboard Metrics Endpoint
 @router.get("/stats", response_model=ApiResponse[AuditDashboardStats])
 async def get_audit_dashboard_stats(
     db: AsyncSession = Depends(get_read_db),
     user: dict = Depends(get_current_user),
 ):
-    await _ensure_vault_seeded(db)
-
     # Total events
     total_res = await db.execute(select(func.count(ImmutableAuditEventModel.id)))
     total_events = total_res.scalar() or 0
@@ -404,7 +194,7 @@ async def get_audit_dashboard_stats(
     )
     last_v = v_res.scalar_one_or_none()
     last_verified = last_v.created_at if last_v else None
-    status_str = "100% Tamper-Evident (Chained)" if not last_v or last_v.verification_result == "VALID_INTEGRITY_INTACT" else "WARNING: Verification Inconclusive"
+    status_str = last_v.verification_result if last_v else "NOT_VERIFIED"
 
     # Active retention policies
     pol_res = await db.execute(
@@ -449,8 +239,6 @@ async def list_audit_events(
     db: AsyncSession = Depends(get_read_db),
     user: dict = Depends(get_current_user),
 ):
-    await _ensure_vault_seeded(db)
-
     # Pre-fetch tenants for resolving names
     states_res = await db.execute(select(StateTenant))
     states_map = {s.tenant_id: s for s in states_res.scalars().all()}
@@ -599,8 +387,6 @@ async def run_hash_verification(
     db: AsyncSession = Depends(get_write_db),
     user: dict = Depends(get_current_user),
 ):
-    await _ensure_vault_seeded(db)
-
     from_dt = _to_naive_utc(payload.fromTimestamp)
     to_dt = _to_naive_utc(payload.toTimestamp)
 
@@ -623,6 +409,8 @@ async def run_hash_verification(
     last_hash = events[-1].event_hash if events else GENESIS_HASH
 
     mismatches = 0
+    unsigned_events = 0
+    scoped_to_tenant = bool(payload.tenantId and payload.tenantId != "ALL")
     calculated_hash = first_hash
 
     # Walk through events in chronological sequence and verify hashes
@@ -643,10 +431,21 @@ async def run_hash_verification(
 
         if expected_current != ev.event_hash:
             mismatches += 1
+        if idx > 0 and ev.prev_event_hash != events[idx - 1].event_hash and not scoped_to_tenant:
+            mismatches += 1
+        if not (ev.signature or "").startswith(AUDIT_SIGNATURE_PREFIX):
+            unsigned_events += 1
+        elif not audit_signature_is_valid(ev.event_hash, ev.signature):
+            mismatches += 1
 
         calculated_hash = expected_current
 
-    result_status = "VALID_INTEGRITY_INTACT" if mismatches == 0 else "TAMPER_DETECTED"
+    if mismatches:
+        result_status = "TAMPER_DETECTED"
+    elif unsigned_events:
+        result_status = "HASHES_VALID_UNSIGNED_EVENTS"
+    else:
+        result_status = "VALID_INTEGRITY_INTACT"
 
     now_year = datetime.datetime.utcnow().year
     rand_job = uuid.uuid4().hex[:6].upper()
@@ -690,6 +489,7 @@ async def run_hash_verification(
             "algorithm": payload.algorithm,
             "totalVerified": len(events),
             "mismatchCount": mismatches,
+            "unsignedEvents": unsigned_events,
             "result": result_status,
         },
     )
@@ -770,7 +570,6 @@ async def list_retention_policies(
     db: AsyncSession = Depends(get_read_db),
     user: dict = Depends(get_current_user),
 ):
-    await _ensure_vault_seeded(db)
     stmt = select(AuditRetentionPolicyModel).order_by(desc(AuditRetentionPolicyModel.created_at))
     res = await db.execute(stmt)
     records = res.scalars().all()

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { LoadingService } from '../../../../core/services/loading.service';
 import { ModuleCatalogueService } from '../../../../core/services/module-catalogue.service';
@@ -18,7 +19,7 @@ import { ComponentFormDialogComponent } from './dialogs/component-form-dialog/co
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     ComponentFormDialogComponent
   ],
   templateUrl: './component-registry.component.html',
@@ -147,12 +148,8 @@ export class ComponentRegistryComponent implements OnInit {
 
     this.catalogueService.getModules().subscribe({
       next: mods => this.modules.set(mods),
-      error: () => {}
+      error: () => this.dialogs.showToast('Could not load the module list.', 'error', 3000)
     });
-  }
-
-  onRefreshClick(): void {
-    this.loadData(true);
   }
 
   onSearchChange(term: string): void {

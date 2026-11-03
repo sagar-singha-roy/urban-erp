@@ -1,17 +1,23 @@
 from typing import List, Optional, Dict
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
 from app.db.session import get_read_db, get_write_db
 from app.db.models import User, StateTenant, Tenant, GlobalUserProfile
 from app.schemas.auth import (
+    AuthorizeResponse,
+    SupportSessionRules,
     SignInRequest, SignUpRequest, AuthResponse, UserProfileResponse, ModuleMetadata,
     AccessibleTenant, AccessibleUlb
 )
-from app.core.security import hash_password, verify_password, create_access_token, decode_access_token
-from app.core.auth import get_current_user
-from app.core.config import settings
+from app.core import rate_limit
+from app.core.auth import BLOCKED_ACCOUNT_STATUSES
+from app.core.security import clear_session_cookie, hash_password, set_session_cookie, verify_password, create_access_token, decode_access_token
+from app.core.auth import PERMISSION_COLUMNS, get_current_sub_tenant, get_current_tenant, get_current_user, require_permission
+from app.core.config import PLATFORM_ULB_TYPE, settings
+from app.core.cross_tenant_access import load_active_grants
+from app.core.impersonation_rules import SENSITIVE_FIELD_PARTS
 
 router = APIRouter(prefix="/auth", tags=["Authentication & SSO"])
 
@@ -199,7 +205,7 @@ ROLE_DEFAULT_MODULES: Dict[str, str] = {
 }
 
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-async def signup(payload: SignUpRequest, db: AsyncSession = Depends(get_write_db)):
+async def signup(payload: SignUpRequest, response: Response, db: AsyncSession = Depends(get_write_db)):
     # Check duplicate
     existing = await db.scalar(
         select(User).where(or_(User.username == payload.username, User.email == payload.email))
@@ -211,19 +217,23 @@ async def signup(payload: SignUpRequest, db: AsyncSession = Depends(get_write_db
         )
 
     # Determine assigned modules
-    modules = ROLE_DEFAULT_MODULES.get(payload.role, ROLE_DEFAULT_MODULES["citizen"])
+    modules = ROLE_DEFAULT_MODULES["citizen"]
 
     user_tenant = (payload.tenantId or settings.DEFAULT_TENANT_ID).strip().upper()
+    tenant_exists = await db.scalar(select(Tenant.tenant_id).where(Tenant.tenant_id == user_tenant))
+    if not tenant_exists:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Selected municipal body is not registered"
+        )
     user = User(
         tenant_id=user_tenant,
         username=payload.username.strip(),
         email=str(payload.email).lower().strip(),
         password_hash=hash_password(payload.password),
         full_name=payload.fullName.strip(),
-        role=payload.role,
-        assigned_modules=modules,
-        assigned_zone=payload.assignedZone,
-        assigned_ward=payload.assignedWard
+        role="citizen",
+        assigned_modules=modules
     )
     db.add(user)
     await db.commit()
@@ -240,6 +250,7 @@ async def signup(payload: SignUpRequest, db: AsyncSession = Depends(get_write_db
         "assigned_modules": user.assigned_modules.split(",")
     }
     accessToken = create_access_token(token_claims)
+    set_session_cookie(response, accessToken)
 
     userProfile = UserProfileResponse(
         id=user.id,
@@ -271,7 +282,7 @@ async def _get_accessible_tenants(
     No hardcoded fallbacks.
     """
     state_tenants = (await db.scalars(select(StateTenant).order_by(StateTenant.state_name))).all()
-    all_ulbs = (await db.scalars(select(Tenant).order_by(Tenant.name))).all()
+    all_ulbs = (await db.scalars(select(Tenant).where(Tenant.ulb_type != PLATFORM_ULB_TYPE).order_by(Tenant.name))).all()
 
     ulbs_by_state: Dict[str, List[AccessibleUlb]] = {}
     for u in all_ulbs:
@@ -326,28 +337,45 @@ async def _get_accessible_tenants(
     return accessible_tenants
 
 @router.post("/signin", response_model=AuthResponse)
-async def signin(payload: SignInRequest, db: AsyncSession = Depends(get_write_db)):
+async def signin(payload: SignInRequest, request: Request, response: Response, db: AsyncSession = Depends(get_write_db)):
     identifier = payload.identifier
     if not identifier:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Official Email or Username is required."
         )
+    throttle_key = f"{request.client.host if request.client else 'unknown'}:{identifier.lower()}"
+    wait = await rate_limit.check(throttle_key)
+    if wait:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed sign-in attempts. Try again later.",
+            headers={"Retry-After": str(wait)},
+        )
     user = await db.scalar(
         select(User).where(or_(User.username == identifier, User.email == identifier.lower()))
     )
 
     if not user or not verify_password(payload.password, user.password_hash):
+        await rate_limit.fail(throttle_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials. Please verify your username/email and password."
         )
 
-    if not user.is_active:
+    gup_rec = await db.scalar(select(GlobalUserProfile).where(GlobalUserProfile.email == user.email))
+    if not user.is_active or (gup_rec and gup_rec.account_status in BLOCKED_ACCOUNT_STATUSES):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is deactivated. Contact Municipal Administrator."
         )
+    await rate_limit.reset(throttle_key)
+
+    effective_tenant = user.tenant_id
+    if gup_rec:
+        parts = [p.strip() for p in [gup_rec.state_tenant_id, gup_rec.ulb_tenant_id] if p and p.strip()]
+        if parts:
+            effective_tenant = ",".join(parts)
 
     # Issue SSO JWT Token
     modulesList = [m.strip() for m in user.assigned_modules.split(",") if m.strip()]
@@ -358,9 +386,11 @@ async def signin(payload: SignInRequest, db: AsyncSession = Depends(get_write_db
         "name": user.full_name,
         "realm_access": {"roles": [user.role]},
         "tenant_id": user.tenant_id,
+        "tenant_scope": effective_tenant,
         "assigned_modules": modulesList
     }
     accessToken = create_access_token(token_claims)
+    set_session_cookie(response, accessToken)
 
     userProfile = UserProfileResponse(
         id=user.id,
@@ -374,15 +404,17 @@ async def signin(payload: SignInRequest, db: AsyncSession = Depends(get_write_db
         assignedWard=user.assigned_ward
     )
 
-    effective_tenant = user.tenant_id
-    gup_rec = await db.scalar(select(GlobalUserProfile).where(GlobalUserProfile.email == user.email))
-    if gup_rec:
-        parts = [p.strip() for p in [gup_rec.state_tenant_id, gup_rec.ulb_tenant_id] if p and p.strip()]
-        if parts:
-            effective_tenant = ",".join(parts)
-
-    accessible_tenants = await _get_accessible_tenants(db, user.role, effective_tenant)
+    # Granted tenants join the switcher only. The token keeps the home scope, and each request adds live grants.
+    granted = await load_active_grants(db, user.email) if user.role != "super_admin" else {}
+    listed_tenants = ",".join(filter(None, [effective_tenant, *granted]))
+    accessible_tenants = await _get_accessible_tenants(db, user.role, listed_tenants)
     return AuthResponse(accessToken=accessToken, user=userProfile, accessibleTenants=accessible_tenants)
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(response: Response):
+    clear_session_cookie(response)
+    response.status_code = status.HTTP_204_NO_CONTENT
+
 
 @router.get("/me", response_model=UserProfileResponse)
 async def get_me(user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_read_db)):
@@ -414,7 +446,7 @@ async def get_me(user: dict = Depends(get_current_user), db: AsyncSession = Depe
         email=user.get("email", "officer@gwmc.gov.in"),
         fullName=user.get("name", "Ramesh Reddy"),
         role=role,
-        tenantId=user.get("tenant_id", settings.DEFAULT_TENANT_ID),
+        tenantId=user.get("tenant_id") or settings.DEFAULT_TENANT_ID,
         assignedModules=assigned,
         assignedZone=user.get("assigned_zone", "Zone-1"),
         assignedWard=user.get("assigned_ward", "Ward-14")
@@ -452,3 +484,33 @@ async def list_modules_for_user(user: dict = Depends(get_current_user), db: Asyn
             )
         )
     return response
+
+
+@router.post("/authorize", response_model=AuthorizeResponse)
+async def authorize(
+    request: Request,
+    component: str = Query(..., min_length=1, max_length=30),
+    action: str = Query(...),
+    tenant_id: str = Depends(get_current_tenant),
+    sub_tenant_id: Optional[str] = Depends(get_current_sub_tenant),
+    user: Dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_read_db),
+):
+    """Module services call this for every request, so identity rules stay in one place."""
+    if action not in PERMISSION_COLUMNS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown action")
+    await require_permission(component, action)(request, user, db)
+    return AuthorizeResponse(
+        tenantId=tenant_id, subTenantId=sub_tenant_id, userId=str(user.get("sub") or "") or None,
+        # The tenant whose limits apply comes from the token. The service holds its concurrency slot with these.
+        quotaTenantId=getattr(request.state, "quota_tenant", None),
+        concurrentLimit=getattr(request.state, "quota_concurrent_limit", None),
+        impersonation=_support_rules(user.get("impersonation")),
+    )
+
+
+def _support_rules(context: Optional[Dict]) -> Optional[SupportSessionRules]:
+    if not context:
+        return None
+    return SupportSessionRules(sessionId=context["sessionId"], maskSensitive=context["maskSensitive"], downloadDisabled=context["downloadDisabled"],
+                               sensitiveFieldParts=list(SENSITIVE_FIELD_PARTS))

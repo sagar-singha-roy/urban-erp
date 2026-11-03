@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { IamSsoService } from '../../../../core/services/iam-sso.service';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { LoadingService } from '../../../../core/services/loading.service';
@@ -11,7 +12,7 @@ import { IdpFormDialogComponent } from '../dialogs/idp-form-dialog/idp-form-dial
 @Component({
   selector: 'app-identity-federation',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, IdpFormDialogComponent],
+  imports: [CommonModule, FormsModule, IconComponent, RefreshButtonComponent, IdpFormDialogComponent],
   templateUrl: './identity-federation.component.html',
   styleUrl: './identity-federation.component.scss'
 })

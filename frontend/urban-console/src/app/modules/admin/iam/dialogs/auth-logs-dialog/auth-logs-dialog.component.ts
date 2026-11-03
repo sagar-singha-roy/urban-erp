@@ -9,9 +9,13 @@ import {
   signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RowSearchPipe } from '../../../../../shared/components/table-pager/row-search.pipe';
+import { TableSearchComponent } from '../../../../../shared/components/table-pager/table-search.component';
+import { PagerState, TablePagerComponent } from '../../../../../shared/components/table-pager/table-pager.component';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { IconComponent } from '../../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../../shared/components/refresh-button/refresh-button.component';
 import { DialogService } from '../../../../../core/services/dialog.service';
 import { IamSsoService } from '../../../../../core/services/iam-sso.service';
 import { AuthenticationAuditLog } from '../../../../../core/models/iam-sso.model';
@@ -19,11 +23,12 @@ import { AuthenticationAuditLog } from '../../../../../core/models/iam-sso.model
 @Component({
   selector: 'app-auth-logs-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent],
+  imports: [TablePagerComponent, RowSearchPipe, TableSearchComponent, CommonModule, FormsModule, IconComponent, RefreshButtonComponent],
   templateUrl: './auth-logs-dialog.component.html',
   styleUrl: './auth-logs-dialog.component.scss'
 })
 export class AuthLogsDialogComponent implements OnChanges {
+  readonly pagers = new PagerState();
   private iamService = inject(IamSsoService);
   private dialogs = inject(DialogService);
 

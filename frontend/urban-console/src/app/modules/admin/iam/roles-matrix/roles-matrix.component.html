@@ -28,10 +28,7 @@
 
     <!-- Header Actions strictly tailored per view and in a single row -->
     <div class="header-actions">
-      <button class="btn btn-refresh" (click)="loadRoles(); onRoleChange(selectedRoleId())" [disabled]="isLoading()" title="Reload roles and matrix">
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="roles and permissions" (refresh)="loadRoles(); loadTemplates(); onRoleChange(selectedRoleId())"></app-refresh-button>
 
       <button
         class="btn btn-secondary-action"

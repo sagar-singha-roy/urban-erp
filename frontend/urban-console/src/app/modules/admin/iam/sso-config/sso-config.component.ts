@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { LoadingService } from '../../../../core/services/loading.service';
 import { IamSsoService } from '../../../../core/services/iam-sso.service';
@@ -20,7 +21,7 @@ import { AuthLogsDialogComponent } from '../dialogs/auth-logs-dialog/auth-logs-d
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     AuthLogsDialogComponent
   ],
   templateUrl: './sso-config.component.html',

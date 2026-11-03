@@ -1,0 +1,83 @@
+// The global pagination bar styles use !important, so these overrides must too.
+.suvidha-pagination-bar {
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.5rem 1rem !important;
+  padding: 0.75rem 1rem !important;
+
+  .pagination-info {
+    white-space: nowrap;
+  }
+
+  .pagination-controls {
+    flex-wrap: wrap !important;
+    gap: 0.5rem 0.75rem !important;
+    min-width: 0;
+  }
+}
+
+.pagination-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+// Base sizes are 44px touch targets. Workstation screens get the compact size below.
+.btn-page-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+select {
+  width: 3.75rem !important;
+  min-width: 0 !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 0.25rem 0 0.5rem !important;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+}
+
+.page-index {
+  padding: 0 0.25rem;
+  font-size: 0.85rem;
+  color: #475569;
+  white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  .suvidha-pagination-bar .pagination-controls {
+    flex-wrap: nowrap !important;
+  }
+
+  .btn-page-nav {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+
+  select {
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+}

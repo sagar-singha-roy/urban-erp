@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import selectinload
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, require_roles
 from app.db.session import get_db
 from app.db.models import ModuleModel, ComponentModel, ModuleChangeHistory
 from app.schemas.module import (
@@ -19,7 +19,7 @@ from app.schemas.tenant import ApiResponse
 router = APIRouter(
     prefix="/modules",
     tags=["Module Catalogue"],
-    dependencies=[Depends(get_current_user)]
+    dependencies=[Depends(require_roles(["super_admin"]))]
 )
 
 def generate_permission_keys(module_code: str, component_code: str, action: str) -> str:

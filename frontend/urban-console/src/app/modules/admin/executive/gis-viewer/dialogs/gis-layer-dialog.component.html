@@ -1,0 +1,108 @@
+<div class="gis-backdrop">
+  <form class="gis-dialog" role="dialog" aria-modal="true" aria-label="GIS layer" (ngSubmit)="save()" #layerForm="ngForm">
+    <header>
+      <h3>{{ layer() ? 'Edit Layer' : 'Add Layer' }}</h3>
+      <button type="button" class="close" aria-label="Close" (click)="closed.emit()">✕</button>
+    </header>
+    <div class="gis-dialog-body">
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+      <div class="form-grid">
+        <label>State Tenant *
+          <select name="state" [(ngModel)]="stateCode" [disabled]="!!layer()">
+            <option value="">All accessible states</option>
+            @for (s of options().states; track s.code) { <option [value]="s.code">{{ s.name }}</option> }
+          </select>
+        </label>
+        <label>ULB / City *
+          <select name="tenantId" [(ngModel)]="form.tenantId" required [disabled]="!!layer()">
+            <option value="">Select</option>
+            @for (u of ulbs(); track u.code) { <option [value]="u.code">{{ u.name }}</option> }
+          </select>
+        </label>
+        <label>Layer Name *
+          <input name="layerName" [(ngModel)]="form.layerName" required maxlength="150" />
+        </label>
+        <label>Layer Code *
+          <input name="layerCode" [(ngModel)]="form.layerCode" required maxlength="60" />
+        </label>
+        <label>Layer Category *
+          <select name="category" [(ngModel)]="form.layerCategory" required>
+            @for (o of options().layerCategories; track o) { <option [value]="o">{{ o }}</option> }
+          </select>
+        </label>
+        <label>Layer Type *
+          <select name="type" [(ngModel)]="form.layerType" required>
+            @for (o of options().layerTypes; track o) { <option [value]="o">{{ o }}</option> }
+          </select>
+        </label>
+        <label>Data Source *
+          <select name="source" [ngModel]="dataSource()" (ngModelChange)="dataSource.set($event)" required>
+            @for (o of options().dataSources; track o) { <option [value]="o">{{ o }}</option> }
+          </select>
+        </label>
+        <label>Coordinate Reference System *
+          <select name="crs" [(ngModel)]="form.crs" required>
+            @for (o of options().crsOptions; track o.code) { <option [value]="o.code">{{ o.code }} — {{ o.name }}</option> }
+          </select>
+        </label>
+        @if (isRemote()) {
+          <label>GIS Service URL *
+            <input name="serviceUrl" type="url" [(ngModel)]="form.serviceUrl" required />
+          </label>
+          <label>Workspace Name
+            <input name="workspaceName" [(ngModel)]="form.workspaceName" />
+          </label>
+          <label>Layer Identifier *
+            <input name="identifier" [(ngModel)]="form.layerIdentifier" required />
+          </label>
+        }
+        @if (form.layerCategory === 'Utility') {
+          <label>Utility Category *
+            <select name="utility" [(ngModel)]="form.utilityCategory" required>
+              <option value="">Select</option>
+              @for (o of options().utilityCategories; track o) { <option [value]="o">{{ o }}</option> }
+            </select>
+          </label>
+          <label>Utility Network Type *
+            <select name="network" [(ngModel)]="form.networkType" required>
+              <option value="">Select</option>
+              @for (o of options().utilityNetworkTypes; track o) { <option [value]="o">{{ o }}</option> }
+            </select>
+          </label>
+          <label>Department
+            <input name="department" [(ngModel)]="form.department" />
+          </label>
+        }
+        <label>Layer Status *
+          <select name="status" [(ngModel)]="form.layerStatus" required>
+            @for (o of options().layerStatuses; track o) { <option [value]="o">{{ o }}</option> }
+          </select>
+        </label>
+        <label>Layer Opacity ({{ form.opacity }})
+          <input name="opacity" type="range" min="0" max="1" step="0.1" [(ngModel)]="form.opacity" />
+        </label>
+        <label>Style Colour
+          <input name="color" type="color" [(ngModel)]="form.layerStyle.color" />
+        </label>
+        <label>Line Weight
+          <input name="weight" type="number" min="1" max="10" [(ngModel)]="form.layerStyle.weight" />
+        </label>
+        <label>Fill Opacity
+          <input name="fill" type="number" min="0" max="1" step="0.1" [(ngModel)]="form.layerStyle.fillOpacity" />
+        </label>
+        <label class="toggle">
+          <input name="visible" type="checkbox" [(ngModel)]="form.defaultVisibility" />
+          Default Visibility
+        </label>
+      </div>
+    </div>
+    <footer>
+      <button type="button" class="btn-secondary" (click)="closed.emit()">Cancel</button>
+      <button type="submit" class="btn-primary" [disabled]="layerForm.invalid || isSaving()">
+        {{ isSaving() ? 'Saving…' : 'Save Layer' }}
+      </button>
+    </footer>
+  </form>
+</div>

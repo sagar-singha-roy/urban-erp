@@ -1,0 +1,782 @@
+.gis-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.gis-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  h1 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.35rem;
+    font-weight: 800;
+  }
+
+  p {
+    margin: 0.25rem 0 0;
+    color: #64748b;
+    font-size: 0.85rem;
+  }
+}
+
+.gis-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+// Map
+.gis-map-panel {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #dbe4ee;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.1);
+
+  &:fullscreen {
+    border-radius: 0;
+
+    .gis-map {
+      height: 100vh;
+    }
+  }
+}
+
+.gis-map {
+  z-index: 0;
+  height: 56vh;
+  min-height: 340px;
+}
+
+.glass {
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(8px);
+}
+
+.map-top {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}
+
+.basemap-switch {
+  display: flex;
+  padding: 0.25rem;
+
+  button {
+    min-height: 44px;
+    padding: 0 0.6rem;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #475569;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &.active {
+      background: #0f172a;
+      color: #ffffff;
+    }
+  }
+}
+
+.map-tools {
+  display: flex;
+  padding: 0.25rem;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #334155;
+    cursor: pointer;
+
+    &:hover {
+      background: #f1f5f9;
+    }
+  }
+}
+
+.legend {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 10;
+  width: min(190px, calc(100% - 4.5rem));
+  max-height: 96px;
+  overflow-y: auto;
+  padding: 0.2rem 0.5rem;
+
+  h4 {
+    display: none;
+    margin: 0 0 0.35rem;
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 32px;
+  color: #1e293b;
+  font-size: 0.8rem;
+
+  .swatch {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+  }
+
+  .name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .count {
+    color: #64748b;
+    font-size: 0.72rem;
+  }
+
+  button {
+    width: 44px;
+    height: 44px;
+    margin-right: -0.5rem;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+
+    &:hover {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+  }
+}
+
+.map-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 9;
+  width: min(320px, calc(100% - 2rem));
+  padding: 1rem 1.1rem;
+  transform: translate(-50%, -50%);
+  text-align: center;
+
+  strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #0f172a;
+    font-size: 0.95rem;
+  }
+
+  span {
+    color: #64748b;
+    font-size: 0.82rem;
+  }
+}
+
+.coords {
+  position: absolute;
+  display: none;
+  left: 0.75rem;
+  bottom: 0.6rem;
+  z-index: 10;
+  padding: 0.2rem 0.55rem;
+  border-radius: 8px;
+  color: #334155;
+  font-family: monospace;
+  font-size: 0.72rem;
+}
+
+.loading-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 11;
+  height: 3px;
+  overflow: hidden;
+  background: rgba(37, 99, 235, 0.15);
+
+  &::after {
+    content: '';
+    display: block;
+    width: 35%;
+    height: 100%;
+    background: #2563eb;
+    animation: gis-load 1s ease-in-out infinite;
+  }
+}
+
+@keyframes gis-load {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+:host ::ng-deep {
+  .gis-map-popup,
+  .gis-map-tooltip {
+    position: absolute;
+    z-index: 5;
+    transform: translate(-50%, calc(-100% - 12px));
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+    color: #0f172a;
+    font-size: 0.8rem;
+  }
+
+  .gis-map-popup {
+    width: min(320px, 80%);
+    max-height: 60%;
+    overflow-y: auto;
+    padding: 0.75rem;
+  }
+
+  .gis-map-tooltip {
+    padding: 0.25rem 0.5rem;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .gis-popup-title {
+    margin-bottom: 0.45rem;
+    color: #0f172a;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .gis-popup-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.2rem 0;
+    border-top: 1px solid #f1f5f9;
+    font-size: 0.76rem;
+
+    span:first-child {
+      color: #64748b;
+    }
+
+    span:last-child {
+      color: #0f172a;
+      font-weight: 600;
+      text-align: right;
+    }
+  }
+}
+
+// Controls
+.gis-controls {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+}
+
+.gis-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  overflow-x: auto;
+  border-bottom: 1px solid #eef2f6;
+
+  button {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 44px;
+    padding: 0 0.7rem;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #64748b;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+      background: #f1f5f9;
+    }
+
+    &.active {
+      background: #eff4ff;
+      color: #1d4ed8;
+    }
+  }
+}
+
+.panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 1rem;
+  overflow: visible;
+}
+
+.panel-section {
+  margin-bottom: 1.1rem;
+
+  h3 {
+    margin: 0 0 0.65rem;
+    color: #94a3b8;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 0.75rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 600;
+
+  &.toggle {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 44px;
+    padding: 0 0.75rem;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 0.82rem;
+  }
+}
+
+input,
+select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 0.7rem;
+  border: 1px solid #d5dce6;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 400;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  }
+
+  &:disabled {
+    background: #f1f5f9;
+    color: #94a3b8;
+  }
+}
+
+input[type='range'] {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  accent-color: #2563eb;
+
+  &:focus {
+    box-shadow: none;
+  }
+}
+
+input[type='color'] {
+  padding: 0.25rem;
+}
+
+// A checkbox drawn as a switch
+.switch {
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  min-height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #cbd5e1;
+  cursor: pointer;
+  appearance: none;
+  transition: background 0.15s ease;
+
+  &::after {
+    content: '';
+    display: block;
+    width: 18px;
+    height: 18px;
+    margin: 2px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+    transition: transform 0.15s ease;
+  }
+
+  &:checked {
+    background: #2563eb;
+
+    &::after {
+      transform: translateX(18px);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.with-action {
+  display: flex;
+  gap: 0.4rem;
+
+  button {
+    flex-shrink: 0;
+    padding: 0 0.6rem;
+    font-size: 0.74rem;
+  }
+}
+
+.range {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.read-only {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.78rem;
+}
+
+button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border: 1px solid #d5dce6;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #334155;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &.primary {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+
+    &:hover:not(:disabled) {
+      background: #1d4ed8;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin: 1rem -1rem -1rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #eef2f6;
+  border-radius: 0 0 16px 16px;
+  background: #ffffff;
+
+  &.inline {
+    position: static;
+    margin: 0 0 0.75rem;
+    padding: 0;
+    border: 0;
+  }
+}
+
+// Layer and ULB cards
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.item-card {
+  padding: 0.75rem;
+  border: 1px solid #eef2f6;
+  border-radius: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: #d5dce6;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+  }
+
+  &.active {
+    border-color: #93b4f8;
+    background: #f8faff;
+  }
+}
+
+.item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  strong {
+    display: block;
+    overflow-wrap: anywhere;
+    color: #0f172a;
+    font-size: 0.86rem;
+  }
+
+  small {
+    color: #64748b;
+    font-size: 0.74rem;
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+
+  span {
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  .ok {
+    background: #dcfce7;
+    color: #166534;
+  }
+}
+
+.item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+
+  button {
+    flex: 1 1 auto;
+    font-size: 0.76rem;
+  }
+
+  .danger:hover {
+    border-color: #fca5a5;
+    background: #fef2f2;
+    color: #b91c1c;
+  }
+}
+
+.empty-card {
+  padding: 1.75rem 1rem;
+  border: 1px dashed #d5dce6;
+  border-radius: 12px;
+  color: #64748b;
+  font-size: 0.84rem;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .gis-map {
+    height: 60vh;
+  }
+
+  .legend {
+    left: 0.75rem;
+    bottom: 2.6rem;
+    width: min(250px, calc(100% - 4.5rem));
+    max-height: 40%;
+    padding: 0.6rem 0.7rem;
+
+    h4 {
+      display: block;
+    }
+  }
+
+  // A pointer is usually available from here up; phones have no hover position to show.
+  .coords {
+    display: block;
+  }
+}
+
+@media (min-width: 1024px) {
+  input,
+  select,
+  button {
+    min-height: 40px;
+  }
+
+  .basemap-switch button {
+    min-height: 40px;
+    padding: 0 0.7rem;
+  }
+
+  .map-tools button {
+    height: 40px;
+  }
+
+  .legend-row button {
+    width: 28px;
+    height: 28px;
+    margin-right: 0;
+  }
+}
+
+// Map and controls sit side by side once both have room.
+@media (min-width: 1280px) {
+  .gis-layout {
+    grid-template-columns: minmax(0, 1fr) 360px;
+    align-items: start;
+  }
+
+  .gis-map-panel {
+    position: sticky;
+    top: 0.5rem;
+  }
+
+  .gis-map {
+    height: calc(100vh - 190px);
+    min-height: 560px;
+  }
+
+  .gis-controls {
+    max-height: calc(100vh - 190px);
+    min-height: 560px;
+  }
+
+  .panel-body {
+    overflow-y: auto;
+  }
+
+  .gis-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+
+    button {
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.15rem;
+      min-height: 52px;
+      padding: 0.25rem;
+      font-size: 0.72rem;
+      white-space: normal;
+      text-align: center;
+    }
+  }
+
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.map-tools button.active {
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.list-search {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  margin: 0.75rem 0;
+  padding: 0 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.section-title {
+  margin: 1.25rem 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+// The global select style is smaller than the 44px touch target and uses !important.
+.form-grid select,
+.form-grid input:not([type='checkbox']):not([type='color']):not([type='range']) {
+  height: 44px !important;
+  min-height: 44px !important;
+}

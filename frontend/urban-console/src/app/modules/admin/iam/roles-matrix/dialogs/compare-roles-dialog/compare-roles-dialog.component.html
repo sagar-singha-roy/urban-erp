@@ -55,7 +55,8 @@
         </div>
 
         <!-- Diff Table -->
-        <div class="table-responsive">
+        <app-table-search [state]="pagers" key="t1"></app-table-search>
+<div class="table-responsive">
           <table class="diff-table">
             <thead>
               <tr>
@@ -66,7 +67,7 @@
               </tr>
             </thead>
             <tbody>
-              @for (diff of comparisonResult()!.differences; track diff.componentCode) {
+              @for (diff of (comparisonResult()!.differences | rowSearch:pagers.search('t1')) | slice:pagers.start('t1', (comparisonResult()!.differences | rowSearch:pagers.search('t1')).length):pagers.end('t1', (comparisonResult()!.differences | rowSearch:pagers.search('t1')).length); track diff.componentCode) {
                 <tr [class.highlight-conflict]="diff.isConflictOrExcessive">
                   <td>
                     <div class="comp-cell">
@@ -115,6 +116,7 @@
             </tbody>
           </table>
         </div>
+<app-table-pager [state]="pagers" key="t1" [total]="(comparisonResult()!.differences | rowSearch:pagers.search('t1')).length"></app-table-pager>
       }
     </div>
 

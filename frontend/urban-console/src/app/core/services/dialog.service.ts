@@ -10,6 +10,7 @@ import {
   providedIn: 'root',
 })
 export class DialogService {
+  private toastsMuted = false;
   // Alert State
   readonly alertState = signal<{
     config: AlertDialogConfig;
@@ -87,11 +88,17 @@ export class DialogService {
   }
 
   // 4. Toast / Snackbar
+  /** While muted, page-level toasts are dropped so a refresh reports exactly one outcome. */
+  setToastsMuted(muted: boolean): void {
+    this.toastsMuted = muted;
+  }
+
   showToast(
     message: string,
     type: 'success' | 'error' | 'warning' | 'info' = 'info',
     durationMs = 4000
   ): void {
+    if (this.toastsMuted) return;
     const id = Math.random().toString(36).substring(2, 9);
     const toast: ToastConfig = { id, message, type, durationMs };
 

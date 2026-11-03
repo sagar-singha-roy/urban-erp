@@ -1,0 +1,29 @@
+<div class="xt-wrapper">
+  <header class="suvidha-page-header">
+    <div class="header-titles">
+      <h1 class="page-title" data-tooltip="Level 0 Identity &amp; Access Management — ADM-R02" title="Level 0 Identity &amp; Access Management — ADM-R02">Cross-Tenant Access Management</h1>
+      <p class="page-subtitle">Grant, scope, review and audit access that crosses state, ULB and department boundaries.</p>
+    </div>
+    <div class="header-actions"><app-refresh-button subject="cross-tenant access" (refresh)="refresh()"></app-refresh-button></div>
+  </header>
+
+  <div class="tabs-bar" role="tablist">
+    @for (tab of tabs; track tab.id) {
+      <button type="button" class="tab-btn" role="tab" [class.active]="activeTab() === tab.id" [attr.aria-selected]="activeTab() === tab.id" (click)="activeTab.set(tab.id)">
+        <app-icon [name]="tab.icon" [size]="16"></app-icon><span>{{ tab.label }}</span>
+      </button>
+    }
+  </div>
+
+  @if (options(); as opts) {
+    <section class="tab-panel" role="tabpanel">
+      @switch (activeTab()) {
+        @case ('directory') { <app-xt-access-directory-tab [options]="opts" [tenants]="tenants()" [authorities]="authorities()"></app-xt-access-directory-tab> }
+        @case ('scope') { <app-xt-scope-config-tab [options]="opts" [tenants]="tenants()"></app-xt-scope-config-tab> }
+        @case ('permissions') { <app-xt-permission-review-tab [options]="opts" [tenants]="tenants()"></app-xt-permission-review-tab> }
+        @case ('certification') { <app-xt-access-certification-tab [options]="opts" [tenants]="tenants()" [authorities]="authorities()"></app-xt-access-certification-tab> }
+        @case ('history') { <app-xt-access-history-tab [tenants]="tenants()"></app-xt-access-history-tab> }
+      }
+    </section>
+  }
+</div>

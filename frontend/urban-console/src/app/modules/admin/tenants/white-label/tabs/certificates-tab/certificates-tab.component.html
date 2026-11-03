@@ -1,0 +1,42 @@
+<div class="wl-toolbar">
+  <input class="wl-search" type="search" placeholder="Search domains, tenants or providers" aria-label="Search domains, tenants or providers" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+  <button type="button" class="btn btn-primary" (click)="open(null)">
+    <app-icon name="ri-add-line" [size]="16"></app-icon>
+    <span>Add Certificate</span>
+  </button>
+</div>
+
+<div class="wl-card">
+  <div class="wl-scroll">
+    <table class="wl-table">
+      <thead>
+        <tr><th>Domain</th><th>Provider</th><th>Expires</th><th>Auto Renewal</th><th>Status</th><th>Last Validated</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        @for (c of items(); track c.id) {
+          <tr>
+            <td>{{ c.domainName }}<span class="wl-sub">{{ c.tenantId }}</span></td>
+            <td>{{ c.provider }}<span class="wl-sub">{{ c.certificateType }}</span></td>
+            <td>{{ c.expiryDate ? (c.expiryDate | date: 'mediumDate') : 'Not issued' }}</td>
+            <td>{{ c.autoRenewal ? 'On' : 'Off' }}</td>
+            <td>
+              <span class="wl-status" [ngClass]="statusClass(c.certificateStatus)">{{ c.certificateStatus }}</span>
+              @if (c.statusMessage) {
+                <span class="wl-sub">{{ c.statusMessage }}</span>
+              }
+            </td>
+            <td>{{ c.lastValidationAt ? (c.lastValidationAt | date: 'medium') : 'Never' }}</td>
+            <td><div class="wl-actions"><button type="button" class="wl-link" (click)="open(c)">Edit</button></div></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7" class="wl-empty">{{ isLoading() ? 'Loading...' : 'No certificates yet.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-wl-pagination [page]="page()" [limit]="limit()" [total]="total()" (pageChange)="onPage($event)" (limitChange)="onLimit($event)"></app-wl-pagination>
+</div>
+
+@if (isDialogOpen()) {
+  <app-certificate-form-dialog [certificate]="selected()" [options]="options()" [tenants]="tenants()" (saved)="onSaved()" (closed)="isDialogOpen.set(false)"></app-certificate-form-dialog>
+}

@@ -1,0 +1,24 @@
+<button type="button" class="ms-trigger" [class.has-value]="value().length" [attr.aria-expanded]="open()" (click)="open.set(!open())">
+  <span class="ms-summary">{{ summary() }}</span>
+  <span class="ms-caret" aria-hidden="true">▾</span>
+</button>
+@if (open()) {
+  <div class="ms-panel">
+    @if (options().length > 6) {
+      <input type="search" placeholder="Search" aria-label="Search options" [value]="term()" (input)="term.set($any($event.target).value)" />
+    }
+    <div class="ms-list">
+      @for (o of visible(); track o.value) {
+        <label class="ms-option">
+          <input type="checkbox" [checked]="isSelected(o.value)" (change)="toggle(o.value)" />
+          <span>{{ o.label }}</span>
+        </label>
+      } @empty {
+        <p class="ms-empty">Nothing to choose yet.</p>
+      }
+    </div>
+    @if (value().length) {
+      <button type="button" class="ms-clear" (click)="clear()">Clear {{ value().length }} selected</button>
+    }
+  </div>
+}

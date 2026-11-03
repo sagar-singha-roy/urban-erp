@@ -1,10 +1,12 @@
 # Rule: Backend & Frontend Coding Structure Consistency
 
+The step-by-step version, with files to copy from, is [docs/ENGINEERING_PLAYBOOK.md](../../docs/ENGINEERING_PLAYBOOK.md).
+
 ## 1. Backend Invariants (`backend/services/core_service/app/`)
 
 1. **Layer Separation**:
-   - `api/v1/`: Controllers and HTTP route handlers only. No raw SQL or direct DB schema alters.
-   - `core/`: Authentication, security, tenant resolution, configuration, and redis clients.
+   - `api/v1/`: Route handlers. Split a module into two routers past about 400 lines.
+   - `core/`: Authentication, tenant resolution, configuration, Valkey, and per-module `<module>_rules.py` (pure constants and functions), `<module>.py` (enforcement and services) and `<module>_worker.py` (background loops).
    - `db/`: SQLAlchemy declarative models (`models.py`), database session (`session.py`), and seeding (`seed.py`).
    - `schemas/`: Pydantic v2 schemas (`auth.py`, `property.py`, `tenant.py`, etc.).
 2. **Naming & Serialization**:
@@ -14,10 +16,21 @@
    - Every router querying municipal entities MUST declare `tenant_id: str = Depends(get_current_tenant)` and where applicable `sub_tenant_id: Optional[str] = Depends(get_current_sub_tenant)`.
    - Never perform bare queries like `select(PropertyParcel)` without `.where(PropertyParcel.tenant_id == tenant_id)`.
 4. **Caching Discipline**:
-   - Cache keys must be scoped with tenant context: `prefix:{tenant_id}:{sub_tenant_id}`.
+   - Valkey keys must be scoped with tenant context: `stats:tenant:{tenant_id}:sub:{sub_tenant_id}:{resource}`.
 5. **Mandatory Search, Limit & Skip Pagination**:
    - Every entity listing and collection endpoint MUST support `search: Optional[str] = Query(None)` across primary textual columns, as well as `skip: int = Query(0, ge=0)` and `limit: int = Query(50, ge=1, le=100)`.
-   - SQL queries must filter by search criteria when provided and execute `.offset(skip).limit(limit)`. Total entity count should be computed via `select(func.count(...))` for accurate pagination ranges.
+   - SQL queries must filter by search criteria when provided and execute `.offset(skip).limit(limit)`. Return `PagedResponse(data, total)`, with the total from `select(func.count(...))`.
+6. **Permissions, Audit and Approvals**:
+   - Component checks use `Depends(require_permission("PTX-P10", "APPROVE"))`. Platform routers are guarded with `require_roles(["super_admin"])`.
+   - Rules that change what a request may do belong in `core/auth.py` (`get_current_user`, `require_permission`) and are read from the database on every request, never baked into the token.
+   - Changes to access, money or configuration write a readable history row and a hash-chained `record_immutable_audit_event`.
+   - The requester never approves their own request. People are compared by lower-cased email.
+   - CSV exports pass every cell through `safe_cell` and are capped by `EXPORT_LIMIT`.
+7. **Migrations and IDs**:
+   - New tables are appended to `db/models.py` with a migration `NNNN_<name>.py` that creates them, chained to the latest revision.
+   - Municipal tables join `RLS_TABLES`. Platform-only tables carry a comment explaining why they have no row-level security.
+   - Readable record numbers (`XTA-000001`) come from a PostgreSQL `Sequence` plus a formatter in the rules file.
+   - Datetimes are stored as naive UTC.
 
 ---
 
@@ -37,7 +50,7 @@
    - Navigation must collapse to slide-over drawer or compact icon rail on <1024px viewports.
    - Fluid grid layouts (`repeat(auto-fit, minmax(..., 1fr))`) preventing horizontal overflow.
 5. **Header Injection**:
-   - All HTTP requests initiated through Angular services MUST inject `Authorization`, `X-Tenant-ID`, and `X-Sub-Tenant-ID` headers.
+   - The session is an httpOnly cookie. `core/interceptors/auth-header.interceptor.ts` adds `X-Tenant-ID`, `X-Sub-Tenant-ID` and the CSRF header to every request and sends cookies. Services must not set these headers themselves.
 6. **Standard Component 4-Tier Visual Architecture (Mandatory)**:
    - All management and directory views across SUVIDHA must implement the official 4-tier layout:
      - **Tier 1 (Page Header)**: Title + Subtitle on left; Outlined Refresh + Primary Action on right.
@@ -62,6 +75,7 @@
          └── <feature>-<child>-dialog/# Child / secondary hierarchy dialog component
      ```
    - Parent directory components must remain lean, containing only list state, filters, pagination, and dialog toggle bindings.
+   - Pages with several tabs use a shell component plus `tabs/` (each tab `extends PagedTab<T>`) and `dialogs/`, sharing one stylesheet that `@use`s `shared/styles/_admin-table.scss`. See `modules/admin/iam/cross-tenant-access/`.
 10. **Environment Variable Discipline**:
    - All backend endpoints and auth server URLs MUST be consumed via `src/environments/environment.ts` (`environment.apiUrl`, `environment.keycloakUrl`), NEVER hardcoded as strings.
 11. **Mandatory Table Search & Pagination Architecture**:

@@ -23,7 +23,7 @@
 │     code ('GWMC')               │                        │ 1:N
 └──────┬──────────────────────────┘                        ▼
        │ 1:N                               ┌─────────────────────────────────┐
-       │                                   │        module_components        │ (405 Processes)
+       │                                   │        module_components        │ (415 Processes)
        │                                   │  PK component_code ('PTX-P01')  │
        │                                   │  FK module_code                 │
        │                                   └────────────────┬────────────────┘
@@ -87,7 +87,7 @@ CREATE TABLE modules (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Granular 405 Components / Processes
+-- Granular 415 Components / Processes
 CREATE TABLE module_components (
     component_code VARCHAR(30) PRIMARY KEY, -- 'PTX-P01', 'BPM-B05', etc.
     module_code VARCHAR(10) NOT NULL REFERENCES modules(code) ON DELETE CASCADE,

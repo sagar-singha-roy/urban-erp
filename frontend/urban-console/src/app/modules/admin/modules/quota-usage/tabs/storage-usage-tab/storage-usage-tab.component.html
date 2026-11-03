@@ -1,0 +1,74 @@
+<div class="wl-notice">
+  <span>Figures come from the platform's storage ledger. Today that holds logos and emblems only, because document storage is not built yet. Providers the platform cannot measure show Not connected.</span>
+</div>
+<form class="usage-filters" (ngSubmit)="apply()">
+    <div class="field"><label for="f-tenantLevel">Tenant Level</label>
+      <select id="f-tenantLevel" name="f-tenantLevel" [(ngModel)]="filters.tenantLevel"><option [ngValue]="undefined">All</option>
+        @for (o of options().tenantLevels; track o) { <option [ngValue]="o">{{ o }}</option> }
+      </select></div>
+    <div class="field"><label for="f-stateTenantId">State Tenant</label>
+      <input id="f-stateTenantId" name="f-stateTenantId" list="usageStates" placeholder="Type to search" [(ngModel)]="filters.stateTenantId" />
+      <datalist id="usageStates">@for (t of states; track t.tenantId) { <option [value]="t.tenantId">{{ t.name }}</option> }</datalist></div>
+    <div class="field"><label for="f-ulbTenantId">ULB / City</label>
+      <input id="f-ulbTenantId" name="f-ulbTenantId" list="usageUlbs" placeholder="Type to search" [(ngModel)]="filters.ulbTenantId" />
+      <datalist id="usageUlbs">@for (t of ulbs; track t.tenantId) { <option [value]="t.tenantId">{{ t.name }}</option> }</datalist></div>
+    <div class="field"><label for="f-storageProvider">Storage Provider</label>
+      <select id="f-storageProvider" name="f-storageProvider" [(ngModel)]="filters.storageProvider"><option [ngValue]="undefined">All</option>
+        @for (o of options().storageProviders; track o) { <option [ngValue]="o">{{ o }}</option> }
+      </select></div>
+    <div class="field"><label for="f-storageType">Storage Type</label>
+      <select id="f-storageType" name="f-storageType" [(ngModel)]="filters.storageType"><option [ngValue]="undefined">All</option>
+        @for (o of options().storageTypes; track o) { <option [ngValue]="o">{{ o }}</option> }
+      </select></div>
+    <div class="field wide"><label>Module</label>
+      <app-check-list [options]="moduleOptions" [value]="filters.modules ?? []" (valueChange)="filters.modules = $event"></app-check-list></div>
+    <div class="field"><label for="f-from">From Date</label><input id="f-from" type="date" name="f-from" [(ngModel)]="filters.dateFrom" /></div>
+    <div class="field"><label for="f-to">To Date</label><input id="f-to" type="date" name="f-to" [(ngModel)]="filters.dateTo" /></div>
+    <div class="field"><label for="f-status">Usage Status</label>
+      <select id="f-status" name="f-status" [(ngModel)]="filters.usageState"><option [ngValue]="undefined">All</option><option ngValue="Normal">Normal</option>
+        @for (l of levels(); track l.id) { <option [ngValue]="l.levelName">{{ l.levelName }} ({{ l.percentage }}%)</option> }
+        <option ngValue="Not Connected">Not Connected</option></select></div>
+    <div class="field"><label for="f-min">Minimum Usage Percentage</label><input id="f-min" type="number" min="0" name="f-min" [(ngModel)]="filters.minPercentage" /></div>
+    <div class="field"><label for="f-max">Maximum Usage Percentage</label><input id="f-max" type="number" min="0" name="f-max" [(ngModel)]="filters.maxPercentage" /></div>
+    <div class="filter-actions wide">
+      <input class="wl-search" type="search" name="f-search" placeholder="Search allocations or tenants" aria-label="Search allocations or tenants" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+      <button type="button" class="btn btn-outline" (click)="clear()">Clear</button>
+      <button type="submit" class="btn btn-primary">Apply Filters</button>
+    </div>
+</form>
+<div class="wl-card">
+  <div class="wl-scroll">
+    <table class="wl-table">
+      <thead><tr><th>Allocation</th><th>Allocated</th><th>Used</th><th>Available</th><th>Utilisation</th><th>Files</th><th>Status</th><th>Detail</th></tr></thead>
+      <tbody>
+        @for (r of items(); track r.allocationId) {
+          <tr>
+            <td>{{ r.allocationName }}<span class="wl-sub">{{ r.tenantId }} · {{ r.storageType }} · {{ r.storageProvider }}</span></td>
+            <td>{{ formatBytes(r.allocatedBytes) }}</td>
+            <td>{{ formatBytes(r.usedBytes) }}</td>
+            <td>{{ formatBytes(r.availableBytes) }}</td>
+            <td>{{ r.utilisationPercentage !== null ? r.utilisationPercentage + '%' : 'Not connected' }}</td>
+            <td>{{ r.totalFiles ?? 'Not connected' }}</td>
+            <td><span class="wl-status" [ngClass]="usageClass(r.usageStatus)">{{ r.usageStatus }}</span></td>
+            <td><div class="wl-actions"><button type="button" class="wl-link" [disabled]="!r.telemetryConnected" (click)="expanded.set(expanded() === r.allocationId ? null : r.allocationId)">{{ expanded() === r.allocationId ? 'Hide' : 'View' }}</button></div></td>
+          </tr>
+          @if (expanded() === r.allocationId) {
+            <tr><td colspan="8">
+              <div class="usage-detail">
+                <div><strong>Module-wise Usage</strong>
+                  @for (m of moduleEntries(r); track m[0]) { <span class="wl-sub">{{ m[0] }}: {{ formatBytes(m[1]) }}</span> } @empty { <span class="wl-sub">No files yet.</span> }
+                </div>
+                <div><strong>Largest Files</strong>
+                  @for (f of r.largestFiles; track $index) { <span class="wl-sub">{{ f.objectName }} ({{ formatBytes(f.sizeBytes) }}, {{ f.moduleCode }})</span> } @empty { <span class="wl-sub">No files yet.</span> }
+                </div>
+              </div>
+            </td></tr>
+          }
+        } @empty {
+          <tr><td colspan="8" class="wl-empty">{{ isLoading() ? 'Loading...' : 'No active storage allocations match.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-wl-pagination [page]="page()" [limit]="limit()" [total]="total()" (pageChange)="onPage($event)" (limitChange)="onLimit($event)"></app-wl-pagination>
+</div>

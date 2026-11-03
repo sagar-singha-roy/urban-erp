@@ -1,0 +1,76 @@
+<section class="levels">
+  <h2>Threshold Levels</h2>
+  <p class="wl-sub">These set the Usage Status shown across this page.</p>
+  <div class="level-grid">
+    @for (l of levels(); track l.id) {
+      <div class="field">
+        <label [attr.for]="'level-' + l.id">{{ l.levelName }} (%)</label>
+        <input [id]="'level-' + l.id" type="number" min="1" max="100" [value]="l.percentage" (change)="saveLevel(l, $any($event.target).value)" />
+      </div>
+    }
+  </div>
+</section>
+
+<div class="wl-toolbar">
+  <input class="wl-search" type="search" placeholder="Search alerts, codes or tenants" aria-label="Search alerts, codes or tenants" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+  <button type="button" class="btn btn-primary" (click)="open(null)">
+    <app-icon name="ri-add-line" [size]="16"></app-icon>
+    <span>New Alert Rule</span>
+  </button>
+</div>
+
+<div class="wl-card">
+  <div class="wl-scroll">
+    <table class="wl-table">
+      <thead><tr><th>Alert</th><th>Tenant</th><th>Resource</th><th>Condition</th><th>Severity</th><th>Current</th><th>State</th><th>Actions</th></tr></thead>
+      <tbody>
+        @for (r of items(); track r.id) {
+          <tr>
+            <td>{{ r.alertName }}<span class="wl-sub">{{ r.alertCode }}</span></td>
+            <td>{{ r.tenantId }}</td>
+            <td>{{ r.resourceType }}</td>
+            <td>{{ r.comparisonOperator }} {{ r.alertCondition === 'Usage Percentage' ? r.thresholdPercentage + '%' : r.thresholdValue }}</td>
+            <td>{{ r.alertSeverity }}</td>
+            <td>{{ r.lastValue ?? 'No data' }}</td>
+            <td><span class="wl-status" [ngClass]="r.isFiring ? 'bad' : r.isActive ? 'good' : ''">{{ r.isFiring ? 'Firing' : r.isActive ? 'Active' : 'Off' }}</span></td>
+            <td><div class="wl-actions"><button type="button" class="wl-link" (click)="open(r)">Edit</button></div></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="8" class="wl-empty">{{ isLoading() ? 'Loading...' : 'No alert rules yet.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-wl-pagination [page]="page()" [limit]="limit()" [total]="total()" (pageChange)="onPage($event)" (limitChange)="onLimit($event)"></app-wl-pagination>
+</div>
+
+<section class="events">
+  <h2>Alert History</h2>
+  <div class="wl-card">
+    <div class="wl-scroll">
+      <table class="wl-table">
+        <thead><tr><th>When</th><th>Severity</th><th>Message</th><th>Delivery</th><th>Actions</th></tr></thead>
+        <tbody>
+          @for (e of events(); track e.id) {
+            <tr>
+              <td>{{ e.createdAt | date: 'medium' }}</td>
+              <td>{{ e.severity }}</td>
+              <td>{{ e.message }}</td>
+              <td>{{ e.deliverySummary }}</td>
+              <td><div class="wl-actions">
+                @if (e.acknowledgedAt) { <span class="wl-sub">By {{ e.acknowledgedBy }}</span> } @else { <button type="button" class="wl-link" (click)="acknowledge(e)">Acknowledge</button> }
+              </div></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="5" class="wl-empty">No alerts have fired.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-wl-pagination [page]="eventPage()" [limit]="eventLimit()" [total]="eventTotal()" (pageChange)="eventPage.set($event); loadEvents()" (limitChange)="eventLimit.set($event); eventPage.set(1); loadEvents()"></app-wl-pagination>
+  </div>
+</section>
+
+@if (isDialogOpen()) {
+  <app-alert-rule-dialog [record]="selected()" [options]="options()" [tenants]="tenants()" [recipients]="recipients()" (saved)="onSaved()" (closed)="isDialogOpen.set(false)"></app-alert-rule-dialog>
+}

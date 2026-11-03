@@ -22,7 +22,7 @@ export class DrillDialogComponent {
   primaryRegion = 'ap-south-1 (Mumbai Primary)';
   secondaryRegion = 'ap-south-2 (Hyderabad Secondary)';
   selectedServices: string[] = ['Core API', 'Billing Engine', 'Citizen Auth Realm'];
-  selectedDatabases: string[] = ['pg-aurora-cluster-prod', 'redis-cluster-ha'];
+  selectedDatabases: string[] = ['pg-aurora-cluster-prod', 'valkey-cluster-ha'];
   plannedStartDate = '';
   plannedEndDate = '';
   expectedRpoMinutes = 5;
@@ -55,7 +55,7 @@ export class DrillDialogComponent {
     'pg-aurora-cluster-prod',
     'pg-gis-postgis-cluster',
     'urban_audit_vault',
-    'redis-cluster-ha',
+    'valkey-cluster-ha',
   ];
 
   readonly availableCoordinators = [

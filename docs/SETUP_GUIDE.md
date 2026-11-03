@@ -89,7 +89,8 @@ pip install -r requirements.txt
 python app/db/seed.py
 
 # Start development server with reload
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# ENVIRONMENT defaults to production, which requires JWT_SECRET_KEY
+ENVIRONMENT=development uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 API Documentation will be live at:
 - Swagger UI: `http://localhost:8000/docs`

@@ -1,0 +1,15 @@
+<button
+  type="button"
+  class="refresh-btn"
+  [class.icon-only]="iconOnly()"
+  [disabled]="isRefreshing()"
+  [attr.aria-busy]="isRefreshing()"
+  [attr.aria-label]="'Refresh ' + subject()"
+  [title]="'Refresh ' + subject()"
+  (click)="run()"
+>
+  <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isRefreshing()"></app-icon>
+  @if (!iconOnly()) {
+    <span>{{ isRefreshing() ? 'Refreshing…' : 'Refresh' }}</span>
+  }
+</button>

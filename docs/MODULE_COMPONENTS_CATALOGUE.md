@@ -38,7 +38,7 @@ Derived from:
 - **Domain**: Revenue & Billing
 - **Department**: Revenue Section / Property Tax Cell
 - **Total Granular Components**: 33
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/ptx.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/ptx.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/ptx.png](../Project-Documents/Urban-ERD-Diagrams-PNG/ptx.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -85,7 +85,7 @@ Derived from:
 - **Domain**: Revenue & Billing
 - **Department**: Water Supply & Public Health Engineering
 - **Total Granular Components**: 32
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/wtr.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/wtr.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/wtr.png](../Project-Documents/Urban-ERD-Diagrams-PNG/wtr.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -131,7 +131,7 @@ Derived from:
 - **Domain**: Citizen Engagement & Welfare
 - **Department**: Commissioner's Office / IT Cell / Public Information Cell
 - **Total Granular Components**: 30
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/grv.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/grv.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/grv.png](../Project-Documents/Urban-ERD-Diagrams-PNG/grv.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -175,7 +175,7 @@ Derived from:
 - **Domain**: Finance & Administration
 - **Department**: Accounts & Finance Section
 - **Total Granular Components**: 30
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/fin.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/fin.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/fin.png](../Project-Documents/Urban-ERD-Diagrams-PNG/fin.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -219,7 +219,7 @@ Derived from:
 - **Domain**: Revenue & Billing
 - **Department**: Trade Licensing & Public Health
 - **Total Granular Components**: 26
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/trl.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/trl.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/trl.png](../Project-Documents/Urban-ERD-Diagrams-PNG/trl.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -259,7 +259,7 @@ Derived from:
 - **Domain**: Revenue & Billing
 - **Department**: Revenue Section / Sanitation
 - **Total Granular Components**: 23
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/uch.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/uch.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/uch.png](../Project-Documents/Urban-ERD-Diagrams-PNG/uch.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -296,7 +296,7 @@ Derived from:
 - **Domain**: Infrastructure & Field Ops
 - **Department**: Public Health & Sanitation Section
 - **Total Granular Components**: 17
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/swm.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/swm.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/swm.png](../Project-Documents/Urban-ERD-Diagrams-PNG/swm.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -327,7 +327,7 @@ Derived from:
 - **Domain**: Finance & Administration
 - **Department**: Administration & Establishment Wing
 - **Total Granular Components**: 19
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/hrm.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/hrm.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/hrm.png](../Project-Documents/Urban-ERD-Diagrams-PNG/hrm.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -360,7 +360,7 @@ Derived from:
 - **Domain**: Finance & Administration
 - **Department**: Central Records & IT Cell
 - **Total Granular Components**: 30
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/dms.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/dms.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/dms.png](../Project-Documents/Urban-ERD-Diagrams-PNG/dms.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -404,7 +404,7 @@ Derived from:
 - **Domain**: Infrastructure & Field Ops
 - **Department**: Engineering & Works Wing
 - **Total Granular Components**: 20
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/eng.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/eng.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/eng.png](../Project-Documents/Urban-ERD-Diagrams-PNG/eng.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -438,7 +438,7 @@ Derived from:
 - **Domain**: Planning & Regulation
 - **Department**: Town Planning & Building Scrutiny Section
 - **Total Granular Components**: 22
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/bpm.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/bpm.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/bpm.png](../Project-Documents/Urban-ERD-Diagrams-PNG/bpm.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -474,7 +474,7 @@ Derived from:
 - **Domain**: Infrastructure & Field Ops
 - **Department**: Electrical & Street Lighting Wing
 - **Total Granular Components**: 12
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/slm.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/slm.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/slm.png](../Project-Documents/Urban-ERD-Diagrams-PNG/slm.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -500,7 +500,7 @@ Derived from:
 - **Domain**: Planning & Regulation
 - **Department**: Town Planning Section / Master Plan Cell
 - **Total Granular Components**: 23
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/tpl.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/tpl.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/tpl.png](../Project-Documents/Urban-ERD-Diagrams-PNG/tpl.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -537,7 +537,7 @@ Derived from:
 - **Domain**: Infrastructure & Field Ops
 - **Department**: Horticulture & Urban Forestry Section
 - **Total Granular Components**: 18
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/prk.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/prk.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/prk.png](../Project-Documents/Urban-ERD-Diagrams-PNG/prk.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -569,7 +569,7 @@ Derived from:
 - **Domain**: Revenue & Billing
 - **Department**: Estates & Asset Management Cell
 - **Total Granular Components**: 15
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/mpm.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/mpm.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/mpm.png](../Project-Documents/Urban-ERD-Diagrams-PNG/mpm.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -598,7 +598,7 @@ Derived from:
 - **Domain**: Planning & Regulation
 - **Department**: Legal Cell & Court Liaison
 - **Total Granular Components**: 17
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/lgl.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/lgl.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/lgl.png](../Project-Documents/Urban-ERD-Diagrams-PNG/lgl.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -629,7 +629,7 @@ Derived from:
 - **Domain**: Finance & Administration
 - **Department**: Central Stores & Procurement Section
 - **Total Granular Components**: 17
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/inv.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/inv.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/inv.png](../Project-Documents/Urban-ERD-Diagrams-PNG/inv.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -660,7 +660,7 @@ Derived from:
 - **Domain**: Planning & Regulation
 - **Department**: Fire Safety Cell & State Fire Service Liaison
 - **Total Granular Components**: 17
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/fnc.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/fnc.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/fnc.png](../Project-Documents/Urban-ERD-Diagrams-PNG/fnc.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 
@@ -691,7 +691,7 @@ Derived from:
 - **Domain**: Citizen Engagement & Welfare
 - **Department**: Urban Community Development (UCD) & Social Welfare
 - **Total Granular Components**: 14
-- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/gsc.png](file:///Users/sagarsingharoy/Documents/urban/Urban-ERD-Diagrams-PNG/gsc.png)
+- **ERD Reference Diagram**: [Urban-ERD-Diagrams-PNG/gsc.png](../Project-Documents/Urban-ERD-Diagrams-PNG/gsc.png)
 
 ### Granular Components / Feature Processes (RBAC Units)
 

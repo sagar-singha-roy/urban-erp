@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { TenantSecurityService } from '../../../../core/services/tenant-security.service';
 import {
   TenantIsolationTestRun,
@@ -16,7 +17,7 @@ import { TestDetailsDialogComponent } from './dialogs/test-details-dialog/test-d
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     CreateTestRunDialogComponent,
     TestDetailsDialogComponent
   ],

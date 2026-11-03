@@ -16,10 +16,7 @@
 
     <!-- Header Actions Strictly Single Row -->
     <div class="header-actions">
-      <button class="btn btn-refresh" (click)="loadAll()" [disabled]="isLoading()" title="Reload configurations">
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="SSO configuration" (refresh)="loadAll()"></app-refresh-button>
 
       <button class="btn btn-secondary-action" (click)="testConnection()" [disabled]="isTestingConnection()" title="Test Keycloak connection">
         <app-icon [name]="isTestingConnection() ? 'ri-loader-4-line' : 'ri-signal-tower-line'" [size]="16" [class.spinning]="isTestingConnection()"></app-icon>

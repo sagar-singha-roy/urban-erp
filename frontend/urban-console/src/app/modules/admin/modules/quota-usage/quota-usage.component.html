@@ -1,0 +1,29 @@
+<div class="quota-wrapper">
+  <header class="suvidha-page-header">
+    <div class="header-titles">
+      <h1 class="page-title" data-tooltip="Level 0 Multi-Tenant Governance — Resource Quotas" title="Level 0 Multi-Tenant Governance — Resource Quotas">Quota &amp; Usage Management</h1>
+      <p class="page-subtitle">Allocate and monitor tenant storage, SMS/DLT credits and API usage.</p>
+    </div>
+    <div class="header-actions"><app-refresh-button subject="quota and usage" (refresh)="refresh()"></app-refresh-button></div>
+  </header>
+
+  <div class="tabs-bar" role="tablist">
+    @for (tab of tabs; track tab.id) {
+      <button type="button" class="tab-btn" role="tab" [class.active]="activeTab() === tab.id" [attr.aria-selected]="activeTab() === tab.id" (click)="activeTab.set(tab.id)">
+        <app-icon [name]="tab.icon" [size]="16"></app-icon><span>{{ tab.label }}</span>
+      </button>
+    }
+  </div>
+
+  @if (options(); as opts) {
+    <section class="tab-panel" role="tabpanel">
+      @switch (activeTab()) {
+        @case ('allocation') { <app-quota-storage-allocation-tab [options]="opts" [tenants]="tenants()"></app-quota-storage-allocation-tab> }
+        @case ('usage') { <app-quota-storage-usage-tab [options]="opts" [tenants]="tenants()"></app-quota-storage-usage-tab> }
+        @case ('sms') { <app-quota-sms-tab [options]="opts" [tenants]="tenants()" [recipients]="recipients()"></app-quota-sms-tab> }
+        @case ('api') { <app-quota-api-tab [options]="opts" [tenants]="tenants()"></app-quota-api-tab> }
+        @case ('alerts') { <app-quota-alerts-tab [options]="opts" [tenants]="tenants()" [recipients]="recipients()"></app-quota-alerts-tab> }
+      }
+    </section>
+  }
+</div>

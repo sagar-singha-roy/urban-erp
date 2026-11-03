@@ -1,0 +1,62 @@
+<div class="dialog-overlay" (click)="closed.emit()">
+  <div class="dialog-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="xt-scope-title">
+    <div class="dialog-header">
+      <div><h3 id="xt-scope-title">Tenant Scope Configuration</h3><p>A scope narrows approved access. It cannot add tenants the record does not already reach.</p></div>
+      <button type="button" class="close-btn" (click)="closed.emit()" title="Close dialog" aria-label="Close dialog"><app-icon name="ri-close-line" [size]="18"></app-icon></button>
+    </div>
+    <form class="dialog-form" (ngSubmit)="submit()">
+      <div class="dialog-body">
+        @if (record) {
+          <div class="field wide"><label for="scopeRecord">Access Record</label><input id="scopeRecord" type="text" readonly [value]="record.recordNumber + ': ' + record.userName + ' (' + record.userEmail + ')'" /></div>
+        } @else {
+          <app-xt-grant-picker [describe]="describeGrant" (selected)="onGrant($event)"></app-xt-grant-picker>
+        }
+        <div class="field"><label for="accessScope">Access Scope <span class="required">*</span></label><select id="accessScope" name="accessScope" [(ngModel)]="form.accessScope">
+          @for (o of options.scopeLevels; track o) { <option [value]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="stateTenantId">State <span class="required">*</span></label><select id="stateTenantId" name="stateTenantId" [ngModel]="form.stateTenantId" (ngModelChange)="onState($event)" [disabled]="!grant()"><option value="">Select</option>
+          @for (s of stateChoices; track s.tenantId) { <option [value]="s.tenantId">{{ s.name }}</option> }
+        </select></div>
+        <div class="field wide"><label>ULB / City</label>
+          <app-check-list [options]="ulbChoices" [value]="form.ulbTenantIds" (valueChange)="onUlbs($event)"></app-check-list>
+          <span class="hint">Leave empty for every ULB this access already reaches in the state.</span></div>
+        <div class="field wide"><label>Department</label>
+          <app-check-list [options]="departmentChoices" [value]="form.departmentIds" (valueChange)="form.departmentIds = $event"></app-check-list>
+          <div class="inline-add">
+            <select aria-label="Department tenant" name="newDepartmentTenant" [(ngModel)]="newDepartment.tenantId"><option value="">Tenant</option>
+              @for (t of departmentTenants; track t.value) { <option [value]="t.value">{{ t.label }}</option> }
+            </select>
+            <input type="text" aria-label="New department code" placeholder="Code" name="newDepartmentCode" maxlength="30" [(ngModel)]="newDepartment.code" />
+            <input type="text" aria-label="New department name" placeholder="Department name" name="newDepartmentName" maxlength="150" [(ngModel)]="newDepartment.name" />
+            <button type="button" class="btn btn-outline" (click)="addDepartment()">Add</button>
+          </div></div>
+        <div class="field wide"><label>Zone</label>
+          <app-check-list [options]="zoneChoices" [value]="form.zoneIds" (valueChange)="onZones($event)"></app-check-list></div>
+        <div class="field wide"><label>Ward</label>
+          <app-check-list [options]="wardChoices" [value]="form.wardIds" (valueChange)="form.wardIds = $event"></app-check-list>
+          <span class="hint">Choosing zones narrows this list to their wards.</span></div>
+        <div class="field"><label for="scopeMode">Scope Mode <span class="required">*</span></label><select id="scopeMode" name="scopeMode" [(ngModel)]="form.scopeMode">
+          @for (o of options.scopeModes; track o) { <option [value]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label class="toggle"><input type="checkbox" name="includeChildTenants" [(ngModel)]="form.includeChildTenants" [disabled]="!wholeState" /> Include Child Tenants</label>
+          <span class="hint">{{ wholeState ? 'Turn off to limit the state to the ULBs chosen above.' : 'Applies when the whole state is a target.' }}</span></div>
+        <div class="field wide"><label>Scope Restrictions: Modules</label>
+          <app-check-list [options]="moduleChoices" [value]="restrictedModules" (valueChange)="restrictedModules = $event"></app-check-list></div>
+        <div class="field wide"><label for="browseModule">Scope Restrictions: Components</label>
+          <select id="browseModule" name="browseModule" [ngModel]="browseModule" (ngModelChange)="onBrowseModule($event)"><option value="">Choose a module to list its components</option>
+            @for (m of options.modules; track m.code) { <option [value]="m.code">{{ m.code }} {{ m.name }}</option> }
+          </select>
+          @if (browseModule) { <app-check-list [options]="componentChoices" [value]="restrictedComponentCodes" (valueChange)="onComponents($event)"></app-check-list> }
+          @if (restrictedComponentCodes.length) { <span class="hint">Restricted components: {{ restrictedComponentCodes.join(', ') }}</span> }</div>
+        <div class="field"><label for="effectiveDate">Effective Date <span class="required">*</span></label><input id="effectiveDate" type="datetime-local" name="effectiveDate" [(ngModel)]="effectiveDate" /></div>
+        <div class="field"><label for="expiryDate">Expiry Date</label><input id="expiryDate" type="datetime-local" name="expiryDate" [(ngModel)]="expiryDate" />
+          <span class="hint">After this, the access record reaches nothing until the scope is renewed.</span></div>
+        <div class="wl-notice wide-notice">Tenant, module and component limits are enforced on every request. Department, zone and ward limits are recorded for modules that filter by them.</div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="closed.emit()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()"><app-icon name="ri-check-line" [size]="16"></app-icon><span>Save Scope</span></button>
+      </div>
+    </form>
+  </div>
+</div>

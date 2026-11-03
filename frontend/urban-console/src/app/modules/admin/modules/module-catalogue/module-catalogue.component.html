@@ -20,10 +20,7 @@
         <span>Export JSON</span>
       </button>
 
-      <button class="btn btn-refresh" (click)="onRefreshClick()" [disabled]="isLoading()" title="Refresh Catalogue">
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="module catalogue" (refresh)="loadData(true)"></app-refresh-button>
 
       <button class="btn btn-primary" (click)="openCreateModuleDialog()" title="Create Module">
         <app-icon name="ri-add-line" [size]="16"></app-icon>

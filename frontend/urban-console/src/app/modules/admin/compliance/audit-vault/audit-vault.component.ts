@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { AuditVaultService } from '../../../../core/services/audit-vault.service';
 import { TenantManagementService } from '../../../../core/services/tenant-management.service';
 import { DialogService } from '../../../../core/services/dialog.service';
@@ -25,7 +26,7 @@ import { AuditExportDialogComponent } from './dialogs/audit-export-dialog/audit-
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     EventDetailsDialogComponent,
     HashVerificationDialogComponent,
     RetentionPolicyDialogComponent,
@@ -44,6 +45,19 @@ export class AuditVaultComponent implements OnInit {
 
   // Core Data Signals
   readonly stats = signal<AuditDashboardStats | null>(null);
+
+  readonly integrity = computed(() => {
+    switch (this.stats()?.integrityStatus) {
+      case 'VALID_INTEGRITY_INTACT':
+        return { label: 'Intact', detail: 'Hashes and signatures match', tone: 'good', icon: 'ri-checkbox-circle-fill' };
+      case 'HASHES_VALID_UNSIGNED_EVENTS':
+        return { label: 'Unsigned events', detail: 'Hashes match; some events have no signature', tone: 'warn', icon: 'ri-alert-line' };
+      case 'TAMPER_DETECTED':
+        return { label: 'Tampering detected', detail: 'Hash or signature mismatch found', tone: 'bad', icon: 'ri-error-warning-fill' };
+      default:
+        return { label: 'Not verified', detail: 'Run a verification to check the chain', tone: 'neutral', icon: 'ri-question-line' };
+    }
+  });
   readonly allEvents = signal<ImmutableAuditEvent[]>([]);
   readonly verificationJobs = signal<HashVerificationJob[]>([]);
   readonly retentionPolicies = signal<RetentionPolicy[]>([]);

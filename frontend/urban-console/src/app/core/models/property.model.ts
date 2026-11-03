@@ -119,7 +119,7 @@ export interface DashboardStats {
   total_units?: number;
   totalDemand: number;
   total_demand?: number;
-  totalCollected: number;
+  totalCollected: number | null;
   total_collected?: number;
   residentialCount: number;
   residential_count?: number;

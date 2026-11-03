@@ -1,0 +1,12 @@
+@use '../../../../../../shared/styles/admin-table';
+
+.levels, .events { margin: 0 0 1rem; }
+.events { margin-top: 1.5rem; }
+h2 { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 700; color: #0f172a; }
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}

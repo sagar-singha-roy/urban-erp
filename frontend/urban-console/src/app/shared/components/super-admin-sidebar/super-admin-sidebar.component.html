@@ -38,12 +38,6 @@
   <!-- Pinned Bottom Controls, Version & Developer Footer -->
   <div class="sidebar-bottom-area" [class.collapsed]="collapsed">
     @if (!collapsed) {
-      <!-- Isolation Status Pill -->
-      <div class="isolation-chip">
-        <span class="pulse-dot"></span>
-        <span class="isolation-text">Postgres RLS Multi-Tenant Enforced</span>
-      </div>
-
       <!-- App Version & Version Code (from package.json) -->
       <div class="version-row">
         <span class="version-badge">v{{ appVersion.version }}</span>

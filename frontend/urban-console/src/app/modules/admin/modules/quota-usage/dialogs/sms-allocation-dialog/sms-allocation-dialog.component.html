@@ -1,0 +1,36 @@
+<div class="dialog-overlay" (click)="closed.emit()">
+  <div class="dialog-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="dialog-header">
+      <div><h3>{{ record ? 'Edit' : 'New' }} SMS Credit Allocation</h3><p>Messages are refused when credits run out or the dates lapse.</p></div>
+      <button type="button" class="close-btn" (click)="closed.emit()" title="Close dialog" aria-label="Close dialog"><app-icon name="ri-close-line" [size]="18"></app-icon></button>
+    </div>
+    <form class="dialog-form" (ngSubmit)="submit()">
+      <div class="dialog-body">
+        <div class="field"><label for="allocationName">Credit Allocation Name <span class="required">*</span></label><input id="allocationName" type="text" name="allocationName" [(ngModel)]="form.allocationName" /></div>
+        <div class="field"><label for="stateTenantId">State Tenant <span class="required">*</span></label><input id="stateTenantId" list="stateTenantIdList" name="stateTenantId" placeholder="Type to search" [(ngModel)]="form.stateTenantId" />
+          <datalist id="stateTenantIdList">@for (t of states; track t.tenantId) { <option [value]="t.tenantId">{{ t.name }}</option> }</datalist></div>
+        <div class="field"><label for="ulbTenantId">ULB / City</label><input id="ulbTenantId" list="ulbTenantIdList" name="ulbTenantId" placeholder="Type to search" [(ngModel)]="form.ulbTenantId" />
+          <datalist id="ulbTenantIdList">@for (t of ulbs; track t.tenantId) { <option [value]="t.tenantId">{{ t.name }}</option> }</datalist></div>
+        <div class="field"><label for="smsProvider">SMS Provider <span class="required">*</span></label><select id="smsProvider" name="smsProvider" [(ngModel)]="form.smsProvider"><option [ngValue]="null">Select</option>
+          @for (o of options.smsProviders; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="dltEntityId">DLT Entity ID</label><input id="dltEntityId" type="text" name="dltEntityId" [(ngModel)]="form.dltEntityId" /><span class="hint">Required to activate</span></div>
+        <div class="field"><label for="senderId">Sender ID</label><input id="senderId" type="text" name="senderId" [(ngModel)]="form.senderId" /><span class="hint">Required to activate</span></div>
+        <div class="field"><label for="dltTemplateId">DLT Template ID</label><input id="dltTemplateId" type="text" name="dltTemplateId" [(ngModel)]="form.dltTemplateId" /><span class="hint">Required to activate</span></div>
+        <div class="field"><label for="creditAllocation">SMS Credit Allocation <span class="required">*</span></label><input id="creditAllocation" type="number" name="creditAllocation" [(ngModel)]="form.creditAllocation" /></div>
+        <div class="field"><label for="validFrom">Credit Validity From <span class="required">*</span></label><input id="validFrom" type="date" name="validFrom" [ngModel]="dateOnly(form.validFrom)" (ngModelChange)="form.validFrom = $event" /></div>
+        <div class="field"><label for="validUntil">Credit Validity Until <span class="required">*</span></label><input id="validUntil" type="date" name="validUntil" [ngModel]="dateOnly(form.validUntil)" (ngModelChange)="form.validUntil = $event" /></div>
+        <div class="field wide"><label>SMS Category</label><app-check-list [options]="asOptions(options.smsCategories)" [value]="form.smsCategories" (valueChange)="form.smsCategories = $event"></app-check-list></div>
+        <div class="field"><label for="lowCreditThreshold">Low Credit Threshold</label><input id="lowCreditThreshold" type="number" name="lowCreditThreshold" [(ngModel)]="form.lowCreditThreshold" /></div>
+        <div class="field wide"><label>Notification Recipients</label><app-check-list [options]="recipientOptions" [value]="form.notificationRecipients" (valueChange)="form.notificationRecipients = $event"></app-check-list></div>
+        <div class="field"><label for="allocationStatus">Allocation Status <span class="required">*</span></label><select id="allocationStatus" name="allocationStatus" [(ngModel)]="form.allocationStatus">
+          @for (o of options.recordStatuses; track o) { <option [ngValue]="o">{{ o }}</option> }
+        </select></div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="closed.emit()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()"><app-icon name="ri-check-line" [size]="16"></app-icon><span>Save Allocation</span></button>
+      </div>
+    </form>
+  </div>
+</div>

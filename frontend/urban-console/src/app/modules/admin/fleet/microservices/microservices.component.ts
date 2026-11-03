@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { FleetService } from '../../../../core/services/fleet.service';
 import { DialogService } from '../../../../core/services/dialog.service';
 import {
@@ -21,7 +22,7 @@ import { ServiceDetailsDialogComponent } from './dialogs/service-details-dialog/
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     ServiceRegisterDialogComponent,
     ServiceDetailsDialogComponent,
   ],

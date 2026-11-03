@@ -15,7 +15,7 @@ export interface BackupPolicyItem {
   policyName: string;
   policyCode: string;
   backupType: 'Full Backup' | 'Incremental Backup' | 'Differential Backup' | 'WAL / Transaction Log Backup' | string;
-  backupScope: 'Platform Full Database' | 'Tenant Scoped' | 'Configuration Only' | 'Audit Vault WORM' | string;
+  backupScope: 'Platform Full Database' | 'Tenant Scoped' | 'Configuration Only' | string;
   environment: 'Production' | 'Staging' | 'Development' | string;
   databaseCluster: string;
   databaseName: string;

@@ -1,0 +1,60 @@
+<div class="form-grid">
+  <label>State Tenant *
+    <select [(ngModel)]="filter().state">
+      <option value="">All accessible states</option>
+      @for (s of options().states; track s.code) { <option [value]="s.code">{{ s.name }}</option> }
+    </select>
+  </label>
+  <label>ULB / City *
+    <select [(ngModel)]="filter().tenantId" (ngModelChange)="filter().tenantId = $event; filter().zones = []; filter().wards = []; tenantChange.emit($event)">
+      <option value="">Select</option>
+      @for (u of ulbs(); track u.code) { <option [value]="u.code">{{ u.name }}</option> }
+    </select>
+  </label>
+  <label>Zone
+    <app-gis-multi-select [items]="options().zones" valueKey="name" labelKey="name" placeholder="All" [(value)]="filter().zones"></app-gis-multi-select>
+  </label>
+  <label>Ward
+    <app-gis-multi-select [items]="options().wards" valueKey="name" labelKey="name" placeholder="All" [(value)]="filter().wards"></app-gis-multi-select>
+  </label>
+  <label>Road Category
+    <app-gis-multi-select [items]="options().roadCategories" placeholder="All" [(value)]="filter().categories"></app-gis-multi-select>
+  </label>
+  <label>Road Status
+    <select [(ngModel)]="filter().status">
+      <option value="">All</option>
+      @for (o of options().roadStatuses; track o) { <option [value]="o">{{ o }}</option> }
+    </select>
+  </label>
+  <label>Road Layer *
+    <select [(ngModel)]="filter().roadLayerId">
+      <option value="">Select</option>
+      @for (l of layersFor('Road'); track l.id) { <option [value]="l.id">{{ l.layerName }}</option> }
+    </select>
+  </label>
+  <label>Zone Boundary Layer *
+    <select [(ngModel)]="filter().zoneLayerId">
+      <option value="">Select</option>
+      @for (l of layersFor('Zone'); track l.id) { <option [value]="l.id">{{ l.layerName }}</option> }
+    </select>
+  </label>
+  <label>Data Source *
+    <select [(ngModel)]="filter().dataSource">
+      @for (o of options().dataSources; track o) { <option [value]="o">{{ o }}</option> }
+    </select>
+  </label>
+  <label>Road Width Range (metres)
+    <span class="range">
+      <input type="number" min="0" aria-label="Minimum width" placeholder="Min" [(ngModel)]="filter().minWidth" />
+      <input type="number" min="0" aria-label="Maximum width" placeholder="Max" [(ngModel)]="filter().maxWidth" />
+    </span>
+  </label>
+  <label>Road Surface Type
+    <app-gis-multi-select [items]="options().roadSurfaces" placeholder="All" [(value)]="filter().surfaces"></app-gis-multi-select>
+  </label>
+  <label class="toggle">Layer Visibility <input class="switch" type="checkbox" [(ngModel)]="filter().visible" /></label>
+</div>
+<div class="actions">
+  <button type="button" (click)="addLayer.emit()">Add Road or Zone Layer</button>
+  <button type="button" class="primary" (click)="show.emit()">Show on Map</button>
+</div>

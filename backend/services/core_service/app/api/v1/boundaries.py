@@ -5,9 +5,9 @@ from sqlalchemy import select, func, and_
 
 from app.db.session import get_read_db
 from app.db.models import Ward, Zone, PropertyParcel
-from app.schemas.property import WardResponse
-from app.core.auth import get_current_user, get_current_tenant
-from app.core.redis import redis_client
+from app.schemas.boundary import WardResponse
+from app.core.auth import get_current_tenant, require_permission
+from app.core.valkey import valkey_client
 
 router = APIRouter(prefix="/boundaries", tags=["Boundaries & Wards"])
 
@@ -15,10 +15,10 @@ router = APIRouter(prefix="/boundaries", tags=["Boundaries & Wards"])
 async def list_wards(
     tenant_id: str = Depends(get_current_tenant),
     db: AsyncSession = Depends(get_read_db),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_permission("PTX-P01", "VIEW"))
 ):
     cache_key = f"boundaries:wards:{tenant_id}"
-    cached = await redis_client.get(cache_key)
+    cached = await valkey_client.get(cache_key)
     if cached:
         return cached
 
@@ -56,5 +56,5 @@ async def list_wards(
         for r in rows
     ]
 
-    await redis_client.set(cache_key, [w.model_dump(by_alias=True) for w in ward_list], expire_seconds=600)
+    await valkey_client.set(cache_key, [w.model_dump(by_alias=True) for w in ward_list], expire_seconds=600)
     return ward_list

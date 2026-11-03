@@ -1,0 +1,132 @@
+:host {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.ms-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: 1px solid #d5dce6;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #94a3b8;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: #94a3b8;
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  }
+
+  &.has-value {
+    color: #0f172a;
+  }
+}
+
+.ms-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-caret {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.ms-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+
+  input[type='search'] {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 40px;
+    margin-bottom: 0.35rem;
+    padding: 0 0.6rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 0.82rem;
+  }
+}
+
+.ms-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ms-option {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 44px;
+  padding: 0 0.45rem;
+  border-radius: 8px;
+  color: #334155;
+  font-size: 0.83rem;
+  font-weight: 400;
+  cursor: pointer;
+
+  &:hover {
+    background: #f1f5f9;
+  }
+
+  input {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    accent-color: #2563eb;
+  }
+}
+
+.ms-empty {
+  margin: 0;
+  padding: 0.75rem 0.45rem;
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+.ms-clear {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 0.35rem;
+  border: 0;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #334155;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (min-width: 1024px) {
+  .ms-trigger,
+  .ms-option {
+    min-height: 40px;
+  }
+}

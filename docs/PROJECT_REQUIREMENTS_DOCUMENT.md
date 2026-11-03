@@ -72,7 +72,7 @@ The system enforces strict multi-level delegation:
 
 ### 2.4 Granular RBAC & Component-Level Access Control
 Access is not merely module-level; it is enforced down to the **Component / Process Level**:
-- Each of the 19 modules consists of 12 to 33 granular functional components (total 405 components catalogued).
+- Each of the 19 modules consists of 12 to 33 granular functional components (total 415 components catalogued, not counting the super admin `ADM-*` features).
 - Roles are configured with a set of `component_permissions`:
   - **Component Code**: e.g. `PTX-P01` (Property Registration), `PTX-P10` (General Rate Revision), `WTR-W12` (Spot Meter Billing), `BPM-B05` (eDCR Plan Scrutiny).
   - **Permissions Matrix**: `CAN_VIEW`, `CAN_CREATE`, `CAN_UPDATE`, `CAN_APPROVE`, `CAN_DELETE`.

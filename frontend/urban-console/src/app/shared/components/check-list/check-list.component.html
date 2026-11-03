@@ -1,0 +1,10 @@
+<div class="check-list">
+  @for (option of options(); track option.value) {
+    <label class="check-row">
+      <input type="checkbox" [checked]="value().includes(option.value)" (change)="toggle(option.value, $any($event.target).checked)" />
+      <span>{{ option.label }}</span>
+    </label>
+  } @empty {
+    <span class="check-empty">No options available.</span>
+  }
+</div>

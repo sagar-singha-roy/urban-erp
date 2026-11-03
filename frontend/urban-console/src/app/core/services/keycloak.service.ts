@@ -90,7 +90,8 @@ export class KeycloakAuthService {
   public userModules = signal<ModuleMetadata[]>([]);
 
   init(): void {
-    const savedToken = localStorage.getItem('urban_token');
+    // Sessions live in an httpOnly cookie. Remove tokens stored by earlier versions.
+    localStorage.removeItem('urban_token');
     const savedUser = localStorage.getItem('urban_user');
     const savedTenant = localStorage.getItem('urban_tenant');
     const savedTenantName = localStorage.getItem('urban_tenant_name');
@@ -110,7 +111,7 @@ export class KeycloakAuthService {
       this.activeSubTenantName.set(savedSubTenantName);
     }
 
-    if (savedToken && savedUser) {
+    if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
         this.isAuthenticated.set(true);
@@ -119,7 +120,6 @@ export class KeycloakAuthService {
         }
         this.userProfile.set({
           ...parsed,
-          token: savedToken,
           roles: [parsed.role],
         });
       } catch (e) {
@@ -127,8 +127,10 @@ export class KeycloakAuthService {
       }
     }
 
-    this.refreshModules();
-    this.loadTenants();
+    if (savedUser) {
+      this.refreshModules();
+      this.loadTenants();
+    }
   }
 
   getTenantId(): string {
@@ -188,7 +190,7 @@ export class KeycloakAuthService {
   }
 
   getToken(): string | undefined {
-    return localStorage.getItem('urban_token') || undefined;
+    return undefined;
   }
 
   getHeaders(): HttpHeaders {
@@ -213,7 +215,6 @@ export class KeycloakAuthService {
       tap((res) => {
         const token = res?.accessToken;
         if (token && res?.user) {
-          localStorage.setItem('urban_token', token);
           localStorage.setItem('urban_user', JSON.stringify(res.user));
 
           this.isAuthenticated.set(true);
@@ -227,6 +228,9 @@ export class KeycloakAuthService {
           if (res?.accessibleTenants && res.accessibleTenants.length > 0) {
             this.accessibleTenants.set(res.accessibleTenants);
           }
+
+          this.activeTenant.set('');
+          localStorage.removeItem('urban_tenant');
 
           const tId = res.user.tenantId;
           if (tId) {
@@ -245,26 +249,19 @@ export class KeycloakAuthService {
     username: string;
     email: string;
     password: string;
-    role?: string;
     tenantId?: string;
-    assignedZone?: string;
-    assignedWard?: string;
   }): Observable<any> {
     const body = {
       username: payload.username,
       email: payload.email,
       password: payload.password,
       fullName: payload.fullName,
-      role: payload.role || 'citizen',
-      tenantId: payload.tenantId || this.activeTenant(),
-      assignedZone: payload.assignedZone,
-      assignedWard: payload.assignedWard,
+      tenantId: payload.tenantId,
     };
     return this.http.post<any>(`${this.apiUrl}/auth/signup`, body).pipe(
       tap((res) => {
         const token = res?.accessToken || res?.access_token;
         if (token && res?.user) {
-          localStorage.setItem('urban_token', token);
           localStorage.setItem('urban_user', JSON.stringify(res.user));
 
           this.isAuthenticated.set(true);
@@ -288,10 +285,18 @@ export class KeycloakAuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('urban_token');
+    this.http.post(`${this.apiUrl}/auth/logout`, {}).pipe(catchError(() => of(null))).subscribe();
     localStorage.removeItem('urban_user');
+    localStorage.removeItem('urban_tenant');
+    localStorage.removeItem('urban_tenant_name');
+    localStorage.removeItem('urban_sub_tenant');
+    localStorage.removeItem('urban_sub_tenant_name');
     this.isAuthenticated.set(false);
     this.userProfile.set(null);
+    this.activeTenant.set('');
+    this.activeTenantName.set('');
+    this.activeSubTenant.set('');
+    this.activeSubTenantName.set('');
   }
 
   refreshModules(): void {

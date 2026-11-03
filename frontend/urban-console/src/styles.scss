@@ -527,3 +527,25 @@ select.scope-select,
 }
 
 
+
+// A table with no rows has nothing to scroll to, so it fits its container and its message stays in view.
+table:has(td.empty-table-cell, td.empty-state, td.empty-cell, td.empty-matrix-cell) {
+  width: 100% !important;
+  min-width: 0 !important;
+
+  // Column headers alone are wider than a phone, so they wait until there is room.
+  thead {
+    display: none;
+  }
+
+  th {
+    white-space: normal !important;
+    min-width: 0 !important;
+  }
+
+  @media (min-width: 768px) {
+    thead {
+      display: table-header-group;
+    }
+  }
+}

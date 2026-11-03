@@ -39,19 +39,7 @@
       </button>
 
       <!-- Refresh -->
-      <button
-        class="btn btn-refresh"
-        (click)="refreshAll()"
-        [disabled]="isLoading()"
-        title="Refresh Delegation Records"
-      >
-        <app-icon
-          name="ri-refresh-line"
-          [size]="16"
-          [class.spinning]="isLoading()"
-        ></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="delegation data" (refresh)="refreshAll()"></app-refresh-button>
 
       <!-- Restrict Component -->
       <button

@@ -2,7 +2,8 @@
   <router-outlet></router-outlet>
 } @else {
   <div class="app-layout">
-    <!-- Top Navigation Header -->
+    <!-- ADM-R04: shown on every page while a support session is live -->
+    <app-support-session-banner></app-support-session-banner>
     <!-- Top Navigation Header -->
     <header class="app-header" [class.super-admin-header]="authService.isSuperAdmin()">
       @if (authService.isSuperAdmin()) {
@@ -97,16 +98,6 @@
                   </button>
                 </div>
                 <div class="notif-list">
-                  <div class="notif-item unread">
-                    <div class="notif-status-indicator success"></div>
-                    <div class="notif-body">
-                      <div class="notif-item-title">Tenant Isolation Verified</div>
-                      <div class="notif-item-desc">
-                        Postgres RLS policy check passed for Telangana (TG-GWMC).
-                      </div>
-                      <span class="notif-item-time">4m ago</span>
-                    </div>
-                  </div>
                   <div class="notif-item unread">
                     <div class="notif-status-indicator info"></div>
                     <div class="notif-body">
@@ -322,6 +313,9 @@
             </div>
           </div>
 
+          @if (canUseSupportHub() && !supportSession()?.active) {
+            <a class="btn btn-sm btn-outline-light" routerLink="/support/impersonation" title="Support Impersonation Hub">Support Hub</a>
+          }
           <!-- Session Sign Out -->
           <button
             class="btn btn-sm btn-outline-light"
@@ -424,7 +418,7 @@
 
           <div class="sidebar-footer">
             <div class="tech-badge">Keycloak SSO Active</div>
-            <div class="tech-sub">FastAPI Microservice + Redis</div>
+            <div class="tech-sub">FastAPI Microservices + Valkey</div>
           </div>
         }
       </aside>

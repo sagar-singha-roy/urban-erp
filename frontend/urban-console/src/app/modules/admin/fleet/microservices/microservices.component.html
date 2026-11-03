@@ -16,15 +16,7 @@
 
     <div class="header-actions">
       <!-- Refresh -->
-      <button
-        class="btn btn-refresh"
-        (click)="refreshAll()"
-        [disabled]="isLoading()"
-        title="Refresh Cluster & Telemetry State"
-      >
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="cluster health" (refresh)="refreshAll()"></app-refresh-button>
 
       <!-- Register Service -->
       <button
@@ -95,7 +87,7 @@
       </div>
       <div class="kpi-content">
         <span class="kpi-label">AVG RESPONSE TIME</span>
-        <span class="kpi-val text-primary">{{ stats()?.averageResponseTimeMs ?? '—' }} ms</span>
+        <span class="kpi-val text-primary">{{ stats()?.averageResponseTimeMs ?? 'N/A' }}{{ stats()?.averageResponseTimeMs === null ? '' : ' ms' }}</span>
         <span class="kpi-sub">Cluster P95 Latency</span>
       </div>
     </div>
@@ -108,7 +100,7 @@
       <div class="kpi-content">
         <span class="kpi-label">ERROR RATE</span>
         <span class="kpi-val" [class.text-danger]="(stats()?.errorRatePct ?? 0) > 1">
-          {{ stats()?.errorRatePct ?? '0.00' }}%
+          {{ stats()?.errorRatePct === null ? 'N/A' : stats()?.errorRatePct + '%' }}
         </span>
         <span class="kpi-sub">HTTP 5xx Ingress Ratio</span>
       </div>
@@ -121,7 +113,7 @@
       </div>
       <div class="kpi-content">
         <span class="kpi-label">CPU UTILISATION</span>
-        <span class="kpi-val">{{ stats()?.cpuUtilisationPct ?? '—' }}%</span>
+        <span class="kpi-val">{{ stats()?.cpuUtilisationPct === null ? 'N/A' : stats()?.cpuUtilisationPct + '%' }}</span>
         <span class="kpi-sub">Cluster Allocated Cores</span>
       </div>
     </div>
@@ -133,7 +125,7 @@
       </div>
       <div class="kpi-content">
         <span class="kpi-label">MEMORY UTILISATION</span>
-        <span class="kpi-val">{{ stats()?.memoryUtilisationPct ?? '—' }}%</span>
+        <span class="kpi-val">{{ stats()?.memoryUtilisationPct === null ? 'N/A' : stats()?.memoryUtilisationPct + '%' }}</span>
         <span class="kpi-sub">Cluster RAM Consumption</span>
       </div>
     </div>
@@ -252,7 +244,9 @@
                   <h3 class="service-name" (click)="inspectService(svc)">{{ svc.serviceName }}</h3>
                   <div class="code-and-ver">
                     <span class="code-pill">{{ svc.serviceCode }}</span>
-                    <span class="version-pill">{{ svc.version }}</span>
+                    @if (svc.version) {
+                      <span class="version-pill">{{ svc.version }}</span>
+                    }
                   </div>
                 </div>
               </div>
@@ -268,7 +262,9 @@
             <div class="topology-tags">
               <span class="tag-pill category">{{ svc.serviceCategory }}</span>
               <span class="tag-pill type">{{ svc.serviceType }}</span>
-              <span class="tag-pill region">{{ svc.region }}</span>
+              @if (svc.region) {
+                <span class="tag-pill region">{{ svc.region }}</span>
+              }
             </div>
 
             <!-- Health Probe Info -->
@@ -277,26 +273,26 @@
                 <app-icon name="ri-pulse-line" [size]="14"></app-icon>
                 <code>{{ svc.healthCheckMethod }} {{ svc.healthCheckEndpoint }}</code>
               </div>
-              <span class="probe-interval">every {{ svc.healthCheckIntervalSeconds }}s</span>
+              <span class="probe-interval">{{ svc.healthCheckIntervalSeconds ? 'every ' + svc.healthCheckIntervalSeconds + 's' : 'checked on request' }}</span>
             </div>
 
             <!-- SLA & Telemetry Meters -->
             <div class="telemetry-meters">
               <div class="meter-col">
                 <span class="meter-label">UPTIME</span>
-                <span class="meter-val text-success">{{ svc.uptimePct }}%</span>
+                <span class="meter-val text-success">{{ svc.uptimePct === null ? 'N/A' : svc.uptimePct + '%' }}</span>
               </div>
               <div class="meter-col">
                 <span class="meter-label">LATENCY</span>
-                <span class="meter-val">{{ svc.avgLatencyMs }}ms</span>
+                <span class="meter-val">{{ svc.avgLatencyMs === null ? 'N/A' : svc.avgLatencyMs + 'ms' }}</span>
               </div>
               <div class="meter-col">
                 <span class="meter-label">ERROR</span>
-                <span class="meter-val" [class.text-danger]="svc.errorRatePct > 1">{{ svc.errorRatePct }}%</span>
+                <span class="meter-val" [class.text-danger]="svc.errorRatePct > 1">{{ svc.errorRatePct === null ? 'N/A' : svc.errorRatePct + '%' }}</span>
               </div>
               <div class="meter-col">
                 <span class="meter-label">CPU / MEM</span>
-                <span class="meter-val">{{ svc.cpuUsagePct }}% / {{ svc.memoryUsagePct }}%</span>
+                <span class="meter-val">{{ svc.cpuUsagePct === null ? 'N/A' : svc.cpuUsagePct + '% / ' + svc.memoryUsagePct + '%' }}</span>
               </div>
             </div>
 
@@ -442,7 +438,7 @@
                   </div>
                 </td>
                 <td>
-                  <span class="timing-text">{{ svc.healthCheckIntervalSeconds }}s / {{ svc.timeoutSeconds }}s</span>
+                  <span class="timing-text">{{ svc.healthCheckIntervalSeconds ? svc.healthCheckIntervalSeconds + 's' : 'On request' }} / {{ svc.timeoutSeconds }}s</span>
                 </td>
                 <td>
                   <span class="criticality-badge" [class.p0]="svc.criticalityLevel.startsWith('P0')" [class.p1]="svc.criticalityLevel.startsWith('P1')" [class.p2]="svc.criticalityLevel.startsWith('P2')">
@@ -666,10 +662,8 @@
         <div class="select-filters-group">
           <select [(ngModel)]="selectedQueueType" (change)="currentPage.set(1)" class="filter-select">
             <option value="ALL">All Queue Types</option>
-            <option value="Celery / Redis">Celery / Redis</option>
+            <option value="Valkey">Valkey</option>
             <option value="Kafka Topic">Kafka Topic</option>
-            <option value="RabbitMQ">RabbitMQ</option>
-            <option value="Cloud PubSub">Cloud PubSub</option>
           </select>
 
           <select [(ngModel)]="selectedQueueStatus" (change)="currentPage.set(1)" class="filter-select">
@@ -770,7 +764,7 @@
           <select [(ngModel)]="selectedDbCluster" class="filter-select">
             <option value="ALL">All Database Clusters</option>
             <option value="pg-aurora-cluster-prod">pg-aurora-cluster-prod</option>
-            <option value="redis-cluster-ha">redis-cluster-ha</option>
+            <option value="valkey-cluster-ha">valkey-cluster-ha</option>
           </select>
 
           <select [(ngModel)]="selectedPoolStatus" class="filter-select">

@@ -10,10 +10,10 @@ class BackupDrOverviewStats(CamelModel):
     failedBackups: int = 0
     totalStoredDataTb: float = 0.0
     lastBackupTime: Optional[str] = None
-    currentRpoMinutes: float = 0.0
-    currentRtoMinutes: float = 0.0
+    currentRpoMinutes: Optional[float] = None
+    currentRtoMinutes: Optional[float] = None
     activePoliciesCount: int = 0
-    drDrillReadinessPct: float = 100.0
+    drDrillReadinessPct: Optional[float] = None
 
 
 # 2. Backup Policy Schemas
@@ -78,7 +78,7 @@ class BackupJobResponse(CamelModel):
     backupType: str
     executionStatus: str
     startTime: datetime.datetime
-    completionTime: datetime.datetime
+    completionTime: Optional[datetime.datetime] = None
     durationSeconds: int
     fileSizeBytes: int
     fileSizeFormatted: str
@@ -132,11 +132,11 @@ class RestoreJobResponse(CamelModel):
 class PitrWindowStatus(CamelModel):
     databaseCluster: str
     databaseName: str
-    earliestRestoreTime: datetime.datetime
-    latestRestoreTime: datetime.datetime
+    earliestRestoreTime: Optional[datetime.datetime] = None
+    latestRestoreTime: Optional[datetime.datetime] = None
     currentWalLsn: str
-    walArchiveLocation: str
-    recoveryWindowDays: int
+    walArchiveLocation: Optional[str] = None
+    recoveryWindowDays: Optional[int] = None
     streamingReplicationStatus: str
 
 
@@ -175,10 +175,10 @@ class DrillExecutionResponse(CamelModel):
     plannedEndDate: datetime.datetime
     expectedRpoMinutes: int
     expectedRtoMinutes: int
-    actualRpoMinutes: float
-    actualRtoMinutes: float
-    recoverySuccessRatePct: float
-    serviceAvailabilityPct: float
+    actualRpoMinutes: Optional[float] = None
+    actualRtoMinutes: Optional[float] = None
+    recoverySuccessRatePct: Optional[float] = None
+    serviceAvailabilityPct: Optional[float] = None
     dataIntegrityResult: str
     completionStatus: str
     drillCoordinator: str

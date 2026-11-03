@@ -92,8 +92,6 @@ export class SuperAdminSidebarComponent implements OnInit {
     const parentSection = this.sections.find((s) => s.items.some((i) => i.id === item.id));
     const secId = parentSection ? parentSection.id : 'tenancy';
 
-    this.dialogs.showToast(`Selected: ${item.title}`, 'info', 1500);
-
     this.router.navigate(['/admin'], { queryParams: { section: secId, item: item.id } });
   }
 }

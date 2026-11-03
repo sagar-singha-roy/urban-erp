@@ -228,6 +228,8 @@
       display: flex;
       flex-direction: column;
       gap: 0.15rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
 
       .kpi-label {
         font-size: 0.72rem;
@@ -1115,3 +1117,13 @@
   }
 }
 
+
+.integrity-text-good { color: #16a34a; }
+.integrity-text-warn { color: #b45309; }
+.integrity-text-bad { color: #dc2626; }
+.integrity-text-neutral { color: #64748b; }
+
+.kpi-icon.integrity-good { background: #dcfce7; color: #16a34a; }
+.kpi-icon.integrity-warn { background: #fef3c7; color: #b45309; }
+.kpi-icon.integrity-bad { background: #fee2e2; color: #dc2626; }
+.kpi-icon.integrity-neutral { background: #f1f5f9; color: #64748b; }

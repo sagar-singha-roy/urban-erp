@@ -1,10 +1,24 @@
 import datetime
 import uuid
 from sqlalchemy import (
-    Column, String, Integer, BigInteger, Float, DateTime, ForeignKey, Boolean, Text, Numeric, JSON
+    Column, String, Integer, BigInteger, Float, DateTime, ForeignKey, Boolean, Text, Numeric, JSON, LargeBinary
 )
+from sqlalchemy import func, text
 from sqlalchemy.orm import relationship
 from app.db.session import Base
+
+from sqlalchemy import Index, Sequence, UniqueConstraint  # noqa: E402
+from sqlalchemy.orm import deferred  # noqa: E402
+from sqlalchemy.types import UserDefinedType  # noqa: E402
+
+
+class Geometry(UserDefinedType):
+    """PostGIS geometry stored in EPSG:4326. Spatial reads and writes use SQL functions directly."""
+    cache_ok = True
+
+    def get_col_spec(self, **kw):
+        return "geometry(Geometry, 4326)"
+
 
 class Tenant(Base):
     __tablename__ = "tenants"
@@ -42,6 +56,8 @@ class Zone(Base):
     tenant_id = Column(String(50), ForeignKey("tenants.tenant_id"), nullable=False, index=True)
     code = Column(String(20), nullable=False)
     name = Column(String(100), nullable=False)
+    # Spatial reads and writes use SQL functions, so ordinary zone queries never load this.
+    geom = deferred(Column(Geometry, nullable=True))
 
     tenant = relationship("Tenant", back_populates="zones")
     wards = relationship("Ward", back_populates="zone")
@@ -57,6 +73,8 @@ class Ward(Base):
     ward_name = Column(String(100), nullable=False)
     councilor_name = Column(String(100), nullable=True)
     boundary_geometry = Column(JSON, nullable=True)
+    # Kept in step with boundary_geometry by a database trigger.
+    geom = deferred(Column(Geometry, nullable=True))
     effective_from = Column(String(30), nullable=True)
 
     tenant = relationship("Tenant", back_populates="wards")
@@ -92,6 +110,10 @@ class PropertyParcel(Base):
     
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+    # Kept in step with latitude and longitude by a database trigger, so every writer is covered.
+    geom = deferred(Column(Geometry, nullable=True))
+    boundary_geom = deferred(Column(Geometry, nullable=True))
+    survey_status = Column(String(30), nullable=True)
     address = Column(Text, nullable=False)
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -849,7 +871,7 @@ class WorkerQueueModel(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     queue_name = Column(String(100), unique=True, index=True, nullable=False)
     worker_service = Column(String(100), nullable=False)
-    queue_type = Column(String(50), default="Celery / Redis", nullable=False)  # Celery / Redis, Kafka Topic, RabbitMQ, Cloud PubSub
+    queue_type = Column(String(50), default="Valkey", nullable=False)  # Valkey, Kafka Topic, RabbitMQ, Cloud PubSub
     queue_status = Column(String(30), default="Optimal", nullable=False)  # Optimal, Backlogged, Stalled, Paused
     pending_jobs = Column(Integer, default=0)
     processing_jobs = Column(Integer, default=0)
@@ -995,3 +1017,689 @@ class DrillExecutionModel(Base):
 
 
 
+
+
+class GisLayerModel(Base):
+    __tablename__ = "gis_layers"
+    __table_args__ = (UniqueConstraint("tenant_id", "layer_code", name="uq_gis_layer_tenant_code"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), ForeignKey("tenants.tenant_id"), nullable=False, index=True)
+    state_code = Column(String(10), nullable=False, index=True)
+    layer_name = Column(String(150), nullable=False)
+    layer_code = Column(String(60), nullable=False)
+    layer_category = Column(String(30), nullable=False, index=True)
+    layer_type = Column(String(30), nullable=False)
+    data_source = Column(String(30), nullable=False)
+    service_url = Column(String(500), nullable=True)
+    workspace_name = Column(String(150), nullable=True)
+    layer_identifier = Column(String(150), nullable=True)
+    crs = Column(String(20), nullable=False)
+    default_visibility = Column(Boolean, default=True, nullable=False)
+    opacity = Column(Float, default=1.0, nullable=False)
+    layer_style = Column(JSON, default=dict)
+    layer_status = Column(String(20), default="Active", nullable=False)
+    utility_category = Column(String(60), nullable=True)
+    network_type = Column(String(60), nullable=True)
+    department = Column(String(100), nullable=True)
+    last_synced_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class GisFeatureModel(Base):
+    __tablename__ = "gis_features"
+    __table_args__ = (Index("ix_gis_features_geom", "geom", postgresql_using="gist"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    layer_id = Column(String(36), ForeignKey("gis_layers.id", ondelete="CASCADE"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.tenant_id"), nullable=False, index=True)
+    feature_ref = Column(String(100), nullable=True)
+    properties = Column(JSON, default=dict)
+    geom = deferred(Column(Geometry, nullable=False))
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class GisWorkspaceModel(Base):
+    __tablename__ = "gis_workspaces"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner = Column(String(150), nullable=False, index=True)
+    workspace_name = Column(String(150), nullable=False)
+    geographic_scope = Column(String(50), nullable=False)
+    state_tenants = Column(JSON, default=list)
+    ulb_tenants = Column(JSON, default=list)
+    map_extent = Column(JSON, nullable=True)
+    base_map = Column(String(30), nullable=False)
+    crs = Column(String(20), nullable=False)
+    default_zoom = Column(Integer, nullable=True)
+    default_centre = Column(JSON, nullable=True)
+    visible_layers = Column(JSON, default=list)
+    refresh_interval = Column(String(30), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class EventOutbox(Base):
+    """Events written with a service's own transaction, published to Kafka by its relay."""
+    __tablename__ = "event_outbox"
+    __table_args__ = (Index("ix_event_outbox_pending", "source_service", "created_at", postgresql_where=text("published_at IS NULL")),)
+
+    id = Column(String(36), primary_key=True)
+    source_service = Column(String(40), nullable=False)
+    topic = Column(String(150), nullable=False)
+    event_key = Column(String(100), nullable=False)
+    tenant_id = Column(String(50), nullable=False)
+    payload = Column(JSON, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    published_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class EventInbox(Base):
+    """Events a consumer has already handled, which makes redelivery harmless."""
+    __tablename__ = "event_inbox"
+
+    consumer_service = Column(String(40), primary_key=True)
+    event_id = Column(String(36), primary_key=True)
+    processed_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class BrandingProfile(Base):
+    """ADM-T04 branding for a State or ULB. Each tenant has at most one Active profile."""
+    __tablename__ = "branding_profiles"
+    __table_args__ = (
+        Index("uq_branding_active_tenant", "tenant_id", unique=True, postgresql_where=text("branding_status = 'Active'")),
+    )
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    tenant_level = Column(String(20), nullable=False)
+    state_tenant_id = Column(String(50), nullable=False)
+    ulb_tenant_id = Column(String(50), nullable=True)
+    profile_name = Column(String(150), nullable=False)
+    display_name = Column(String(150), nullable=False)
+    tagline = Column(String(255), nullable=True)
+    primary_colour = Column(String(7), nullable=False)
+    secondary_colour = Column(String(7), nullable=False)
+    accent_colour = Column(String(7), nullable=True)
+    header_background_colour = Column(String(7), nullable=True)
+    sidebar_background_colour = Column(String(7), nullable=True)
+    font_family = Column(String(50), nullable=True)
+    login_page_title = Column(String(150), nullable=True)
+    login_page_message = Column(Text, nullable=True)
+    footer_text = Column(Text, nullable=True)
+    custom_css = Column(Text, nullable=True)
+    branding_status = Column(String(20), nullable=False, default="Draft")
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class BrandingAssetSet(Base):
+    __tablename__ = "branding_asset_sets"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    logo_type = Column(String(50), nullable=False)
+    alt_text = Column(String(255), nullable=False)
+    effective_from = Column(DateTime, nullable=True)
+    asset_status = Column(String(20), nullable=False, default="Draft")
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class BrandingAssetFile(Base):
+    __tablename__ = "branding_asset_files"
+    __table_args__ = (UniqueConstraint("asset_set_id", "file_kind", name="uq_branding_asset_kind"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    asset_set_id = Column(String(36), ForeignKey("branding_asset_sets.id", ondelete="CASCADE"), nullable=False, index=True)
+    file_kind = Column(String(30), nullable=False)
+    content_type = Column(String(50), nullable=False)
+    size_bytes = Column(Integer, nullable=False)
+    sha256 = Column(String(64), nullable=False)
+    data = deferred(Column(LargeBinary, nullable=False))
+
+
+class TenantDomain(Base):
+    """A pending claim is private to its tenant; the first tenant to prove ownership holds the name."""
+    __tablename__ = "tenant_domains"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "domain_name", name="uq_tenant_domain_claim"),
+        Index("uq_domain_verified_owner", "domain_name", unique=True, postgresql_where=text("verification_status = 'Verified'")),
+        Index("uq_domain_primary_tenant", "tenant_id", unique=True, postgresql_where=text("is_primary")),
+    )
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    domain_name = Column(String(253), nullable=False, index=True)
+    domain_type = Column(String(30), nullable=False)
+    subdomain = Column(String(63), nullable=True)
+    root_domain = Column(String(253), nullable=True)
+    dns_provider = Column(String(50), nullable=True)
+    dns_record_type = Column(String(10), nullable=False)
+    dns_host = Column(String(253), nullable=False)
+    dns_target = Column(String(253), nullable=False)
+    verification_method = Column(String(20), nullable=False)
+    verification_status = Column(String(20), nullable=False, default="Pending")
+    verification_token = Column(String(64), nullable=False)
+    claim_expires_at = Column(DateTime, nullable=True)
+    last_checked_at = Column(DateTime, nullable=True)
+    last_check_message = Column(String(255), nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    is_primary = Column(Boolean, nullable=False, default=False)
+    domain_status = Column(String(20), nullable=False, default="Pending")
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class TenantCertificate(Base):
+    __tablename__ = "tenant_certificates"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    domain_id = Column(String(36), ForeignKey("tenant_domains.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider = Column(String(30), nullable=False)
+    certificate_type = Column(String(30), nullable=False)
+    certificate_pem = Column(Text, nullable=True)
+    certificate_chain_pem = Column(Text, nullable=True)
+    private_key_encrypted = deferred(Column(LargeBinary, nullable=True))
+    auto_renewal = Column(Boolean, nullable=False, default=False)
+    renewal_notification_days = Column(Integer, nullable=False, default=30)
+    expiry_date = Column(DateTime, nullable=True)
+    certificate_status = Column(String(20), nullable=False, default="Pending Issuance")
+    status_message = Column(String(255), nullable=True)
+    last_validation_at = Column(DateTime, nullable=True)
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class DomainMapping(Base):
+    __tablename__ = "domain_mappings"
+    __table_args__ = (
+        Index("uq_mapping_active_domain", "domain_id", unique=True, postgresql_where=text("mapping_status = 'Active'")),
+    )
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    domain_id = Column(String(36), ForeignKey("tenant_domains.id", ondelete="CASCADE"), nullable=False, index=True)
+    mapping_name = Column(String(150), nullable=False)
+    target_application = Column(String(50), nullable=False)
+    target_service = Column(String(50), nullable=False)
+    target_route = Column(String(255), nullable=True)
+    routing_strategy = Column(String(30), nullable=False)
+    ssl_required = Column(Boolean, nullable=False, default=True)
+    force_https = Column(Boolean, nullable=False, default=True)
+    is_primary = Column(Boolean, nullable=False, default=False)
+    mapping_status = Column(String(20), nullable=False, default="Draft")
+    effective_from = Column(DateTime, nullable=True)
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class StorageAllocation(Base):
+    """ADM-S04 storage quota for a State or ULB."""
+    __tablename__ = "storage_allocations"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    tenant_level = Column(String(20), nullable=False)
+    state_tenant_id = Column(String(50), nullable=False)
+    ulb_tenant_id = Column(String(50), nullable=True)
+    allocation_name = Column(String(150), nullable=False)
+    storage_type = Column(String(50), nullable=False)
+    storage_provider = Column(String(50), nullable=False)
+    storage_bucket = Column(String(100), nullable=False)
+    allocation_amount = Column(Float, nullable=False)
+    storage_unit = Column(String(5), nullable=False)
+    allocation_bytes = Column(BigInteger, nullable=False)
+    max_file_size_mb = Column(Float, nullable=False)
+    allowed_file_types = Column(JSON, nullable=False)
+    module_allocations = Column(JSON, nullable=False, default=list)
+    effective_from = Column(DateTime, nullable=False)
+    effective_until = Column(DateTime, nullable=True)
+    allocation_status = Column(String(20), nullable=False, default="Draft")
+    remarks = Column(Text, nullable=True)
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class StorageObject(Base):
+    """Ledger of stored files. Quota checks and usage figures both read it."""
+    __tablename__ = "storage_objects"
+    __table_args__ = (Index("ix_storage_objects_usage", "tenant_id", "storage_type"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False)
+    storage_type = Column(String(50), nullable=False)
+    module_code = Column(String(20), nullable=False)
+    object_name = Column(String(255), nullable=False)
+    size_bytes = Column(BigInteger, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class SmsCreditAllocation(Base):
+    __tablename__ = "sms_credit_allocations"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    state_tenant_id = Column(String(50), nullable=False)
+    ulb_tenant_id = Column(String(50), nullable=True)
+    allocation_name = Column(String(150), nullable=False)
+    sms_provider = Column(String(50), nullable=False)
+    dlt_entity_id = Column(String(30), nullable=True)
+    sender_id = Column(String(11), nullable=True)
+    dlt_template_id = Column(String(30), nullable=True)
+    credit_allocation = Column(BigInteger, nullable=False)
+    credits_consumed = Column(BigInteger, nullable=False, default=0)
+    valid_from = Column(DateTime, nullable=False)
+    valid_until = Column(DateTime, nullable=False)
+    sms_categories = Column(JSON, nullable=False, default=list)
+    low_credit_threshold = Column(BigInteger, nullable=True)
+    low_credit_notified = Column(Boolean, nullable=False, default=False)
+    notification_recipients = Column(JSON, nullable=False, default=list)
+    allocation_status = Column(String(20), nullable=False, default="Draft")
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class SmsMessage(Base):
+    """Delivery ledger. Holds no phone numbers or message text."""
+    __tablename__ = "sms_messages"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    allocation_id = Column(String(36), ForeignKey("sms_credit_allocations.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(50), nullable=True)
+    credits = Column(Integer, nullable=False, default=1)
+    delivery_status = Column(String(20), nullable=False, default="Queued")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class ApiQuotaPolicy(Base):
+    __tablename__ = "api_quota_policies"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    tenant_level = Column(String(20), nullable=False)
+    state_tenant_id = Column(String(50), nullable=False)
+    ulb_tenant_id = Column(String(50), nullable=True)
+    api_gateway = Column(String(50), nullable=False)
+    api_services = Column(JSON, nullable=False, default=list)
+    api_category = Column(String(50), nullable=True)
+    rate_limit_per_minute = Column(Integer, nullable=False)
+    rate_limit_per_hour = Column(Integer, nullable=True)
+    rate_limit_per_day = Column(Integer, nullable=True)
+    burst_limit = Column(Integer, nullable=True)
+    concurrent_limit = Column(Integer, nullable=True)
+    quota_period = Column(String(20), nullable=False)
+    effective_from = Column(DateTime, nullable=False)
+    effective_until = Column(DateTime, nullable=True)
+    policy_status = Column(String(20), nullable=False, default="Draft")
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class ApiUsageMinute(Base):
+    __tablename__ = "api_usage_minutes"
+    __table_args__ = (UniqueConstraint("tenant_id", "service", "bucket", name="uq_api_usage_minute"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    service = Column(String(50), nullable=False)
+    bucket = Column(DateTime, nullable=False, index=True)
+    total_requests = Column(BigInteger, nullable=False, default=0)
+    successful_requests = Column(BigInteger, nullable=False, default=0)
+    failed_requests = Column(BigInteger, nullable=False, default=0)
+    throttled_requests = Column(BigInteger, nullable=False, default=0)
+    latency_ms_total = Column(BigInteger, nullable=False, default=0)
+
+
+class UsageThresholdLevel(Base):
+    """Configurable levels such as 70% Warning. Platform-wide, so it has no tenant."""
+    __tablename__ = "usage_threshold_levels"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    level_name = Column(String(30), unique=True, nullable=False)
+    percentage = Column(Float, nullable=False)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class UsageAlertRule(Base):
+    __tablename__ = "usage_alert_rules"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    tenant_level = Column(String(20), nullable=False)
+    state_tenant_id = Column(String(50), nullable=False)
+    ulb_tenant_id = Column(String(50), nullable=True)
+    alert_name = Column(String(150), nullable=False)
+    alert_code = Column(String(50), unique=True, nullable=False)
+    resource_type = Column(String(30), nullable=False)
+    alert_condition = Column(String(30), nullable=False)
+    threshold_percentage = Column(Float, nullable=True)
+    threshold_value = Column(Float, nullable=True)
+    comparison_operator = Column(String(5), nullable=False)
+    alert_severity = Column(String(20), nullable=False)
+    notification_channels = Column(JSON, nullable=False)
+    notification_recipients = Column(JSON, nullable=False)
+    repeat_interval_minutes = Column(Integer, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    description = Column(Text, nullable=True)
+    is_firing = Column(Boolean, nullable=False, default=False)
+    last_notified_at = Column(DateTime, nullable=True)
+    last_value = Column(Float, nullable=True)
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class UsageAlertEvent(Base):
+    __tablename__ = "usage_alert_events"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    rule_id = Column(String(36), ForeignKey("usage_alert_rules.id", ondelete="CASCADE"), nullable=True, index=True)
+    severity = Column(String(20), nullable=False)
+    message = Column(String(500), nullable=False)
+    delivery_summary = Column(String(255), nullable=True)
+    acknowledged_by = Column(String(150), nullable=True)
+    acknowledged_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+
+
+class GisApprovedService(Base):
+    """A WMS or WFS service a tenant has approved. Remote layers can only point at one of these."""
+    __tablename__ = "gis_approved_services"
+    __table_args__ = (UniqueConstraint("tenant_id", "base_url", name="uq_gis_service_tenant_url"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), ForeignKey("tenants.tenant_id"), nullable=False, index=True)
+    service_name = Column(String(150), nullable=False)
+    base_url = Column(String(500), nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class TenantDepartment(Base):
+    """Department master for a State or ULB, so department choices come from the database."""
+    __tablename__ = "tenant_departments"
+    __table_args__ = (UniqueConstraint("tenant_id", "code", name="uq_tenant_department_code"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    code = Column(String(30), nullable=False)
+    name = Column(String(150), nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+# ADM-R02 tables are platform IAM records, like users and roles. Only super admins manage them,
+# and sign-in reads them before any tenant context exists, so they carry no row-level security.
+CROSS_TENANT_RECORD_SEQUENCE = Sequence("cross_tenant_record_seq")
+
+
+class CrossTenantAccessGrant(Base):
+    """ADM-R02: a user's access to tenants outside their home tenant."""
+    __tablename__ = "cross_tenant_access_grants"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    record_sequence = Column(Integer, CROSS_TENANT_RECORD_SEQUENCE, server_default=CROSS_TENANT_RECORD_SEQUENCE.next_value(), unique=True, nullable=False)
+    user_profile_id = Column(String(36), ForeignKey("global_user_profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_email = Column(String(150), nullable=False, index=True)
+    user_name = Column(String(150), nullable=False)
+    user_type = Column(String(30), nullable=False)
+    home_tenant_id = Column(String(50), nullable=False)
+    access_level = Column(String(20), nullable=False)
+    status = Column(String(20), nullable=False, default="Pending", index=True)
+    effective_from = Column(DateTime, nullable=False)
+    effective_until = Column(DateTime, nullable=True)
+    business_justification = Column(Text, nullable=False)
+    approval_authority_id = Column(String(36), nullable=False)
+    approval_authority_email = Column(String(150), nullable=False)
+    requested_by = Column(String(150), nullable=False)
+    approved_by = Column(String(150), nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    decision_note = Column(Text, nullable=True)
+    revoked_by = Column(String(150), nullable=True)
+    revoked_at = Column(DateTime, nullable=True)
+    revoke_reason = Column(Text, nullable=True)
+    approval_reference = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    targets = relationship("CrossTenantGrantTarget", cascade="all, delete-orphan", lazy="selectin")
+    scope = relationship("CrossTenantAccessScope", uselist=False, cascade="all, delete-orphan", lazy="selectin")
+
+
+class CrossTenantGrantTarget(Base):
+    """One row per target tenant, because every request checks these."""
+    __tablename__ = "cross_tenant_grant_targets"
+    __table_args__ = (UniqueConstraint("grant_id", "target_tenant_id", name="uq_cross_tenant_target"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    grant_id = Column(String(36), ForeignKey("cross_tenant_access_grants.id", ondelete="CASCADE"), nullable=False, index=True)
+    target_tenant_id = Column(String(50), nullable=False, index=True)
+
+
+class CrossTenantAccessScope(Base):
+    """ADM-R02 Tab 2: how far a grant reaches inside its target tenants."""
+    __tablename__ = "cross_tenant_access_scopes"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    grant_id = Column(String(36), ForeignKey("cross_tenant_access_grants.id", ondelete="CASCADE"), nullable=False, unique=True)
+    access_scope = Column(String(20), nullable=False)
+    state_tenant_id = Column(String(50), nullable=False)
+    ulb_tenant_ids = Column(JSON, nullable=False, default=list)
+    department_ids = Column(JSON, nullable=False, default=list)
+    zone_ids = Column(JSON, nullable=False, default=list)
+    ward_ids = Column(JSON, nullable=False, default=list)
+    scope_mode = Column(String(20), nullable=False)
+    include_child_tenants = Column(Boolean, nullable=False, default=True)
+    restricted_components = Column(JSON, nullable=False, default=list)
+    effective_date = Column(DateTime, nullable=False)
+    expiry_date = Column(DateTime, nullable=True)
+    updated_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class CrossTenantPermissionRule(Base):
+    """ADM-R02 Tab 3: an approved Deny rule blocks actions in the target tenant."""
+    __tablename__ = "cross_tenant_permission_rules"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    grant_id = Column(String(36), ForeignKey("cross_tenant_access_grants.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_email = Column(String(150), nullable=False, index=True)
+    target_tenant_id = Column(String(50), nullable=False)
+    module_codes = Column(JSON, nullable=False, default=list)
+    component_codes = Column(JSON, nullable=False, default=list)
+    action_permissions = Column(JSON, nullable=False, default=list)
+    data_access_scope = Column(String(20), nullable=False)
+    access_decision = Column(String(10), nullable=False)
+    restriction_reason = Column(Text, nullable=True)
+    review_status = Column(String(20), nullable=False, default="Pending")
+    reviewed_by = Column(String(150), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class AccessReviewCampaign(Base):
+    """ADM-R02 Tab 4: a certification round over existing grants."""
+    __tablename__ = "access_review_campaigns"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    campaign_name = Column(String(150), nullable=False)
+    period_start = Column(DateTime, nullable=False)
+    period_end = Column(DateTime, nullable=False)
+    tenant_scope = Column(JSON, nullable=False, default=list)
+    user_types = Column(JSON, nullable=False, default=list)
+    access_statuses = Column(JSON, nullable=False, default=list)
+    review_owner_id = Column(String(36), nullable=False)
+    review_owner_email = Column(String(150), nullable=False)
+    review_deadline = Column(DateTime, nullable=False)
+    status = Column(String(20), nullable=False, default="Open")
+    created_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+
+class AccessReviewItem(Base):
+    __tablename__ = "access_review_items"
+    __table_args__ = (UniqueConstraint("campaign_id", "grant_id", name="uq_access_review_item"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    campaign_id = Column(String(36), ForeignKey("access_review_campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
+    grant_id = Column(String(36), ForeignKey("cross_tenant_access_grants.id", ondelete="CASCADE"), nullable=False, index=True)
+    status = Column(String(20), nullable=False, default="Pending")
+    review_decision = Column(String(10), nullable=True)
+    reviewer_comments = Column(Text, nullable=True)
+    decided_by = Column(String(150), nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+
+
+class AccessChangeHistory(Base):
+    """ADM-R02 Tab 5. Rows are only ever added; the audit vault holds a hash-chained copy."""
+    __tablename__ = "access_change_history"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    grant_id = Column(String(36), nullable=True, index=True)
+    user_email = Column(String(150), nullable=False, index=True)
+    home_tenant_id = Column(String(50), nullable=True)
+    target_tenant_ids = Column(JSON, nullable=False, default=list)
+    previous_access_level = Column(String(20), nullable=True)
+    new_access_level = Column(String(20), nullable=True)
+    previous_scope = Column(Text, nullable=True)
+    new_scope = Column(Text, nullable=True)
+    action = Column(String(50), nullable=False, index=True)
+    changed_by = Column(String(150), nullable=False)
+    ip_address = Column(String(50), nullable=True)
+    reason = Column(Text, nullable=True)
+    approval_reference = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+
+
+# ADM-R04 tables are platform records like the ADM-R02 ones. Sign-in reads sessions before any tenant context exists.
+IMPERSONATION_POLICY_SEQUENCE = Sequence("impersonation_policy_seq")
+IMPERSONATION_REQUEST_SEQUENCE = Sequence("impersonation_request_seq")
+IMPERSONATION_SESSION_SEQUENCE = Sequence("impersonation_session_seq")
+
+
+class ImpersonationPolicy(Base):
+    """ADM-R04 Tab 4. One active policy covers each tenant level."""
+    __tablename__ = "impersonation_policies"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    policy_sequence = Column(Integer, IMPERSONATION_POLICY_SEQUENCE, server_default=IMPERSONATION_POLICY_SEQUENCE.next_value(), unique=True, nullable=False)
+    policy_name = Column(String(150), nullable=False)
+    allowed_support_roles = Column(JSON, nullable=False, default=list)
+    allowed_tenant_levels = Column(JSON, nullable=False, default=list)
+    max_session_minutes = Column(Integer, nullable=False)
+    approval_required = Column(Boolean, nullable=False, default=True)
+    dual_approval = Column(Boolean, nullable=False, default=False)
+    read_only_default = Column(Boolean, nullable=False, default=True)
+    mask_sensitive_data = Column(Boolean, nullable=False, default=True)
+    download_disabled = Column(Boolean, nullable=False, default=True)
+    write_actions_allowed = Column(JSON, nullable=False, default=list)
+    session_recording = Column(Boolean, nullable=False, default=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    updated_by = Column(String(150), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class ImpersonationRequest(Base):
+    """ADM-R04 Tab 1. The policy's settings are copied in, so a later policy edit cannot change an approved request."""
+    __tablename__ = "impersonation_requests"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    request_sequence = Column(Integer, IMPERSONATION_REQUEST_SEQUENCE, server_default=IMPERSONATION_REQUEST_SEQUENCE.next_value(), unique=True, nullable=False)
+    policy_id = Column(String(36), ForeignKey("impersonation_policies.id"), nullable=False)
+    policy_snapshot = Column(JSON, nullable=False)
+    support_user_id = Column(String(36), nullable=False, index=True)
+    support_email = Column(String(150), nullable=False)
+    support_name = Column(String(150), nullable=False)
+    target_user_id = Column(String(36), nullable=False, index=True)
+    target_email = Column(String(150), nullable=False)
+    target_name = Column(String(150), nullable=False)
+    target_tenant_id = Column(String(50), nullable=False)
+    target_tenant_level = Column(String(20), nullable=False)
+    request_type = Column(String(30), nullable=False)
+    business_justification = Column(Text, nullable=False)
+    ticket_reference = Column(String(100), nullable=False)
+    requested_minutes = Column(Integer, nullable=False)
+    access_mode = Column(String(30), nullable=False)
+    status = Column(String(30), nullable=False, default="Pending", index=True)
+    dual_approval_required = Column(Boolean, nullable=False, default=False)
+    second_approver_id = Column(String(36), nullable=True)
+    second_approver_email = Column(String(150), nullable=True)
+    approval_valid_until = Column(DateTime, nullable=True)
+    requested_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    decided_at = Column(DateTime, nullable=True)
+
+    approvals = relationship("ImpersonationApproval", cascade="all, delete-orphan", lazy="selectin", order_by="ImpersonationApproval.stage")
+
+
+class ImpersonationApproval(Base):
+    __tablename__ = "impersonation_approvals"
+    __table_args__ = (UniqueConstraint("request_id", "stage", name="uq_impersonation_approval_stage"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    request_id = Column(String(36), ForeignKey("impersonation_requests.id", ondelete="CASCADE"), nullable=False, index=True)
+    stage = Column(Integer, nullable=False)
+    approver_id = Column(String(36), nullable=False)
+    approver_email = Column(String(150), nullable=False)
+    decision = Column(String(20), nullable=False)
+    comments = Column(Text, nullable=True)
+    decided_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class ImpersonationSession(Base):
+    """ADM-R04 Tabs 3 and 5. Each request is checked against this row, so ending it takes effect at once."""
+    __tablename__ = "impersonation_sessions"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_sequence = Column(Integer, IMPERSONATION_SESSION_SEQUENCE, server_default=IMPERSONATION_SESSION_SEQUENCE.next_value(), unique=True, nullable=False)
+    request_id = Column(String(36), ForeignKey("impersonation_requests.id"), nullable=False, unique=True)
+    support_user_id = Column(String(36), nullable=False, index=True)
+    support_email = Column(String(150), nullable=False)
+    target_user_id = Column(String(36), nullable=False)
+    target_email = Column(String(150), nullable=False)
+    tenant_id = Column(String(50), nullable=False)
+    access_mode = Column(String(30), nullable=False)
+    status = Column(String(20), nullable=False, default="Active", index=True)
+    started_at = Column(DateTime, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    ended_at = Column(DateTime, nullable=True)
+    termination_reason = Column(Text, nullable=True)
+    terminated_by = Column(String(150), nullable=True)
+    ip_address = Column(String(50), nullable=True)
+    device = Column(String(255), nullable=True)
+    audit_event_id = Column(String(50), nullable=True)
+
+
+class ImpersonationAction(Base):
+    """One row per request made during a recorded session. Request bodies are never stored."""
+    __tablename__ = "impersonation_actions"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(String(36), ForeignKey("impersonation_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    method = Column(String(10), nullable=False)
+    path = Column(String(500), nullable=False)
+    permission = Column(String(80), nullable=True)
+    status_code = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)

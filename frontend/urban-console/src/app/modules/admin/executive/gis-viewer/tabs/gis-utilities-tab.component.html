@@ -1,0 +1,49 @@
+<div class="form-grid">
+  <label>State Tenant *
+    <select [(ngModel)]="filter().state">
+      <option value="">All accessible states</option>
+      @for (s of options().states; track s.code) { <option [value]="s.code">{{ s.name }}</option> }
+    </select>
+  </label>
+  <label>ULB / City *
+    <select [(ngModel)]="filter().tenantId" (ngModelChange)="filter().tenantId = $event; filter().layerId = ''">
+      <option value="">Select</option>
+      @for (u of ulbs(); track u.code) { <option [value]="u.code">{{ u.name }}</option> }
+    </select>
+  </label>
+  <label>Utility Category *
+    <app-gis-multi-select [items]="options().utilityCategories" placeholder="All" [(value)]="filter().categories"></app-gis-multi-select>
+  </label>
+  <label>Utility Network Type *
+    <select [(ngModel)]="filter().networkType">
+      <option value="">Select</option>
+      @for (o of options().utilityNetworkTypes; track o) { <option [value]="o">{{ o }}</option> }
+    </select>
+  </label>
+  <label>Network Layer *
+    <select [(ngModel)]="filter().layerId">
+      <option value="">Select</option>
+      @for (l of layersFor('Utility'); track l.id) { <option [value]="l.id">{{ l.layerName }}</option> }
+    </select>
+  </label>
+  <label>Asset Status
+    <app-gis-multi-select [items]="options().assetStatuses" placeholder="All" [(value)]="filter().assetStatuses"></app-gis-multi-select>
+  </label>
+  <label>Department
+    <input [(ngModel)]="filter().department" />
+  </label>
+  <label>Data Source *
+    <select [(ngModel)]="filter().dataSource">
+      @for (o of options().dataSources; track o) { <option [value]="o">{{ o }}</option> }
+    </select>
+  </label>
+  <label>Network Style
+    <input type="color" [(ngModel)]="filter().color" />
+  </label>
+  <label class="toggle">Network Visibility <input class="switch" type="checkbox" [(ngModel)]="filter().visible" /></label>
+  <p class="read-only">Last Synchronisation: <strong>{{ (selectedLayer()?.lastSyncedAt | date: 'dd MMM yyyy, HH:mm') || 'Never' }}</strong></p>
+</div>
+<div class="actions">
+  <button type="button" (click)="addLayer.emit()">Add Network Layer</button>
+  <button type="button" class="primary" (click)="show.emit()">Show on Map</button>
+</div>

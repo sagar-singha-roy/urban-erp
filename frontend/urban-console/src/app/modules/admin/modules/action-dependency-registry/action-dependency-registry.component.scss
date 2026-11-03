@@ -609,3 +609,14 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+// A table cell must stay a table cell for its colspan to work.
+td.empty-table-cell {
+  display: table-cell;
+
+  > app-icon {
+    display: block;
+    width: fit-content;
+    margin: 0 auto 0.6rem;
+  }
+}

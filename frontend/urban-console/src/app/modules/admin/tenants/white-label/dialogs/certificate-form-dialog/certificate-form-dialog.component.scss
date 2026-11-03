@@ -1,0 +1,4 @@
+@use '../../../../../../shared/styles/admin-table';
+
+// Hides the key on screen without a password field, which browsers offer to save.
+.secret { -webkit-text-security: disc; }

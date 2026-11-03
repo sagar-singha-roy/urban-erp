@@ -1,0 +1,1335 @@
+<div class="executive-dashboard-container">
+  <!-- 1. Header Section -->
+  <header class="page-header">
+    <div class="header-titles">
+      <div class="title-with-badge">
+        <h1
+          class="page-title"
+          data-tooltip="Level 0 — Platform Super Admin Global View"
+          title="Level 0 — Platform Super Admin Global View"
+        >
+          <app-icon name="ri-command-line" class="title-icon"></app-icon>
+          Global Command Dashboard
+        </h1>
+        <span class="pulse-indicator" title="Live Continuous Data Stream"></span>
+      </div>
+      <p class="page-subtitle">
+        Consolidated overview of all states and ULBs, including revenue, registered properties, grievances, and citizen digital adoption.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="exportReport()"
+        [disabled]="isExporting()"
+      >
+        <app-icon name="ri-download-2-line"></app-icon>
+        <span>{{ isExporting() ? 'Exporting...' : 'Export Report' }}</span>
+      </button>
+
+      <app-refresh-button subject="dashboard metrics" (refresh)="refreshData()"></app-refresh-button>
+    </div>
+  </header>
+
+  <!-- 2. Segmented Navigation Bar -->
+  <nav class="nav-segment-bar" aria-label="Executive Intelligence Tabs">
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'overview'"
+      (click)="setTab('overview')"
+    >
+      <app-icon name="ri-dashboard-line"></app-icon>
+      <span>Overview</span>
+    </button>
+
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'revenue'"
+      (click)="setTab('revenue')"
+    >
+      <app-icon name="ri-money-rupee-circle-line"></app-icon>
+      <span>Revenue Analytics</span>
+    </button>
+
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'parcels'"
+      (click)="setTab('parcels')"
+    >
+      <app-icon name="ri-map-pin-2-line"></app-icon>
+      <span>Parcel Statistics</span>
+    </button>
+
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'grievances'"
+      (click)="setTab('grievances')"
+    >
+      <app-icon name="ri-customer-service-2-line"></app-icon>
+      <span>Grievance Overview</span>
+    </button>
+
+    <button
+      type="button"
+      class="segment-btn"
+      [class.active]="activeTab() === 'adoption'"
+      (click)="setTab('adoption')"
+    >
+      <app-icon name="ri-user-star-line"></app-icon>
+      <span>Citizen Adoption</span>
+    </button>
+  </nav>
+
+  <!-- ========================================================================= -->
+  <!-- TAB 1: OVERVIEW                                                           -->
+  <!-- ========================================================================= -->
+  @if (dataNotice()) {
+    <app-data-notice [message]="dataNotice()"></app-data-notice>
+  }
+
+  @if (activeTab() === 'overview') {
+    <section class="tab-content" aria-label="Overview Tab">
+      <!-- A. Filter Controls Card -->
+      <div class="filter-card">
+        <div class="filter-card-header">
+          <div class="filter-title">
+            <app-icon name="ri-filter-3-line"></app-icon>
+            <span>Overview Analytics Filters</span>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn btn-sm btn-outline" (click)="resetFilters()">
+              <app-icon name="ri-restart-line"></app-icon>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" (click)="applyFilters()">
+              <app-icon name="ri-check-line"></app-icon>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-grid">
+          <div class="form-group">
+            <label class="form-label">Reporting Period</label>
+            <select class="form-select" [(ngModel)]="overviewFilters().period">
+              <option value="today">Today</option>
+              <option value="this_week">This Week</option>
+              <option value="this_month">This Month</option>
+              <option value="this_quarter">This Quarter</option>
+              <option value="fy_2026_27">Financial Year (FY 2026-27)</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
+          </div>
+
+          @if (overviewFilters().period === 'custom') {
+            <div class="form-group">
+              <label class="form-label">From Date</label>
+              <input type="date" class="form-control" [(ngModel)]="overviewFilters().fromDate" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">To Date</label>
+              <input type="date" class="form-control" [(ngModel)]="overviewFilters().toDate" />
+            </div>
+          }
+
+          <div class="form-group">
+            <label class="form-label">Geographic Scope</label>
+            <select class="form-select" [(ngModel)]="overviewFilters().geoScope">
+              @if (filterOptions().geographicScopes.length === 0) {
+                <option value="All India / All Configured States">All India / All Configured States</option>
+              }
+              @for (scope of filterOptions().geographicScopes; track scope) {
+                <option [value]="scope">{{ show(scope) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">State Tenant</label>
+            <select class="form-select" [(ngModel)]="overviewFilters().stateTenant">
+              <option value="">All State Tenants</option>
+              @for (st of filterOptions().states; track st.code) {
+                <option [value]="st.code">{{ show(st.name) }} ({{ show(st.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ULB / City</label>
+            <select class="form-select" [(ngModel)]="overviewFilters().ulbTenant">
+              <option value="">All Municipal Corporations</option>
+              @for (u of filterOptions().ulbs; track u.code) {
+                <option [value]="u.code">{{ show(u.name) }} ({{ show(u.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <select class="form-select" [(ngModel)]="overviewFilters().department">
+              <option value="">All Departments</option>
+              @for (dept of filterOptions().departments; track dept) {
+                <option [value]="dept">{{ show(dept) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Refresh Interval</label>
+            <select class="form-select" [(ngModel)]="overviewFilters().refreshInterval">
+              <option value="manual">Manual Refresh</option>
+              <option value="realtime">Real-time (Live Stream)</option>
+              <option value="5min">Every 5 Minutes</option>
+              <option value="15min">Every 15 Minutes</option>
+              <option value="hourly">Hourly</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Comparison Period</label>
+            <select class="form-select" [(ngModel)]="overviewFilters().comparisonPeriod">
+              <option value="Previous Period">Previous Period</option>
+              <option value="Same Period Last Year">Same Period Last Year</option>
+              <option value="None">None</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- B. System-Generated Dashboard Metrics -->
+      @if (overviewData(); as overview) {
+        <div class="kpi-grid kpi-grid-6">
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-parcels">
+              <app-icon name="ri-map-pin-2-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Total Registered Parcels</span>
+              <strong class="kpi-value">{{ formatNumber(overview.totalRegisteredParcels) }}</strong>
+              <span class="kpi-subtext">Across {{ show(overview.activeStateTenants) }} States</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-revenue">
+              <app-icon name="ri-money-rupee-circle-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Total Revenue Collected</span>
+              <strong class="kpi-value text-success">{{ formatInr(overview.totalRevenueCollected) }}</strong>
+              <span class="kpi-subtext">Outstanding: {{ formatInr(overview.totalOutstandingRevenue) }}</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-grievance">
+              <app-icon name="ri-customer-service-2-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Active Grievances</span>
+              <strong class="kpi-value text-warning">{{ formatNumber(overview.activeGrievances) }}</strong>
+              <span class="kpi-subtext">Resolved: {{ formatNumber(overview.resolvedGrievances) }}</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-sla">
+              <app-icon name="ri-shield-check-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Grievance SLA Compliance</span>
+              <strong class="kpi-value">{{ formatPct(overview.grievanceSlaCompliance) }}</strong>
+              <span class="kpi-subtext">National Average: 90%</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-citizens">
+              <app-icon name="ri-user-star-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Registered Citizens</span>
+              <strong class="kpi-value">{{ formatNumber(overview.totalRegisteredCitizens) }}</strong>
+              <span class="kpi-subtext">Digital Adoption: {{ formatPct(overview.digitalServiceAdoptionPercentage) }}</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-tenants">
+              <app-icon name="ri-building-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Active Municipal Tenants</span>
+              <strong class="kpi-value">{{ formatNumber(overview.activeUlbTenants) }}</strong>
+              <span class="kpi-subtext">{{ show(overview.activeStateTenants) }} States Enrolled</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- C. Macro Trend Velocity Cards -->
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Macro Velocity & 6-Month Trajectory</h3>
+              <p class="card-subtitle">Aggregated national performance trajectory across revenue, property onboarding, and citizen adoption.</p>
+            </div>
+            <span class="badge badge-success">Audited Data</span>
+          </div>
+
+          <app-table-search [state]="pagers" key="t1"></app-table-search>
+<div class="trends-table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Period</th>
+                  <th>Revenue Collection</th>
+                  <th>Onboarded Parcels</th>
+                  <th>Grievance Volume</th>
+                  <th>Digital Adoption</th>
+                  <th>Trajectory</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (tr of (overview.macroTrends | rowSearch:pagers.search('t1')) | slice:pagers.start('t1', (overview.macroTrends | rowSearch:pagers.search('t1')).length):pagers.end('t1', (overview.macroTrends | rowSearch:pagers.search('t1')).length); track tr.period) {
+                  <tr>
+                    <td><strong>{{ show(tr.period) }}</strong></td>
+                    <td class="text-success font-mono font-bold">₹{{ formatNumber(tr.revenueCr) }} Cr</td>
+                    <td class="font-mono">{{ (tr.parcelsK / 1000).toFixed(1) }}M</td>
+                    <td>{{ formatNumber(tr.grievances) }}</td>
+                    <td>
+                      <div class="inline-progress">
+                        <span>{{ formatPct(tr.digitalPct) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="tr.digitalPct"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="trend-badge positive">
+                        <app-icon name="ri-arrow-right-up-line"></app-icon> Upward
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t1" [total]="(overview.macroTrends | rowSearch:pagers.search('t1')).length"></app-table-pager>
+        </div>
+
+        <!-- D. State Benchmark League Table -->
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Pan-India State Benchmarks & League Table</h3>
+              <p class="card-subtitle">Comparative municipal operational KPIs across active Level 1 State jurisdictions.</p>
+            </div>
+            <div class="search-input-box">
+              <app-icon name="ri-search-line"></app-icon>
+              <input
+                type="text"
+                placeholder="Search state or code..."
+                [ngModel]="tableSearch()"
+                (ngModelChange)="tableSearch.set($event)"
+              />
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>State Name</th>
+                  <th>Code</th>
+                  <th>Active ULBs</th>
+                  <th>Registered Parcels</th>
+                  <th>Demand Target</th>
+                  <th>Collected (INR)</th>
+                  <th>Efficiency</th>
+                  <th>Grievance SLA</th>
+                  <th>Digital Adoption</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (st of (filteredBenchmarks()) | slice:pagers.start('t2', (filteredBenchmarks()).length):pagers.end('t2', (filteredBenchmarks()).length); track st.stateCode) {
+                  <tr>
+                    <td>
+                      <strong>{{ show(st.stateName) }}</strong>
+                    </td>
+                    <td><span class="badge badge-outline">{{ show(st.stateCode) }}</span></td>
+                    <td class="font-mono">{{ show(st.ulbCount) }}</td>
+                    <td class="font-mono">{{ formatNumber(st.parcels) }}</td>
+                    <td class="font-mono">{{ formatInr(st.demand) }}</td>
+                    <td class="font-mono font-bold text-success">{{ formatInr(st.collected) }}</td>
+                    <td>
+                      <div class="inline-progress">
+                        <span>{{ formatPct(st.efficiency) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="st.efficiency"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="text-success font-bold">{{ formatPct(st.grievanceSla) }}</span></td>
+                    <td>{{ formatPct(st.digitalAdoption) }}</td>
+                    <td>
+                      <span class="badge badge-success">
+                        <app-icon name="ri-check-line"></app-icon> {{ show(st.status) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t2" [total]="(filteredBenchmarks()).length"></app-table-pager>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 2: REVENUE ANALYTICS                                                  -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'revenue') {
+    <section class="tab-content" aria-label="Revenue Analytics Tab">
+      <!-- A. Filter Controls Card -->
+      <div class="filter-card">
+        <div class="filter-card-header">
+          <div class="filter-title">
+            <app-icon name="ri-money-rupee-circle-line"></app-icon>
+            <span>Revenue Analytics Filters</span>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn btn-sm btn-outline" (click)="resetFilters()">
+              <app-icon name="ri-restart-line"></app-icon>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" (click)="applyFilters()">
+              <app-icon name="ri-check-line"></app-icon>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-grid">
+          <div class="form-group">
+            <label class="form-label">State Tenant</label>
+            <select class="form-select" [(ngModel)]="revenueFilters().stateTenant">
+              <option value="">All State Tenants</option>
+              @for (st of filterOptions().states; track st.code) {
+                <option [value]="st.code">{{ show(st.name) }} ({{ show(st.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ULB / City</label>
+            <select class="form-select" [(ngModel)]="revenueFilters().ulbTenant">
+              <option value="">All Municipalities</option>
+              @for (u of filterOptions().ulbs; track u.code) {
+                <option [value]="u.code">{{ show(u.name) }} ({{ show(u.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Revenue Module</label>
+            <select class="form-select" [(ngModel)]="revenueFilters().revenueModule">
+              <option value="">All Modules (PTX, WTR, TRL...)</option>
+              @for (m of filterOptions().revenueModules; track m.code) {
+                <option [value]="m.code">{{ show(m.name) }} ({{ show(m.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Revenue Category</label>
+            <select class="form-select" [(ngModel)]="revenueFilters().revenueCategory">
+              <option value="">All Categories</option>
+              @for (cat of filterOptions().revenueCategories; track cat) {
+                <option [value]="cat">{{ show(cat) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Financial Year</label>
+            <select class="form-select" [(ngModel)]="revenueFilters().financialYear">
+              @for (fy of filterOptions().financialYears; track fy) {
+                <option [value]="fy">{{ show(fy) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Aggregation Level</label>
+            <select class="form-select" [(ngModel)]="revenueFilters().aggregationLevel">
+              @for (lvl of filterOptions().aggregationLevels; track lvl) {
+                <option [value]="lvl">{{ show(lvl) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Revenue Comparison</label>
+            <select class="form-select" [(ngModel)]="revenueFilters().revenueComparison">
+              <option value="vs Prior Year">vs Prior Year</option>
+              <option value="vs Target Budget">vs Target Budget</option>
+              <option value="None">None</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Chart Type</label>
+            <select class="form-select" [(ngModel)]="revenueFilters().chartType">
+              <option value="Bar Chart">Bar Chart</option>
+              <option value="Line Trend">Line Trend</option>
+              <option value="Area Stack">Area Stack</option>
+              <option value="Donut Breakdown">Donut Breakdown</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- B. Revenue Metrics Cards -->
+      @if (revenueData(); as rev) {
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-revenue">
+              <app-icon name="ri-target-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Total Demand Target</span>
+              <strong class="kpi-value">{{ formatInr(rev.totalDemandTarget) }}</strong>
+              <span class="kpi-subtext">Approved Municipal Budget</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-parcels">
+              <app-icon name="ri-checkbox-circle-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Total Collection to Date</span>
+              <strong class="kpi-value text-success">{{ formatInr(rev.totalCollection) }}</strong>
+              <span class="kpi-subtext">Current Year: {{ formatInr(rev.currentYearCollected) }}</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-sla">
+              <app-icon name="ri-history-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Arrears Collected</span>
+              <strong class="kpi-value">{{ formatInr(rev.arrearsCollected) }}</strong>
+              <span class="kpi-subtext">Past Overdue Recovered</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-citizens">
+              <app-icon name="ri-percent-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Collection Efficiency</span>
+              <strong class="kpi-value text-success">{{ formatPct(rev.collectionEfficiency) }}</strong>
+              <span class="kpi-subtext">Outstanding: {{ formatInr(rev.outstandingBalance) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- C. Revenue Breakdown Table -->
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Revenue Aggregation Matrix ({{ revenueFilters().aggregationLevel }})</h3>
+              <p class="card-subtitle">Collection breakdown, target demand, arrears recovery, and relative share percentage.</p>
+            </div>
+            <span class="badge badge-outline">{{ revenueFilters().financialYear }}</span>
+          </div>
+
+          <app-table-search [state]="pagers" key="t3"></app-table-search>
+<div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ revenueFilters().aggregationLevel }}</th>
+                  <th>Target Demand</th>
+                  <th>Collected (INR)</th>
+                  <th>Arrears Recovered</th>
+                  <th>Efficiency</th>
+                  <th>Portfolio Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of (rev.breakdown | rowSearch:pagers.search('t3')) | slice:pagers.start('t3', (rev.breakdown | rowSearch:pagers.search('t3')).length):pagers.end('t3', (rev.breakdown | rowSearch:pagers.search('t3')).length); track item.name) {
+                  <tr>
+                    <td><strong>{{ show(item.name) }}</strong></td>
+                    <td class="font-mono">{{ formatInr(item.demand) }}</td>
+                    <td class="font-mono font-bold text-success">{{ formatInr(item.collected) }}</td>
+                    <td class="font-mono text-muted">{{ formatInr(item.arrears) }}</td>
+                    <td>
+                      <div class="inline-progress">
+                        <span>{{ formatPct(item.efficiency) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="item.efficiency"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge badge-primary">{{ formatPct(item.sharePct) }}</span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t3" [total]="(rev.breakdown | rowSearch:pagers.search('t3')).length"></app-table-pager>
+        </div>
+
+        <!-- D. Monthly Velocity Card -->
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Monthly Collection Velocity</h3>
+              <p class="card-subtitle">Month-on-month revenue realisation against monthly run-rate demand.</p>
+            </div>
+          </div>
+
+          <app-table-search [state]="pagers" key="t4"></app-table-search>
+<div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Target Run-Rate</th>
+                  <th>Realized Collection</th>
+                  <th>Monthly Realization Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of (rev.monthlyTrend | rowSearch:pagers.search('t4')) | slice:pagers.start('t4', (rev.monthlyTrend | rowSearch:pagers.search('t4')).length):pagers.end('t4', (rev.monthlyTrend | rowSearch:pagers.search('t4')).length); track m.month) {
+                  <tr>
+                    <td><strong>{{ show(m.month) }}</strong></td>
+                    <td class="font-mono">₹{{ show(m.demandCr) }} Cr</td>
+                    <td class="font-mono text-success font-bold">₹{{ show(m.collectedCr) }} Cr</td>
+                    <td>
+                      <div class="inline-progress">
+                        <span>{{ formatPct(m.efficiency) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="m.efficiency"></div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t4" [total]="(rev.monthlyTrend | rowSearch:pagers.search('t4')).length"></app-table-pager>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 3: PARCEL STATISTICS                                                  -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'parcels') {
+    <section class="tab-content" aria-label="Parcel Statistics Tab">
+      <!-- A. Filter Controls Card -->
+      <div class="filter-card">
+        <div class="filter-card-header">
+          <div class="filter-title">
+            <app-icon name="ri-map-pin-2-line"></app-icon>
+            <span>Parcel & GIS Mapping Filters</span>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn btn-sm btn-outline" (click)="resetFilters()">
+              <app-icon name="ri-restart-line"></app-icon>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" (click)="applyFilters()">
+              <app-icon name="ri-check-line"></app-icon>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-grid">
+          <div class="form-group">
+            <label class="form-label">State Tenant</label>
+            <select class="form-select" [(ngModel)]="parcelFilters().stateTenant">
+              <option value="">All State Tenants</option>
+              @for (st of filterOptions().states; track st.code) {
+                <option [value]="st.code">{{ show(st.name) }} ({{ show(st.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ULB / City</label>
+            <select class="form-select" [(ngModel)]="parcelFilters().ulbTenant">
+              <option value="">All ULBs</option>
+              @for (u of filterOptions().ulbs; track u.code) {
+                <option [value]="u.code">{{ show(u.name) }} ({{ show(u.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Property Category</label>
+            <select class="form-select" [(ngModel)]="parcelFilters().propertyCategory">
+              <option value="">All Categories</option>
+              @for (cat of filterOptions().propertyCategories; track cat) {
+                <option [value]="cat">{{ show(cat) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Survey Status</label>
+            <select class="form-select" [(ngModel)]="parcelFilters().surveyStatus">
+              <option value="all">All Survey Statuses</option>
+              <option value="dgps">DGPS Ground Surveyed</option>
+              <option value="drone">Drone Ortho-Imagery</option>
+              <option value="ets">ETS Total Station</option>
+              <option value="unsurveyed">Unsurveyed</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">GIS Mapping Status</label>
+            <select class="form-select" [(ngModel)]="parcelFilters().gisStatus">
+              <option value="all">All GIS Statuses</option>
+              <option value="mapped">Fully Georeferenced</option>
+              <option value="unmapped">Unmapped / Pending Cadastral</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Reporting Period</label>
+            <select class="form-select" [(ngModel)]="parcelFilters().reportingPeriod">
+              <option value="this_month">This Month</option>
+              <option value="this_quarter">This Quarter</option>
+              <option value="fy_2026_27">FY 2026-27</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- B. System-Generated Metrics -->
+      @if (parcelData(); as p) {
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-parcels">
+              <app-icon name="ri-map-pin-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Total Registered Parcels</span>
+              <strong class="kpi-value">{{ formatNumber(p.totalParcels) }}</strong>
+              <span class="kpi-subtext">Cadastral Registry Count</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-revenue">
+              <app-icon name="ri-shield-check-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Verified Parcels</span>
+              <strong class="kpi-value text-success">{{ formatNumber(p.verifiedParcels) }}</strong>
+              <span class="kpi-subtext">Unverified: {{ formatNumber(p.unverifiedParcels) }}</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-sla">
+              <app-icon name="ri-earth-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">GIS-Mapped Parcels</span>
+              <strong class="kpi-value">{{ formatNumber(p.gisMappedParcels) }}</strong>
+              <span class="kpi-subtext">Coverage: {{ formatPct(p.gisCoveragePct) }}</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-citizens">
+              <app-icon name="ri-home-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Residential Units</span>
+              <strong class="kpi-value">{{ formatNumber(p.residentialParcels) }}</strong>
+              <span class="kpi-subtext">Commercial: {{ formatNumber(p.commercialParcels) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- C. Survey Methodology Breakdown -->
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Survey Methodology & Ground Truth Cadastral Status</h3>
+              <p class="card-subtitle">Drone photogrammetry, high-precision DGPS and legacy digitisation progress.</p>
+            </div>
+          </div>
+
+          <app-table-search [state]="pagers" key="t5"></app-table-search>
+<div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Survey Methodology</th>
+                  <th>Parcel Count</th>
+                  <th>Percentage</th>
+                  <th>Verification Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of (p.surveyDistribution | rowSearch:pagers.search('t5')) | slice:pagers.start('t5', (p.surveyDistribution | rowSearch:pagers.search('t5')).length):pagers.end('t5', (p.surveyDistribution | rowSearch:pagers.search('t5')).length); track s.method) {
+                  <tr>
+                    <td><strong>{{ show(s.method) }}</strong></td>
+                    <td class="font-mono">{{ formatNumber(s.count) }}</td>
+                    <td>
+                      <div class="inline-progress">
+                        <span>{{ formatPct(s.pct) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="s.pct"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span
+                        class="badge"
+                        [ngClass]="s.status === 'Completed' ? 'badge-success' : 'badge-warning'"
+                      >
+                        {{ show(s.status) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t5" [total]="(p.surveyDistribution | rowSearch:pagers.search('t5')).length"></app-table-pager>
+        </div>
+
+        <!-- D. Property Category Contribution -->
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Property Category Distribution & Municipal Revenue Contribution</h3>
+              <p class="card-subtitle">Land use classification across residential, commercial, industrial, and institutional holdings.</p>
+            </div>
+          </div>
+
+          <app-table-search [state]="pagers" key="t6"></app-table-search>
+<div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Property Classification</th>
+                  <th>Parcels</th>
+                  <th>Share (%)</th>
+                  <th>Revenue Contribution</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of (p.categoryBreakdown | rowSearch:pagers.search('t6')) | slice:pagers.start('t6', (p.categoryBreakdown | rowSearch:pagers.search('t6')).length):pagers.end('t6', (p.categoryBreakdown | rowSearch:pagers.search('t6')).length); track c.category) {
+                  <tr>
+                    <td><strong>{{ show(c.category) }}</strong></td>
+                    <td class="font-mono">{{ formatNumber(c.count) }}</td>
+                    <td>
+                      <div class="inline-progress">
+                        <span>{{ formatPct(c.pct) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="c.pct"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="badge badge-primary">{{ show(c.revenueContribution) }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t6" [total]="(p.categoryBreakdown | rowSearch:pagers.search('t6')).length"></app-table-pager>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 4: GRIEVANCE OVERVIEW                                                 -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'grievances') {
+    <section class="tab-content" aria-label="Grievance Overview Tab">
+      <!-- A. Filter Controls Card -->
+      <div class="filter-card">
+        <div class="filter-card-header">
+          <div class="filter-title">
+            <app-icon name="ri-customer-service-2-line"></app-icon>
+            <span>Citizen Grievance & SLA Filters</span>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn btn-sm btn-outline" (click)="resetFilters()">
+              <app-icon name="ri-restart-line"></app-icon>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" (click)="applyFilters()">
+              <app-icon name="ri-check-line"></app-icon>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-grid">
+          <div class="form-group">
+            <label class="form-label">State Tenant</label>
+            <select class="form-select" [(ngModel)]="grievanceFilters().stateTenant">
+              <option value="">All State Tenants</option>
+              @for (st of filterOptions().states; track st.code) {
+                <option [value]="st.code">{{ show(st.name) }} ({{ show(st.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ULB / City</label>
+            <select class="form-select" [(ngModel)]="grievanceFilters().ulbTenant">
+              <option value="">All Municipalities</option>
+              @for (u of filterOptions().ulbs; track u.code) {
+                <option [value]="u.code">{{ show(u.name) }} ({{ show(u.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <select class="form-select" [(ngModel)]="grievanceFilters().department">
+              <option value="">All Departments</option>
+              @for (dept of filterOptions().departments; track dept) {
+                <option [value]="dept">{{ show(dept) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Grievance Category</label>
+            <select class="form-select" [(ngModel)]="grievanceFilters().category">
+              <option value="">All Categories</option>
+              @for (cat of filterOptions().grievanceCategories; track cat) {
+                <option [value]="cat">{{ show(cat) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Grievance Priority</label>
+            <select class="form-select" [(ngModel)]="grievanceFilters().priority">
+              <option value="">All Priorities</option>
+              <option value="Critical">Critical / Emergency</option>
+              <option value="High">High Priority</option>
+              <option value="Medium">Medium Priority</option>
+              <option value="Low">Low / Routine</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">SLA Status</label>
+            <select class="form-select" [(ngModel)]="grievanceFilters().slaStatus">
+              <option value="all">All SLA Statuses</option>
+              <option value="within">Within SLA Window</option>
+              <option value="breached">Breached SLA / Overdue</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Reporting Period</label>
+            <select class="form-select" [(ngModel)]="grievanceFilters().reportingPeriod">
+              <option value="this_month">This Month</option>
+              <option value="this_quarter">This Quarter</option>
+              <option value="fy_2026_27">FY 2026-27</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- B. System-Generated Grievance Metrics -->
+      @if (grievanceData(); as g) {
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-grievance">
+              <app-icon name="ri-inbox-archive-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Total Grievances</span>
+              <strong class="kpi-value">{{ formatNumber(g.totalGrievances) }}</strong>
+              <span class="kpi-subtext">Logged across all channels</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-warning">
+              <app-icon name="ri-time-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Open Grievances</span>
+              <strong class="kpi-value text-warning">{{ formatNumber(g.openGrievances) }}</strong>
+              <span class="kpi-subtext">Overdue: {{ formatNumber(g.overdueGrievances) }}</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-revenue">
+              <app-icon name="ri-check-double-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Resolved Grievances</span>
+              <strong class="kpi-value text-success">{{ formatNumber(g.resolvedGrievances) }}</strong>
+              <span class="kpi-subtext">Avg Time: {{ show(g.averageResolutionTimeDays) }} Days</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-sla">
+              <app-icon name="ri-shield-star-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">SLA Compliance Rate</span>
+              <strong class="kpi-value text-success">{{ formatPct(g.slaCompliancePercentage) }}</strong>
+              <span class="kpi-subtext">Target: 95% SLA Target</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- C. Category SLA Performance Table -->
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Category-wise Grievance SLA Adherence & Resolution Velocity</h3>
+              <p class="card-subtitle">Detailed breakdown across sanitation, water supply, road repairs, and civil infrastructure.</p>
+            </div>
+          </div>
+
+          <app-table-search [state]="pagers" key="t7"></app-table-search>
+<div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Grievance Category</th>
+                  <th>Total Filed</th>
+                  <th>Resolved</th>
+                  <th>Overdue</th>
+                  <th>SLA Compliance</th>
+                  <th>Avg Resolution Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of (g.categoryBreakdown | rowSearch:pagers.search('t7')) | slice:pagers.start('t7', (g.categoryBreakdown | rowSearch:pagers.search('t7')).length):pagers.end('t7', (g.categoryBreakdown | rowSearch:pagers.search('t7')).length); track c.category) {
+                  <tr>
+                    <td><strong>{{ show(c.category) }}</strong></td>
+                    <td class="font-mono">{{ formatNumber(c.total) }}</td>
+                    <td class="font-mono text-success">{{ formatNumber(c.resolved) }}</td>
+                    <td class="font-mono text-danger">{{ formatNumber(c.overdue) }}</td>
+                    <td>
+                      <div class="inline-progress">
+                        <span>{{ formatPct(c.slaPct) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="c.slaPct"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{{ show(c.avgDays) }} Days</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t7" [total]="(g.categoryBreakdown | rowSearch:pagers.search('t7')).length"></app-table-pager>
+        </div>
+
+        <!-- D. Priority Breakdown & Department Matrix -->
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Priority Tier Resolution Performance</h3>
+              <p class="card-subtitle">Resolution rate according to citizen grievance emergency severity classifications.</p>
+            </div>
+          </div>
+
+          <app-table-search [state]="pagers" key="t8"></app-table-search>
+<div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Priority Level</th>
+                  <th>Total Tickets</th>
+                  <th>SLA Standard</th>
+                  <th>Resolution Rate (%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of (g.priorityBreakdown | rowSearch:pagers.search('t8')) | slice:pagers.start('t8', (g.priorityBreakdown | rowSearch:pagers.search('t8')).length):pagers.end('t8', (g.priorityBreakdown | rowSearch:pagers.search('t8')).length); track p.priority) {
+                  <tr>
+                    <td><strong>{{ show(p.priority) }}</strong></td>
+                    <td class="font-mono">{{ formatNumber(p.count) }}</td>
+                    <td><span class="badge badge-outline">{{ show(p.slaHours) }}</span></td>
+                    <td>
+                      <div class="inline-progress">
+                        <span>{{ formatPct(p.resolvedPct) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="p.resolvedPct"></div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t8" [total]="(g.priorityBreakdown | rowSearch:pagers.search('t8')).length"></app-table-pager>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- TAB 5: CITIZEN ADOPTION                                                   -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'adoption') {
+    <section class="tab-content" aria-label="Citizen Adoption Tab">
+      <!-- A. Filter Controls Card -->
+      <div class="filter-card">
+        <div class="filter-card-header">
+          <div class="filter-title">
+            <app-icon name="ri-user-star-line"></app-icon>
+            <span>Citizen Digital Penetration Filters</span>
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn btn-sm btn-outline" (click)="resetFilters()">
+              <app-icon name="ri-restart-line"></app-icon>
+              <span>Reset</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" (click)="applyFilters()">
+              <app-icon name="ri-check-line"></app-icon>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-grid">
+          <div class="form-group">
+            <label class="form-label">State Tenant</label>
+            <select class="form-select" [(ngModel)]="citizenFilters().stateTenant">
+              <option value="">All State Tenants</option>
+              @for (st of filterOptions().states; track st.code) {
+                <option [value]="st.code">{{ show(st.name) }} ({{ show(st.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">ULB / City</label>
+            <select class="form-select" [(ngModel)]="citizenFilters().ulbTenant">
+              <option value="">All Municipalities</option>
+              @for (u of filterOptions().ulbs; track u.code) {
+                <option [value]="u.code">{{ show(u.name) }} ({{ show(u.code) }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Digital Service</label>
+            <select class="form-select" [(ngModel)]="citizenFilters().digitalService">
+              <option value="">All Digital Services</option>
+              @for (srv of filterOptions().digitalServices; track srv) {
+                <option [value]="srv">{{ show(srv) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Registration Channel</label>
+            <select class="form-select" [(ngModel)]="citizenFilters().registrationChannel">
+              <option value="">All Channels</option>
+              @for (ch of filterOptions().registrationChannels; track ch) {
+                <option [value]="ch">{{ show(ch) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Citizen Type</label>
+            <select class="form-select" [(ngModel)]="citizenFilters().citizenType">
+              <option value="All Citizens">All Citizens</option>
+              <option value="Property Owners">Property Owners</option>
+              <option value="Business Owners">Business Owners</option>
+              <option value="Tenants">Tenants</option>
+              <option value="Senior Citizens">Senior Citizens</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Reporting Period</label>
+            <select class="form-select" [(ngModel)]="citizenFilters().reportingPeriod">
+              <option value="this_month">This Month</option>
+              <option value="this_quarter">This Quarter</option>
+              <option value="fy_2026_27">FY 2026-27</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- B. System-Generated Citizen Adoption Metrics -->
+      @if (citizenData(); as c) {
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-citizens">
+              <app-icon name="ri-user-follow-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Registered Citizens</span>
+              <strong class="kpi-value">{{ formatNumber(c.registeredCitizens) }}</strong>
+              <span class="kpi-subtext">30-Day Active: {{ formatNumber(c.activeDigitalUsers) }}</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-parcels">
+              <app-icon name="ri-smartphone-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Mobile App Installs</span>
+              <strong class="kpi-value text-success">{{ formatNumber(c.mobileAppAdoption) }}</strong>
+              <span class="kpi-subtext">Android & iOS Store</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-revenue">
+              <app-icon name="ri-secure-payment-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Online Payments</span>
+              <strong class="kpi-value">{{ formatNumber(c.onlinePayments) }}</strong>
+              <span class="kpi-subtext">Applications: {{ formatNumber(c.onlineApplications) }}</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-icon-badge icon-sla">
+              <app-icon name="ri-flashlight-line"></app-icon>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Digital Transaction Rate</span>
+              <strong class="kpi-value text-success">{{ formatPct(c.digitalTransactionPercentage) }}</strong>
+              <span class="kpi-subtext">Cashless Municipal Realization</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- C. Channel Breakdown Table -->
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Access Channel Volume & Digital Share</h3>
+              <p class="card-subtitle">Channel utilization breakdown across Citizen Portal, Mobile App, WhatsApp Bot, and Service Centers.</p>
+            </div>
+          </div>
+
+          <app-table-search [state]="pagers" key="t9"></app-table-search>
+<div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Access Channel</th>
+                  <th>Active Users</th>
+                  <th>Transaction Volume</th>
+                  <th>Share (%)</th>
+                  <th>Channel Feedback / SLA</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (ch of (c.channelBreakdown | rowSearch:pagers.search('t9')) | slice:pagers.start('t9', (c.channelBreakdown | rowSearch:pagers.search('t9')).length):pagers.end('t9', (c.channelBreakdown | rowSearch:pagers.search('t9')).length); track ch.channel) {
+                  <tr>
+                    <td><strong>{{ show(ch.channel) }}</strong></td>
+                    <td class="font-mono">{{ formatNumber(ch.users) }}</td>
+                    <td class="font-mono font-bold text-success">{{ formatNumber(ch.txVolume) }}</td>
+                    <td>
+                      <div class="inline-progress">
+                        <span>{{ formatPct(ch.sharePct) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="ch.sharePct"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="badge badge-outline">{{ show(ch.rating) }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t9" [total]="(c.channelBreakdown | rowSearch:pagers.search('t9')).length"></app-table-pager>
+        </div>
+
+        <!-- D. Digital Service Adoption Table -->
+        <div class="analytics-card mt-4">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Service-Wise Digital Migration & Year-on-Year Growth</h3>
+              <p class="card-subtitle">Digital penetration across core municipal services (Tax, Water, Trade, Grievance, Certificates).</p>
+            </div>
+          </div>
+
+          <app-table-search [state]="pagers" key="t10"></app-table-search>
+<div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Municipal Service</th>
+                  <th>Online Volume</th>
+                  <th>Digital Share (%)</th>
+                  <th>YoY Growth</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (srv of (c.serviceAdoption | rowSearch:pagers.search('t10')) | slice:pagers.start('t10', (c.serviceAdoption | rowSearch:pagers.search('t10')).length):pagers.end('t10', (c.serviceAdoption | rowSearch:pagers.search('t10')).length); track srv.service) {
+                  <tr>
+                    <td><strong>{{ show(srv.service) }}</strong></td>
+                    <td class="font-mono">{{ formatNumber(srv.onlineTransactions) }}</td>
+                    <td>
+                      <div class="inline-progress">
+                        <span>{{ formatPct(srv.digitalPct) }}</span>
+                        <div class="progress-bar-bg">
+                          <div class="progress-bar-fill" [style.width.%]="srv.digitalPct"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="trend-badge positive">
+                        <app-icon name="ri-arrow-up-line"></app-icon> {{ show(srv.growthYoY) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+<app-table-pager [state]="pagers" key="t10" [total]="(c.serviceAdoption | rowSearch:pagers.search('t10')).length"></app-table-pager>
+        </div>
+      }
+    </section>
+  }
+</div>
+

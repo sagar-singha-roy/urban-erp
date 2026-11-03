@@ -41,7 +41,7 @@
             <label class="form-label required">Export Format</label>
             <select class="form-select" [(ngModel)]="exportFormat" name="exportFormat">
               <option value="CSV">CSV (Tabular Forensic Audit)</option>
-              <option value="JSON">JSON (Machine-Readable WORM Tree)</option>
+              <option value="JSON">JSON (Machine-Readable Tree)</option>
               <option value="PDF">PDF (Formatted Governance Report)</option>
             </select>
           </div>
@@ -121,7 +121,7 @@
           <label class="toggle-card">
             <div class="toggle-text">
               <span class="title">Include Cryptographic Hash Information</span>
-              <span class="desc">Exports previous hash, event hash, and WORM digital signatures.</span>
+              <span class="desc">Exports previous hash, event hash, and digital signatures.</span>
             </div>
             <input type="checkbox" [(ngModel)]="includeHashInfo" name="includeHashInfo" class="sr-only" />
             <div class="toggle-switch" [class.active]="includeHashInfo"></div>

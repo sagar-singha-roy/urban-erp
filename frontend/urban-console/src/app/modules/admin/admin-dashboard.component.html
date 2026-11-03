@@ -1,4 +1,29 @@
 <div class="admin-dashboard-wrapper">
+  <!-- SECTION 0: EXECUTIVE INTELLIGENCE (ADM-A01, ADM-A02) -->
+  @if (activeSection() === 'executive') {
+    <div class="section-content">
+      <!-- Submenu 1: Global Command Dashboard (EXEC-01) -->
+      @if (activeItemId() === 'EXEC-01') {
+        <app-global-command-dashboard></app-global-command-dashboard>
+      }
+
+      <!-- Submenu 2: State & City Benchmarking Matrix (EXEC-02) -->
+      @if (activeItemId() === 'EXEC-02') {
+        <app-benchmarking-matrix></app-benchmarking-matrix>
+      }
+
+      <!-- Submenu 3: Consolidated Financial Ledger (EXEC-03) -->
+      @if (activeItemId() === 'EXEC-03') {
+        <app-financial-ledger></app-financial-ledger>
+      }
+
+      <!-- Submenu 4: Spatial GIS Multi-City Viewer (EXEC-04) -->
+      @if (activeItemId() === 'EXEC-04') {
+        <app-gis-viewer></app-gis-viewer>
+      }
+    </div>
+  }
+
   <!-- SECTION 1: TENANCY & HIERARCHY -->
   @if (activeSection() === 'tenancy') {
     <div class="section-content">
@@ -15,6 +40,11 @@
       <!-- Submenu 3: Tenant Lifecycle Management (ADM-T03) -->
       @if (activeItemId() === 'TH-03') {
         <app-tenant-lifecycle></app-tenant-lifecycle>
+      }
+
+      <!-- Submenu 4: White-Labelling & Domain Management (ADM-T04) -->
+      @if (activeItemId() === 'TH-04') {
+        <app-white-label></app-white-label>
       }
     </div>
   }
@@ -50,6 +80,11 @@
       @if (activeItemId() === 'MS-05') {
         <app-cascade-delegation></app-cascade-delegation>
       }
+
+      <!-- Submenu 6: Quota & Usage Management (ADM-S04) -->
+      @if (activeItemId() === 'MS-06') {
+        <app-quota-usage></app-quota-usage>
+      }
     </div>
   }
 
@@ -83,7 +118,17 @@
   }
 
   <!-- SECTION 5: GLOBAL USER MANAGEMENT & INVITATIONS (ADM-R01) -->
-  @if (activeSection() === 'iam-users' || (activeSection() === 'iam' && (activeItemId() === 'IAM-07' || activeItemId() === 'IAM-08' || activeItemId() === 'IAM-09'))) {
+  @if (activeItemId() === 'IAM-10') {
+    <!-- ADM-R02: Cross-Tenant Access Management -->
+    <div class="section-content">
+      <app-cross-tenant-access></app-cross-tenant-access>
+    </div>
+  } @else if (activeItemId() === 'IAM-11') {
+    <!-- ADM-R04: Support Impersonation Hub -->
+    <div class="section-content">
+      <app-support-impersonation></app-support-impersonation>
+    </div>
+  } @else if (activeSection() === 'iam-users' || (activeSection() === 'iam' && (activeItemId() === 'IAM-07' || activeItemId() === 'IAM-08' || activeItemId() === 'IAM-09'))) {
     <div class="section-content">
       <app-user-management
         [defaultTab]="activeItemId() === 'IAM-08' ? 'invitations' : (activeItemId() === 'IAM-09' ? 'scopes' : 'directory')"

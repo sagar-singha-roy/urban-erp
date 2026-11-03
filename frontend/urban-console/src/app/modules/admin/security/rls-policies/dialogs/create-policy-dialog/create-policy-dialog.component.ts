@@ -32,7 +32,7 @@ export class CreatePolicyDialogComponent {
   availableServices = [
     'PostgreSQL 16 (Core Service)',
     'PostgreSQL TimescaleDB (IoT/Telemetry)',
-    'Redis Scoped Cache Engine'
+    'Valkey Scoped Cache Engine'
   ];
 
   availableTables = [

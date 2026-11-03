@@ -1,0 +1,44 @@
+<div class="dialog-overlay" (click)="closed.emit()">
+  <div class="dialog-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="xt-rule-title">
+    <div class="dialog-header">
+      <div><h3 id="xt-rule-title">{{ record ? 'Edit' : 'New' }} Permission Rule</h3><p>A rule applies once another super admin approves it. Deny always wins; Allow cannot go beyond the user's role.</p></div>
+      <button type="button" class="close-btn" (click)="closed.emit()" title="Close dialog" aria-label="Close dialog"><app-icon name="ri-close-line" [size]="18"></app-icon></button>
+    </div>
+    <form class="dialog-form" (ngSubmit)="submit()">
+      <div class="dialog-body">
+        @if (record) {
+          <div class="field wide"><label for="ruleRecord">User</label><input id="ruleRecord" type="text" readonly [value]="record.recordNumber + ': ' + record.userEmail" /></div>
+        } @else {
+          <app-xt-grant-picker [describe]="describeGrant" (selected)="onGrant($event)"></app-xt-grant-picker>
+        }
+        <div class="field"><label for="targetTenantId">Tenant <span class="required">*</span></label><select id="targetTenantId" name="targetTenantId" [(ngModel)]="form.targetTenantId" [disabled]="!grant()"><option value="">Select</option>
+          @for (t of tenantChoices; track t.tenantId) { <option [value]="t.tenantId">{{ t.name }} ({{ t.tenantLevel }})</option> }
+        </select></div>
+        <div class="field"><label for="dataAccessScope">Data Access Scope <span class="required">*</span></label><select id="dataAccessScope" name="dataAccessScope" [(ngModel)]="form.dataAccessScope"><option value="">Select</option>
+          @for (o of options.dataScopes; track o) { <option [value]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field wide"><label>Module <span class="required">*</span></label>
+          <app-check-list [options]="moduleChoices" [value]="form.moduleCodes" (valueChange)="onModules($event)"></app-check-list></div>
+        <div class="field wide"><label>Component</label>
+          <app-check-list [options]="componentChoices" [value]="form.componentCodes" (valueChange)="form.componentCodes = $event"></app-check-list>
+          <span class="hint">Leave empty to cover every component in the selected modules.</span></div>
+        <div class="field wide"><label>Action Permissions <span class="required">*</span></label>
+          <app-check-list [options]="asOptions(options.actions)" [value]="form.actionPermissions" (valueChange)="form.actionPermissions = $event"></app-check-list></div>
+        <div class="field"><label for="accessDecision">Access Decision <span class="required">*</span></label><select id="accessDecision" name="accessDecision" [(ngModel)]="form.accessDecision">
+          @for (o of options.accessDecisions; track o) { <option [value]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="reviewStatus">Review Status</label><input id="reviewStatus" type="text" readonly [value]="record ? record.reviewStatus + (record.reviewStatus !== 'Pending' ? ' (resets on save)' : '') : 'Pending (set on save)'" /></div>
+        <div class="field wide"><label for="restrictionReason">Restriction Reason @if (form.accessDecision === 'Deny') { <span class="required">*</span> }</label>
+          <textarea id="restrictionReason" name="restrictionReason" maxlength="2000" [(ngModel)]="form.restrictionReason"></textarea></div>
+        @if (record?.reviewedBy) {
+          <div class="field"><label for="reviewedBy">Reviewed By</label><input id="reviewedBy" type="text" readonly [value]="record?.reviewedBy" /></div>
+          <div class="field"><label for="reviewedAt">Review Date</label><input id="reviewedAt" type="text" readonly [value]="asUtc(record?.reviewedAt) | date: 'medium'" /></div>
+        }
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="closed.emit()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()"><app-icon name="ri-check-line" [size]="16"></app-icon><span>Save Rule</span></button>
+      </div>
+    </form>
+  </div>
+</div>

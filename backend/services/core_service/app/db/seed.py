@@ -1,19 +1,54 @@
 import logging
+import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.models import (
     Tenant, Zone, Ward, Locality, PropertyParcel, Building, PropertyUnit, Owner, User,
     StateTenant, TenantAuditLog, State, District, City, ModuleModel, ComponentModel
 )
+from app.core.config import settings
 from app.core.security import hash_password
 from app.db.session import engine, Base
 
 logger = logging.getLogger(__name__)
 
+async def _bootstrap_first_admin(db: AsyncSession):
+    """Creates the first platform admin from environment settings. Does nothing once one exists."""
+    email = os.getenv("BOOTSTRAP_ADMIN_EMAIL", "").strip().lower()
+    password = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "")
+    if not email or not password:
+        return
+    if await db.scalar(select(User.id).where(User.role == "super_admin").limit(1)):
+        return
+    if len(password) < 12:
+        raise ValueError("BOOTSTRAP_ADMIN_PASSWORD must have at least 12 characters.")
+    tenant_id = "PLATFORM"
+    if not await db.scalar(select(Tenant.tenant_id).where(Tenant.tenant_id == tenant_id)):
+        db.add(Tenant(tenant_id=tenant_id, name="Platform Administration", state_code="ALL", district="", ulb_type="Platform"))
+        await db.flush()
+    db.add(
+        User(
+            tenant_id=tenant_id,
+            username=email,
+            email=email,
+            password_hash=hash_password(password),
+            full_name="Platform Administrator",
+            role="super_admin",
+            assigned_modules=",".join(sorted(await _module_codes(db))),
+        )
+    )
+    await db.commit()
+    logger.info("First platform administrator created.")
+
+
+async def _module_codes(db: AsyncSession):
+    return (await db.scalars(select(ModuleModel.code))).all()
+
+
 async def seed_initial_data(db: AsyncSession):
     # Check and seed GWMC tenant
     existing_gwmc = await db.scalar(select(Tenant).where(Tenant.tenant_id == "GWMC"))
-    if not existing_gwmc:
+    if settings.is_development and not existing_gwmc:
         logger.info("Seeding initial GWMC municipal data...")
 
         # Tenant
@@ -273,14 +308,15 @@ async def seed_initial_data(db: AsyncSession):
                 assigned_ward="Ward-14"
             )
         ]
-        db.add_all(demo_users)
+        if settings.is_development:
+            db.add_all(demo_users)
 
         await db.commit()
         logger.info("GWMC initial data & SSO users seeded successfully!")
 
     # Check and seed second SaaS Tenant: GHMC (Greater Hyderabad Municipal Corporation)
     existing_ghmc = await db.scalar(select(Tenant).where(Tenant.tenant_id == "GHMC"))
-    if not existing_ghmc:
+    if settings.is_development and not existing_ghmc:
         logger.info("Seeding initial GHMC SaaS tenant data...")
         ghmc_tenant = Tenant(
             tenant_id="GHMC",
@@ -416,13 +452,14 @@ async def seed_initial_data(db: AsyncSession):
             assigned_zone="Khairatabad Zone",
             assigned_ward="Ward-89"
         )
-        db.add(ghmc_officer)
+        if settings.is_development:
+            db.add(ghmc_officer)
         await db.commit()
         logger.info("GHMC SaaS tenant & demo data seeded successfully!")
 
     # Check and seed Level 1 State Tenants (unconditionally checked)
     existing_st = await db.scalar(select(StateTenant).limit(1))
-    if not existing_st:
+    if settings.is_development and not existing_st:
         logger.info("Seeding Level 1 State Tenants (ADM-T01)...")
         st_tg = StateTenant(
             tenant_id="d47a8b30-1c39-4b62-9e12-4f81014a9001",
@@ -530,6 +567,24 @@ async def seed_initial_data(db: AsyncSession):
         db.add_all([audit1, audit2, audit3, audit4])
         await db.commit()
         logger.info("Level 1 State Tenants and audit trails seeded successfully!")
+
+    if settings.is_development:
+        director_email = "suresh.director@telangana.gov.in"
+        if not await db.scalar(select(User).where(User.email == director_email)):
+            db.add(
+                User(
+                    tenant_id="GWMC",
+                    username=director_email,
+                    email=director_email,
+                    password_hash=hash_password("Director@123"),
+                    full_name="Suresh Kumar (State Director)",
+                    role="state_director",
+                    assigned_modules="PTX,WTR,GRV,FIN,DMS",
+                )
+            )
+            await db.commit()
+
+    await _bootstrap_first_admin(db)
 
     # Check and seed master States, Districts, Cities tables
     existing_state = await db.scalar(select(State).limit(1))

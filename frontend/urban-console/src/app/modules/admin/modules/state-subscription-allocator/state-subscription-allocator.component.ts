@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { SubscriptionService } from '../../../../core/services/subscription.service';
 import { TenantManagementService } from '../../../../core/services/tenant-management.service';
 import { DialogService } from '../../../../core/services/dialog.service';
@@ -22,7 +23,7 @@ import { RevokeSubscriptionDialogComponent } from './dialogs/revoke-subscription
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     AssignModulesDialogComponent,
     RenewalExpiryDialogComponent,
     RevokeSubscriptionDialogComponent

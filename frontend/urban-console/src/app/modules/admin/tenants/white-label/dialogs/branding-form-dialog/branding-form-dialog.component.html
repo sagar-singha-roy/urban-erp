@@ -1,0 +1,133 @@
+<div class="dialog-overlay" (click)="closed.emit()">
+  <div class="dialog-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="dialog-header">
+      <div>
+        <h3>{{ profile ? 'Edit' : 'New' }} Branding Profile</h3>
+        <p>Activating this profile replaces the tenant's current active profile.</p>
+      </div>
+      <button type="button" class="close-btn" (click)="closed.emit()" title="Close dialog" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+    <form class="dialog-form" (ngSubmit)="submit()">
+      <div class="dialog-body">
+        <div class="field">
+          <label for="tenantLevel">Tenant Level <span class="required">*</span></label>
+          <select id="tenantLevel" name="tenantLevel" [(ngModel)]="form.tenantLevel">
+            @for (o of options.tenantLevels; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="stateTenantId">State Tenant <span class="required">*</span></label>
+          <input id="stateTenantId" type="text" list="stateTenantIdList" name="stateTenantId" [(ngModel)]="form.stateTenantId" placeholder="Type to search" />
+          <datalist id="stateTenantIdList">
+            @for (t of states; track t.tenantId) {
+              <option [value]="t.tenantId">{{ t.name }}</option>
+            }
+          </datalist>
+        </div>
+        @if (form.tenantLevel === 'ULB') {
+        <div class="field">
+          <label for="ulbTenantId">ULB / City <span class="required">*</span></label>
+          <input id="ulbTenantId" type="text" list="ulbTenantIdList" name="ulbTenantId" [(ngModel)]="form.ulbTenantId" placeholder="Type to search" />
+          <datalist id="ulbTenantIdList">
+            @for (t of ulbs; track t.tenantId) {
+              <option [value]="t.tenantId">{{ t.name }}</option>
+            }
+          </datalist>
+        </div>
+        }
+        <div class="field">
+          <label for="profileName">Branding Profile Name <span class="required">*</span></label>
+          <input id="profileName" type="text" name="profileName" [(ngModel)]="form.profileName" />
+        </div>
+        <div class="field">
+          <label for="displayName">Application Display Name <span class="required">*</span></label>
+          <input id="displayName" type="text" name="displayName" [(ngModel)]="form.displayName" />
+        </div>
+        <div class="field wide">
+          <label for="tagline">Application Tagline</label>
+          <input id="tagline" type="text" name="tagline" [(ngModel)]="form.tagline" />
+        </div>
+        <div class="field">
+          <label for="primaryColour">Primary Colour <span class="required">*</span></label>
+          <div class="colour-input">
+            <input type="color" name="primaryColourPicker" [ngModel]="form.primaryColour || '#000000'" (ngModelChange)="form.primaryColour = $event" [attr.aria-label]="'Primary Colour'" />
+            <input id="primaryColour" type="text" name="primaryColour" [(ngModel)]="form.primaryColour" placeholder="#000000" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="secondaryColour">Secondary Colour <span class="required">*</span></label>
+          <div class="colour-input">
+            <input type="color" name="secondaryColourPicker" [ngModel]="form.secondaryColour || '#000000'" (ngModelChange)="form.secondaryColour = $event" [attr.aria-label]="'Secondary Colour'" />
+            <input id="secondaryColour" type="text" name="secondaryColour" [(ngModel)]="form.secondaryColour" placeholder="#000000" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="accentColour">Accent Colour</label>
+          <div class="colour-input">
+            <input type="color" name="accentColourPicker" [ngModel]="form.accentColour || '#000000'" (ngModelChange)="form.accentColour = $event" [attr.aria-label]="'Accent Colour'" />
+            <input id="accentColour" type="text" name="accentColour" [(ngModel)]="form.accentColour" placeholder="#000000" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="headerBackgroundColour">Header Background Colour</label>
+          <div class="colour-input">
+            <input type="color" name="headerBackgroundColourPicker" [ngModel]="form.headerBackgroundColour || '#000000'" (ngModelChange)="form.headerBackgroundColour = $event" [attr.aria-label]="'Header Background Colour'" />
+            <input id="headerBackgroundColour" type="text" name="headerBackgroundColour" [(ngModel)]="form.headerBackgroundColour" placeholder="#000000" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="sidebarBackgroundColour">Sidebar Background Colour</label>
+          <div class="colour-input">
+            <input type="color" name="sidebarBackgroundColourPicker" [ngModel]="form.sidebarBackgroundColour || '#000000'" (ngModelChange)="form.sidebarBackgroundColour = $event" [attr.aria-label]="'Sidebar Background Colour'" />
+            <input id="sidebarBackgroundColour" type="text" name="sidebarBackgroundColour" [(ngModel)]="form.sidebarBackgroundColour" placeholder="#000000" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="fontFamily">Font Family</label>
+          <select id="fontFamily" name="fontFamily" [(ngModel)]="form.fontFamily">
+            <option [ngValue]="null">Select</option>
+            @for (o of options.fontFamilies; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+        <div class="field wide">
+          <label for="loginPageTitle">Login Page Title</label>
+          <input id="loginPageTitle" type="text" name="loginPageTitle" [(ngModel)]="form.loginPageTitle" />
+        </div>
+        <div class="field wide">
+          <label for="loginPageMessage">Login Page Message</label>
+          <textarea id="loginPageMessage" name="loginPageMessage" [(ngModel)]="form.loginPageMessage"></textarea>
+        </div>
+        <div class="field wide">
+          <label for="footerText">Footer Text</label>
+          <textarea id="footerText" name="footerText" [(ngModel)]="form.footerText"></textarea>
+        </div>
+        <div class="field wide">
+          <label for="customCss">Custom CSS</label>
+          <textarea id="customCss" class="code" name="customCss" [(ngModel)]="form.customCss" spellcheck="false"></textarea>
+          <span class="hint">Only plain rules and &#64;media. url(), &#64;import, escapes and HTML are refused.</span>
+        </div>
+        <div class="field">
+          <label for="brandingStatus">Branding Status <span class="required">*</span></label>
+          <select id="brandingStatus" name="brandingStatus" [(ngModel)]="form.brandingStatus">
+            @for (o of options.recordStatuses; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="closed.emit()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          <app-icon name="ri-check-line" [size]="16"></app-icon>
+          <span>Save Profile</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

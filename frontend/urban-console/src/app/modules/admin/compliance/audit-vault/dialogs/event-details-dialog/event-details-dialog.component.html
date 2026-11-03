@@ -20,10 +20,10 @@
       <div class="integrity-banner">
         <div class="banner-badge">
           <app-icon name="ri-checkbox-circle-fill" [size]="18"></app-icon>
-          <span>WORM Verified</span>
+          <span>Hash-Chained</span>
         </div>
         <div class="banner-text">
-          <span>Signature: <code>{{ event.signature || 'WORM-SIG:VALID' }}</code></span>
+          <span>Signature: <code>{{ event.signature || 'Unsigned' }}</code></span>
           <span class="chain-badge">Chained to Sequence #{{ event.sequenceNumber - 1 }}</span>
         </div>
       </div>
@@ -115,7 +115,7 @@
           </div>
           <div class="chain-connector">
             <app-icon name="ri-arrow-down-line" [size]="16"></app-icon>
-            <span>SHA-256 HMAC & WORM Binding</span>
+            <span>SHA-256 Hash & HMAC Signature</span>
           </div>
           <div class="hash-row">
             <span class="hash-tag">Current Event Hash (H_{{ event.sequenceNumber }}):</span>

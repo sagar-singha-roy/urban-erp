@@ -1,0 +1,8 @@
+<input
+  class="table-search"
+  type="search"
+  placeholder="Search this table"
+  aria-label="Search this table"
+  [value]="state().search(key())"
+  (input)="state().setSearch(key(), $any($event.target).value)"
+/>

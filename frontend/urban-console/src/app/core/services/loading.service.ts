@@ -5,6 +5,8 @@ import { Injectable, signal, computed } from '@angular/core';
 })
 export class LoadingService {
   private activeRequests = signal<number>(0);
+  /** Total failed HTTP requests, so a refresh can tell whether any of its calls failed */
+  readonly failedRequests = signal<number>(0);
   private explicitLoading = signal<boolean>(false);
   private loadingMessage = signal<string>('Loading municipal data...');
 

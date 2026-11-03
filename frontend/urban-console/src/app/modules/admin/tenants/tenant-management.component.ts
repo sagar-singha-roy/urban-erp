@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../shared/components/refresh-button/refresh-button.component';
 import { StateTenantFormDialogComponent } from './dialogs/state-tenant-form-dialog/state-tenant-form-dialog.component';
 import { DialogService } from '../../../core/services/dialog.service';
 import { KeycloakAuthService } from '../../../core/services/keycloak.service';
@@ -19,7 +20,7 @@ export type TenantTab = 'directory' | 'create' | 'audit';
 @Component({
   selector: 'app-tenant-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, StateTenantFormDialogComponent],
+  imports: [CommonModule, FormsModule, IconComponent, RefreshButtonComponent, StateTenantFormDialogComponent],
   templateUrl: './tenant-management.component.html',
   styleUrl: './tenant-management.component.scss',
 })
@@ -157,11 +158,6 @@ export class TenantManagementComponent implements OnInit {
       });
   }
 
-  onRefreshClick(): void {
-    this.loadingService.setMessage('Refreshing tenants list...');
-    this.loadTenants(true);
-  }
-
   clearAllFilters(): void {
     this.searchQuery.set('');
     this.selectedStateFilter.set('ALL');
@@ -173,7 +169,7 @@ export class TenantManagementComponent implements OnInit {
   loadAuditLogs(): void {
     this.tenantService.getAuditLogs().subscribe({
       next: (logs) => this.auditLogs.set(logs),
-      error: () => {},
+      error: () => this.dialogs.showToast('Could not load tenant audit logs.', 'error', 3000),
     });
   }
 

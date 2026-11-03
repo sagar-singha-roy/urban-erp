@@ -1,0 +1,41 @@
+// High-contrast and always on top, so it cannot be missed on any page.
+.support-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 1rem;
+  background: #991b1b;
+  color: #ffffff;
+  font-size: 0.85rem;
+  min-width: 0;
+
+  .label {
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid #fecaca;
+    border-radius: 0.25rem;
+  }
+
+  .who { flex: 1 1 16rem; min-width: 0; overflow-wrap: anywhere; }
+  .mode, .clock { font-weight: 700; white-space: nowrap; }
+  .clock { font-variant-numeric: tabular-nums; }
+
+  button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: #ffffff;
+    color: #991b1b;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+  }
+}

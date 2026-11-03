@@ -12,7 +12,7 @@ from app.db.models import (
     StateModuleSubscription,
     StateSubscriptionHistory
 )
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, require_roles, require_state_scope_for_reads
 from app.schemas.tenant import ApiResponse
 from app.schemas.subscription import (
     StateSubscriptionResponse,
@@ -23,7 +23,7 @@ from app.schemas.subscription import (
     SubscribedModuleItem
 )
 
-router = APIRouter(prefix="/modules/subscriptions", tags=["ADM-M04 State Module Subscription Allocator"])
+router = APIRouter(prefix="/modules/subscriptions", tags=["ADM-M04 State Module Subscription Allocator"], dependencies=[Depends(require_state_scope_for_reads())])
 
 
 def _to_naive_utc(dt: Optional[datetime.datetime]) -> Optional[datetime.datetime]:
@@ -191,7 +191,7 @@ async def get_subscription_stats(
     )
 
 
-@router.post("", response_model=ApiResponse[StateSubscriptionResponse])
+@router.post("", response_model=ApiResponse[StateSubscriptionResponse], dependencies=[Depends(require_roles(["super_admin"]))])
 async def create_subscription(
     payload: StateSubscriptionCreatePayload,
     db: AsyncSession = Depends(get_write_db),
@@ -336,7 +336,7 @@ async def create_subscription(
     )
 
 
-@router.post("/{subscription_id}/renew", response_model=ApiResponse[StateSubscriptionResponse])
+@router.post("/{subscription_id}/renew", response_model=ApiResponse[StateSubscriptionResponse], dependencies=[Depends(require_roles(["super_admin"]))])
 async def renew_subscription(
     subscription_id: str,
     payload: StateSubscriptionRenewPayload,
@@ -435,7 +435,7 @@ async def renew_subscription(
     )
 
 
-@router.post("/{subscription_id}/revoke", response_model=ApiResponse[StateSubscriptionResponse])
+@router.post("/{subscription_id}/revoke", response_model=ApiResponse[StateSubscriptionResponse], dependencies=[Depends(require_roles(["super_admin"]))])
 async def revoke_subscription(
     subscription_id: str,
     reason: str = Query(..., min_length=5),

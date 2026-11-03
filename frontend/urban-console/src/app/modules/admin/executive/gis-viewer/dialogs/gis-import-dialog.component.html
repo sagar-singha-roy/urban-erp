@@ -1,0 +1,33 @@
+<div class="gis-backdrop">
+  <form class="gis-dialog" role="dialog" aria-modal="true" aria-label="Import GeoJSON" (ngSubmit)="submit()">
+    <header>
+      <h3>Import GeoJSON: {{ layer().layerName }}</h3>
+      <button type="button" class="close" aria-label="Close" (click)="closed.emit()">✕</button>
+    </header>
+    <div class="gis-dialog-body">
+      <p class="help">This replaces the layer's stored features. The file must be in the layer's CRS. Geometry is converted to EPSG:4326 for storage, and if nothing in the file is usable the layer is left unchanged.</p>
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+      <div class="form-grid">
+        <label>Source Coordinate Reference System *
+          <select name="crs" [(ngModel)]="sourceCrs" disabled title="Set by the layer. Edit the layer to change it.">
+            @for (o of options().crsOptions; track o.code) { <option [value]="o.code">{{ o.code }} — {{ o.name }}</option> }
+          </select>
+        </label>
+        <label>GeoJSON File
+          <input type="file" accept=".json,.geojson,application/geo+json" (change)="readFile($event)" />
+        </label>
+      </div>
+      <label style="margin-top: 0.85rem">FeatureCollection
+        <textarea name="geojson" [(ngModel)]="geojson" required></textarea>
+      </label>
+    </div>
+    <footer>
+      <button type="button" (click)="closed.emit()">Cancel</button>
+      <button type="submit" class="btn-primary" [disabled]="!geojson.trim() || isSaving()">
+        {{ isSaving() ? 'Importing…' : 'Import Features' }}
+      </button>
+    </footer>
+  </form>
+</div>

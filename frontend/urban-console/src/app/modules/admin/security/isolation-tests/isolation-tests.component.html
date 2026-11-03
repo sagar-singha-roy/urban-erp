@@ -24,10 +24,7 @@
 
     <!-- Header Actions Strictly Single Row -->
     <div class="header-actions">
-      <button class="btn btn-refresh" (click)="loadTestRuns()" [disabled]="isLoading()" title="Reload tests">
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="isolation tests" (refresh)="loadTestRuns()"></app-refresh-button>
 
       <button
         class="btn btn-secondary-action"

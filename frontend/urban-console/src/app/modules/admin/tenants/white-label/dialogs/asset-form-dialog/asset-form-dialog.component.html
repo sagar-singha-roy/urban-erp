@@ -1,0 +1,89 @@
+<div class="dialog-overlay" (click)="closed.emit()">
+  <div class="dialog-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="dialog-header">
+      <div>
+        <h3>{{ assets ? 'Edit' : 'Upload' }} Logo &amp; Emblem</h3>
+        <p>PNG, JPEG, WebP or ICO, up to 2 MB each. SVG is not accepted.</p>
+      </div>
+      <button type="button" class="close-btn" (click)="closed.emit()" title="Close dialog" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+    <form class="dialog-form" (ngSubmit)="submit()">
+      <div class="dialog-body">
+        @if (!assets) {
+        <div class="field">
+          <label for="tenantId">Tenant <span class="required">*</span></label>
+          <input id="tenantId" type="text" list="tenantIdList" name="tenantId" [(ngModel)]="form.tenantId" placeholder="Type to search" />
+          <datalist id="tenantIdList">
+            @for (t of tenants; track t.tenantId) {
+              <option [value]="t.tenantId">{{ t.name }}</option>
+            }
+          </datalist>
+        </div>
+        <div class="field">
+          <label for="logoType">Logo Type <span class="required">*</span></label>
+          <select id="logoType" name="logoType" [(ngModel)]="form.logoType">
+            @for (o of options.logoTypes; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="logo">Logo File <span class="required">*</span></label>
+          <input id="logo" type="file" accept="image/png,image/jpeg,image/webp,image/x-icon" (change)="onFile('logo', $event)" />
+        </div>
+          @if (form.logoType === 'Official Emblem') {
+        <div class="field">
+          <label for="emblem">Emblem File <span class="required">*</span></label>
+          <input id="emblem" type="file" accept="image/png,image/jpeg,image/webp,image/x-icon" (change)="onFile('emblem', $event)" />
+        </div>
+          }
+        <div class="field">
+          <label for="favicon">Favicon</label>
+          <input id="favicon" type="file" accept="image/png,image/jpeg,image/webp,image/x-icon" (change)="onFile('favicon', $event)" />
+        </div>
+        <div class="field">
+          <label for="loginBanner">Login Page Banner</label>
+          <input id="loginBanner" type="file" accept="image/png,image/jpeg,image/webp,image/x-icon" (change)="onFile('loginBanner', $event)" />
+        </div>
+        <div class="field">
+          <label for="headerLogo">Header Logo</label>
+          <input id="headerLogo" type="file" accept="image/png,image/jpeg,image/webp,image/x-icon" (change)="onFile('headerLogo', $event)" />
+        </div>
+        <div class="field">
+          <label for="footerLogo">Footer Logo</label>
+          <input id="footerLogo" type="file" accept="image/png,image/jpeg,image/webp,image/x-icon" (change)="onFile('footerLogo', $event)" />
+        </div>
+        <div class="field">
+          <label for="watermark">Watermark Image</label>
+          <input id="watermark" type="file" accept="image/png,image/jpeg,image/webp,image/x-icon" (change)="onFile('watermark', $event)" />
+        </div>
+        }
+        <div class="field wide">
+          <label for="altText">Alt Text <span class="required">*</span></label>
+          <input id="altText" type="text" name="altText" [(ngModel)]="form.altText" />
+        </div>
+        <div class="field">
+          <label for="effectiveFrom">Effective From</label>
+          <input id="effectiveFrom" type="date" name="effectiveFrom" [(ngModel)]="form.effectiveFrom" />
+        </div>
+        <div class="field">
+          <label for="assetStatus">Asset Status <span class="required">*</span></label>
+          <select id="assetStatus" name="assetStatus" [(ngModel)]="form.assetStatus">
+            @for (o of options.recordStatuses; track o) {
+              <option [ngValue]="o">{{ o }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="closed.emit()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+          <app-icon name="ri-check-line" [size]="16"></app-icon>
+          <span>Save Assets</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

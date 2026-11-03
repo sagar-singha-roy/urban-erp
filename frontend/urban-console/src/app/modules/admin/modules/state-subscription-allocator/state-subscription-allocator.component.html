@@ -29,15 +29,7 @@
       </button>
 
       <!-- Refresh -->
-      <button
-        class="btn btn-refresh"
-        (click)="loadSubscriptions(); loadStats()"
-        [disabled]="isLoading()"
-        title="Refresh Subscriptions"
-      >
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
-        <span>Refresh</span>
-      </button>
+      <app-refresh-button subject="subscriptions" (refresh)="loadMasterStates(); loadSubscriptions(); loadStats(); loadHistory()"></app-refresh-button>
 
       <!-- Assign Modules -->
       <button

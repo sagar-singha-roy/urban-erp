@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { RefreshButtonComponent } from '../../../../shared/components/refresh-button/refresh-button.component';
 import { IamRbacService } from '../../../../core/services/iam-rbac.service';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { LoadingService } from '../../../../core/services/loading.service';
@@ -17,7 +18,7 @@ import { CopyPermissionsDialogComponent } from './dialogs/copy-permissions-dialo
   imports: [
     CommonModule,
     FormsModule,
-    IconComponent,
+    IconComponent, RefreshButtonComponent,
     CreateRoleDialogComponent,
     CompareRolesDialogComponent,
     CopyPermissionsDialogComponent

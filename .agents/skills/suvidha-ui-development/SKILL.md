@@ -37,16 +37,27 @@ src/app/modules/<domain>/<feature>/
 | **Child Entity Dialog** (`<feature>-<sub-entity>-dialog/`) | Sub-hierarchies (e.g. Wards & Zones under ULB, Subscriptions under State, Users under Department). | Unrelated parent entity updates. |
 
 ### Dialog Binding Contract:
+Newer modules (ADM-T04, ADM-S04, ADM-R02, ADM-R04) create the dialog only while it is open. `undefined` means closed, `null` means new, and a record means edit:
 ```html
-<!-- In main component HTML -->
-<app-<feature>-form-dialog
-  [isOpen]="isFormDialogOpen()"
-  [isEditing]="isEditing()"
-  [selectedItem]="selectedItem()"
-  (close)="closeFormDialog()"
-  (saveSuccess)="onItemSaved($event)"
-></app-<feature>-form-dialog>
+@if (editing() !== undefined) {
+  <app-<feature>-form-dialog
+    [record]="editing() ?? null"
+    [options]="options()"
+    (saved)="onSaved()"
+    (closed)="editing.set(undefined)"
+  ></app-<feature>-form-dialog>
+}
 ```
+```ts
+readonly editing = signal<Item | null | undefined>(undefined);
+onSaved(): void { this.editing.set(undefined); this.load(); }
+```
+Older pages bind `[isOpen]`, `(close)` and `(saveSuccess)` instead. Follow whichever the page you are editing already uses.
+
+Dialogs use the shared classes from `shared/styles/_admin-table.scss` (`dialog-overlay`, `dialog-card`, `dialog-header`, `dialog-form`, `dialog-body`, `field`, `field wide`, `dialog-footer`). They carry `role="dialog" aria-modal="true" aria-labelledby`, and report errors with `this.dialogs.showToast(apiError(err, 'Could not save this.'), 'error', 5000)`.
+
+### Pages with Tabs
+A page with several tables is a shell plus `tabs/` and `dialogs/`. Each tab `extends PagedTab<T>` (`shared/components/paged-tab/paged-tab.ts`), implements `fetch(query)`, and renders `<app-wl-pagination>`. Copy `modules/admin/iam/cross-tenant-access/` or `modules/admin/modules/quota-usage/`.
 
 ---
 
