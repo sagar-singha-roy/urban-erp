@@ -5,13 +5,13 @@
       <button type="button" class="close" aria-label="Close" (click)="closed.emit()">✕</button>
     </header>
     <div class="gis-dialog-body">
-      <p class="help">This replaces the layer's stored features. Geometry is converted to EPSG:4326 for storage.</p>
+      <p class="help">This replaces the layer's stored features. The file must be in the layer's CRS. Geometry is converted to EPSG:4326 for storage, and if nothing in the file is usable the layer is left unchanged.</p>
       @if (error()) {
         <p class="form-error" role="alert">{{ error() }}</p>
       }
       <div class="form-grid">
         <label>Source Coordinate Reference System *
-          <select name="crs" [(ngModel)]="sourceCrs" required>
+          <select name="crs" [(ngModel)]="sourceCrs" disabled title="Set by the layer. Edit the layer to change it.">
             @for (o of options().crsOptions; track o.code) { <option [value]="o.code">{{ o.code }} — {{ o.name }}</option> }
           </select>
         </label>

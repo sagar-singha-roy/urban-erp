@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     )
     BACKUP_DIR: str = os.getenv("BACKUP_DIR", "backups")
     GIS_CUSTOM_BASEMAP_URL: str = os.getenv("GIS_CUSTOM_BASEMAP_URL", "")
+    GIS_CUSTOM_BASEMAP_ATTRIBUTION: str = os.getenv("GIS_CUSTOM_BASEMAP_ATTRIBUTION", "")
     BACKUP_ENCRYPTION_KEY: str = os.getenv("BACKUP_ENCRYPTION_KEY", "")
     # ADM-T04: encrypts uploaded certificate private keys. Uploads are refused without it.
     CERT_ENCRYPTION_KEY: str = os.getenv("CERT_ENCRYPTION_KEY", "")

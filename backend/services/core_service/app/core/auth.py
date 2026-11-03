@@ -8,6 +8,13 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.api_quota import enforce as enforce_api_quota
+from app.core.cross_tenant_access import (
+    action_permitted, entries_for, load_active_grants, method_permitted, request_tenants, with_grants,
+)
+from app.core.cross_tenant_rules import READ_METHODS
+from app.core import impersonation, impersonation_rules
+from app.core.impersonation import IMPERSONATION_COOKIE
+from app.core.impersonation_rules import TOKEN_ROLE_CODES
 from app.core.security import CSRF_HEADER, SESSION_COOKIE
 from app.core.tenant_context import SET_RLS_CONTEXT_SQL, rls_params, set_rls_context
 from app.db.models import GlobalUserProfile, RoleModel, RolePermission, StateTenant, Tenant, User
@@ -18,14 +25,10 @@ security = HTTPBearer(auto_error=False)
 
 _jwks_cache: Optional[Dict] = None
 SUPER_ADMIN = "super_admin"
+AUTHORIZE_PATH = f"{settings.API_V1_STR}/auth/authorize"
 BLOCKED_ACCOUNT_STATUSES = ("Suspended", "Deactivated")
 # Token roles mapped to the permission matrix's role codes.
-ROLE_CODES = {
-    "state_director": "STATE_DIRECTOR",
-    "revenue_officer": "TAX_INSPECTOR",
-    "town_planner": "TOWN_PLANNER",
-    "citizen": "CITIZEN_READONLY",
-}
+ROLE_CODES = {role: code for role, code in TOKEN_ROLE_CODES.items() if role != SUPER_ADMIN}
 PERMISSION_COLUMNS = {
     "VIEW": "can_view",
     "CREATE": "can_create",
@@ -59,7 +62,13 @@ async def get_current_user(
     # Browsers attach cookies by themselves, so state changes must also carry a header other sites cannot set.
     if not credentials and token and request.method not in ("GET", "HEAD", "OPTIONS") and not request.headers.get(CSRF_HEADER):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing CSRF header")
-    user = await _authenticate(token)
+    support_token = None if credentials else request.cookies.get(IMPERSONATION_COOKIE)
+    if support_token:
+        user = await _authenticate_support_session(token, support_token)
+        impersonation.enforce_path(request, user["impersonation"])
+    else:
+        user = await _authenticate(token)
+        await _enforce_cross_tenant_method(request, user)
     set_rls_context(user_tenant_scope(user), bypass=is_super_admin(user))
     await enforce_api_quota(request, user)
     return user
@@ -75,18 +84,56 @@ def keycloak_token_is_for_this_client(payload: Dict) -> bool:
 
 async def _apply_current_account_state(payload: Dict) -> Dict:
     """Tokens outlive account changes, so status and role always come from the database."""
+    # A support session token only works next to the agent's own sign-in, never as a sign-in itself.
+    if payload.get("typ") == impersonation_rules.TOKEN_TYPE:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"})
     async with AsyncReadSessionLocal() as db:
         user = await db.scalar(select(User).where(User.id == str(payload.get("sub") or "")))
         profile = None
+        grants = {}
         if user:
             profile = await db.scalar(select(GlobalUserProfile).where(GlobalUserProfile.email == user.email))
+            if user.role != SUPER_ADMIN:
+                grants = await load_active_grants(db, user.email)
     if not user or not user.is_active or (profile and profile.account_status in BLOCKED_ACCOUNT_STATUSES):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="This account is no longer active",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return {**payload, "realm_access": {"roles": [user.role]}}
+    return with_grants({**payload, "realm_access": {"roles": [user.role]}}, grants)
+
+
+async def _authenticate_support_session(agent_token: Optional[str], support_token: str) -> Dict:
+    """The agent signs in as themselves, then acts as the target only inside the live session's tenant."""
+    agent = await _authenticate(agent_token)
+    async with AsyncReadSessionLocal() as db:
+        session, request = await impersonation.load_session(db, support_token, str(agent.get("sub") or ""))
+        target = await db.scalar(select(User).where(User.id == session.target_user_id))
+    user = await _apply_current_account_state({"sub": session.target_user_id, "tenant_id": session.tenant_id})
+    if is_super_admin(user) or not target:
+        raise impersonation.ENDED
+    # The target's own grants and other tenants are left out: the session covers one tenant.
+    user.pop("cross_tenant", None)
+    user.pop("home_tenant_scope", None)
+    return {
+        **user, "tenant_id": session.tenant_id, "tenant_scope": session.tenant_id, "email": target.email, "preferred_username": target.username,
+        "name": target.full_name, "impersonation": impersonation.session_context(session, request),
+    }
+
+
+async def _enforce_cross_tenant_method(request: Request, user: Dict) -> None:
+    """A Read Only grant lets the user read a tenant, never change it."""
+    if not user.get("cross_tenant") or request.method in READ_METHODS:
+        return
+    # Module services POST here for reads too. The action it names is checked against the grant instead.
+    if getattr(getattr(request, "url", None), "path", "") == AUTHORIZE_PATH:
+        return
+    async with AsyncReadSessionLocal() as db:
+        for tenant_id in request_tenants(request):
+            entries = entries_for(user, await _tenant_identifiers(tenant_id, db))
+            if not method_permitted(entries, request.method):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Your access to this tenant is read only")
 
 
 async def _authenticate(token: Optional[str]) -> Dict:
@@ -164,11 +211,22 @@ def require_permission(component_code: str, action: str):
     column = getattr(RolePermission, PERMISSION_COLUMNS[action])
 
     async def permission_checker(
+        request: Request,
         user: Dict = Depends(get_current_user),
         db: AsyncSession = Depends(get_read_db),
     ) -> Dict:
+        if user.get("impersonation"):
+            impersonation.check_action(request, user["impersonation"], component_code, action)
         if is_super_admin(user):
             return user
+        if user.get("cross_tenant"):
+            for tenant_id in request_tenants(request):
+                identifiers = await _tenant_identifiers(tenant_id, db)
+                if not action_permitted(entries_for(user, identifiers), identifiers, component_code, action):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Your access to {tenant_id} does not include {component_code}:{action}",
+                    )
         codes = [ROLE_CODES[r] for r in user.get("realm_access", {}).get("roles", []) if r in ROLE_CODES]
         allowed = bool(codes) and await db.scalar(
             select(RolePermission.id)

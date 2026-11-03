@@ -1,0 +1,53 @@
+// Shared by the ADM-R04 tabs and dialogs. Mobile first: min-width queries only.
+@use '../../../../shared/styles/admin-table';
+
+.wl-toolbar .filter {
+  flex: 1 1 9rem;
+  min-width: 0;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  font-size: 0.85rem;
+}
+
+.clip { max-width: 18rem; overflow-wrap: anywhere; }
+.wide-notice { grid-column: 1 / -1; margin-bottom: 0; }
+.dialog-card.narrow { max-width: 520px; }
+.btn-primary.danger { background: #b91c1c; }
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 44px;
+    padding: 0 0.25rem 0 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    background: #f8fafc;
+
+    button { min-width: 44px; min-height: 44px; border: none; background: transparent; cursor: pointer; color: #64748b; }
+  }
+}
+
+.inline-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  select { flex: 1 1 8rem; min-width: 0; }
+}
+
+.toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0 1rem;
+}

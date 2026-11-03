@@ -13,8 +13,7 @@
 
   <div class="gis-layout">
     <section #mapPanel class="gis-map-panel" aria-label="Map">
-      <div #mapHost class="gis-map" [class.hidden-view]="is3d()"></div>
-      <div #globeHost class="gis-map" [class.hidden-view]="!is3d()"></div>
+      <div #mapHost class="gis-map"></div>
       @if (isLoadingMap()) {
         <div class="loading-bar" role="progressbar" aria-label="Loading map data"></div>
       }
@@ -26,6 +25,8 @@
         </div>
         <div class="glass map-tools">
           <button type="button" [class.active]="is3d()" [title]="is3d() ? 'Back to 2D map' : 'Show on 3D globe'" [attr.aria-label]="is3d() ? 'Back to 2D map' : 'Show on 3D globe'" [attr.aria-pressed]="is3d()" (click)="toggle3d()"><app-icon name="ri-earth-line" [size]="18"></app-icon></button>
+          <button type="button" title="Zoom in" aria-label="Zoom in" (click)="zoom('in')"><app-icon name="ri-add-line" [size]="18"></app-icon></button>
+          <button type="button" title="Zoom out" aria-label="Zoom out" (click)="zoom('out')"><app-icon name="ri-subtract-line" [size]="18"></app-icon></button>
           <button type="button" title="Show all of India" aria-label="Show all of India" (click)="resetView()"><app-icon name="ri-global-line" [size]="18"></app-icon></button>
           <button type="button" title="Fit to what is on the map" aria-label="Fit to what is on the map" (click)="fitToData()"><app-icon name="ri-focus-3-line" [size]="18"></app-icon></button>
           <button type="button" title="Full screen" aria-label="Full screen" (click)="toggleFullscreen()"><app-icon name="ri-fullscreen-line" [size]="18"></app-icon></button>
@@ -51,7 +52,7 @@
           <span>Open Parcel Layers and choose a city, or turn on a layer under City Layers.</span>
         </div>
       }
-      <div class="glass coords">{{ cursor() }}</div>
+      <div class="glass coords">{{ cursor() }}@if (clicked()) { <span> · {{ clicked() }}</span> }</div>
     </section>
 
     <section class="gis-controls">
@@ -90,6 +91,7 @@
             <span class="with-action">
               <input [(ngModel)]="extentText" placeholder="Coordinates" (change)="applyView()" />
               <button type="button" (click)="useCurrentExtent()">Use View</button>
+              <button type="button" [class.active]="pickMode() === 'extent'" (click)="startPick('extent')">Draw</button>
             </span>
           </label>
           <label>Coordinate Reference System *
@@ -104,6 +106,7 @@
             <span class="with-action">
               <input [(ngModel)]="centreText" placeholder="Coordinates" (change)="applyView()" />
               <button type="button" (click)="useCurrentCentre()">Use Centre</button>
+              <button type="button" [class.active]="pickMode() === 'centre'" (click)="startPick('centre')">Pick</button>
             </span>
           </label>
           <label>Visible Layers
@@ -114,9 +117,18 @@
               @for (o of options().refreshIntervals; track o) { <option [value]="o">{{ o }}</option> }
             </select>
           </label>
+          <label class="toggle">Include Registered Parcels <input class="switch" type="checkbox" [(ngModel)]="includeParcels" /></label>
         </div>
+        @if (pickMode()) {
+          <p class="read-only" role="status">{{ pickMode() === 'centre' ? 'Click the map to set the centre.' : extentFirst ? 'Click the opposite corner.' : 'Click the first corner of the extent.' }}</p>
+        }
         <div class="actions">
-          <button type="button" class="primary" [disabled]="!workspace.geographicScope || !workspace.baseMap || !workspace.crs" (click)="saveWorkspace()">Save Workspace</button>
+          <button type="button" (click)="exportScope()">Export GeoJSON</button>
+          <button type="button" (click)="applyScope()">Show Scope on Map</button>
+          @if (selectedWorkspaceId) {
+            <button type="button" class="danger" (click)="deleteWorkspace()">Delete Workspace</button>
+          }
+          <button type="button" class="primary" [disabled]="!workspace.geographicScope || !workspace.baseMap || !workspace.crs" (click)="saveWorkspace()">{{ selectedWorkspaceId ? 'Update Workspace' : 'Save Workspace' }}</button>
         </div>
       }
 
@@ -152,9 +164,9 @@
         <div class="actions inline" style="margin-top: 0.75rem">
           <button type="button" class="primary" [disabled]="!stateFilter.stateTenants.length" (click)="showState()">Show on Map</button>
         </div>
-        <app-table-search [state]="pagers" key="scope"></app-table-search>
+        <input class="list-search" type="search" placeholder="Search ULBs" aria-label="Search ULBs" [ngModel]="scopeSearch()" (ngModelChange)="scopeSearch.set($event); scopePage.set(1); loadScope()" />
         <div class="card-list">
-          @for (r of (scope() | rowSearch:pagers.search('scope')) | slice:pagers.start('scope', (scope() | rowSearch:pagers.search('scope')).length):pagers.end('scope', (scope() | rowSearch:pagers.search('scope')).length); track r.tenantId) {
+          @for (r of scope(); track r.tenantId) {
             <article class="item-card">
               <div class="item-top">
                 <div>
@@ -174,37 +186,39 @@
             <div class="empty-card">No ULBs match this selection.</div>
           }
         </div>
-        <app-table-pager [state]="pagers" key="scope" [total]="(scope() | rowSearch:pagers.search('scope')).length"></app-table-pager>
+        <app-wl-pagination [page]="scopePage()" [limit]="scopeLimit()" [total]="scopeTotal()" (pageChange)="scopePage.set($event); loadScope()" (limitChange)="scopeLimit.set($event); scopePage.set(1); loadScope()"></app-wl-pagination>
       }
 
       @if (activeTab() === 'city') {
         <div class="form-grid">
           <label>State Tenant *
-            <select [(ngModel)]="cityFilter.state" (ngModelChange)="cityFilter.state = $event; cityFilter.tenantId = ''; loadLayers()">
+            <select [(ngModel)]="cityFilter.state" (ngModelChange)="cityFilter.state = $event; cityFilter.tenantId = ''; cityPage.set(1); loadCityLayers()">
               <option value="">All accessible states</option>
               @for (s of options().states; track s.code) { <option [value]="s.code">{{ s.name }}</option> }
             </select>
           </label>
           <label>ULB / City *
-            <select [(ngModel)]="cityFilter.tenantId" (ngModelChange)="cityFilter.tenantId = $event; loadLayers()">
+            <select [(ngModel)]="cityFilter.tenantId" (ngModelChange)="cityFilter.tenantId = $event; cityPage.set(1); loadCityLayers(); loadServices()">
               <option value="">All accessible ULBs</option>
               @for (u of ulbsFor(cityFilter.state); track u.code) { <option [value]="u.code">{{ u.name }}</option> }
             </select>
           </label>
         </div>
         <div class="actions inline">
+          <button type="button" (click)="serviceDialog.set({ service: null })">Approve Service</button>
+          <button type="button" (click)="boundaryDialog.set(true)">Import Boundaries</button>
           <button type="button" class="primary" (click)="layerDialog.set({ layer: null, category: 'City' })">Add Layer</button>
         </div>
-        <app-table-search [state]="pagers" key="layers"></app-table-search>
+        <input class="list-search" type="search" placeholder="Search layers" aria-label="Search layers" [ngModel]="citySearch()" (ngModelChange)="citySearch.set($event); cityPage.set(1); loadCityLayers()" />
         <div class="card-list">
-          @for (l of (layers() | rowSearch:pagers.search('layers')) | slice:pagers.start('layers', (layers() | rowSearch:pagers.search('layers')).length):pagers.end('layers', (layers() | rowSearch:pagers.search('layers')).length); track l.id) {
+          @for (l of cityLayers(); track l.id) {
             <article class="item-card" [class.active]="isOnMap(l)">
               <div class="item-top">
                 <div>
                   <strong>{{ l.layerName }}</strong>
                   <small>{{ l.layerCode }} · {{ l.tenantName }}</small>
                 </div>
-                <input class="switch" type="checkbox" [attr.aria-label]="'Show ' + l.layerName" [checked]="isOnMap(l)" [disabled]="l.layerStatus !== 'Active'" (change)="toggleLayer(l, $any($event.target).checked)" />
+                <input class="switch" type="checkbox" [attr.aria-label]="'Show ' + l.layerName" [checked]="isOnMap(l)" [disabled]="l.layerStatus !== 'Active' || l.serviceApproved === false" (change)="toggleLayer(l, $any($event.target).checked)" />
               </div>
               <div class="chips">
                 <span [class.ok]="l.layerStatus === 'Active'">{{ l.layerStatus }}</span>
@@ -213,11 +227,16 @@
                 <span>{{ l.dataSource }}</span>
                 <span>{{ l.crs }}</span>
                 <span>{{ l.featureCount }} features</span>
+                @if (l.serviceApproved === false) { <span>Service not approved</span> }
+                <span>Synced: {{ l.lastSyncedAt ? (l.lastSyncedAt | date: 'dd MMM yyyy, HH:mm') : 'Never' }}</span>
               </div>
               <div class="item-actions">
                 <button type="button" (click)="layerDialog.set({ layer: l, category: l.layerCategory })">Edit</button>
                 @if (l.dataSource === 'PostGIS' || l.dataSource === 'GeoJSON') {
                   <button type="button" (click)="importLayer.set(l)">Import</button>
+                }
+                @if (l.dataSource === 'WFS') {
+                  <button type="button" [disabled]="syncingId() === l.id" (click)="syncLayer(l)">{{ syncingId() === l.id ? 'Syncing…' : 'Sync' }}</button>
                 }
                 <button type="button" class="danger" (click)="removeLayer(l)">Delete</button>
               </div>
@@ -226,182 +245,32 @@
             <div class="empty-card">No GIS layers yet. Add one to start.</div>
           }
         </div>
-        <app-table-pager [state]="pagers" key="layers" [total]="(layers() | rowSearch:pagers.search('layers')).length"></app-table-pager>
+        <app-wl-pagination [page]="cityPage()" [limit]="cityLimit()" [total]="cityTotal()" (pageChange)="cityPage.set($event); loadCityLayers()" (limitChange)="cityLimit.set($event); cityPage.set(1); loadCityLayers()"></app-wl-pagination>
+        <h4 class="section-title">Approved Services</h4>
+        <p class="read-only">WMS and WFS layers can only use these addresses.</p>
+        <div class="card-list">
+          @for (s of services(); track s.id) {
+            <article class="item-card">
+              <div class="item-top"><div><strong>{{ s.serviceName }}</strong><small>{{ s.tenantId }} · {{ s.baseUrl }}</small></div></div>
+              <div class="chips"><span [class.ok]="s.isActive">{{ s.isActive ? 'Active' : 'Inactive' }}</span></div>
+              <div class="item-actions"><button type="button" (click)="serviceDialog.set({ service: s })">Edit</button></div>
+            </article>
+          } @empty {
+            <div class="empty-card">No services approved yet.</div>
+          }
+        </div>
       }
 
       @if (activeTab() === 'parcels') {
-        <div class="form-grid">
-          <label>State Tenant *
-            <select [(ngModel)]="parcelFilter.state">
-              <option value="">All accessible states</option>
-              @for (s of options().states; track s.code) { <option [value]="s.code">{{ s.name }}</option> }
-            </select>
-          </label>
-          <label>ULB / City *
-            <select [(ngModel)]="parcelFilter.tenantId" (ngModelChange)="parcelFilter.tenantId = $event; parcelFilter.wards = []; onTenantChange($event)">
-              <option value="">Select</option>
-              @for (u of ulbsFor(parcelFilter.state); track u.code) { <option [value]="u.code">{{ u.name }}</option> }
-            </select>
-          </label>
-          <label>Ward
-            <app-gis-multi-select [items]="options().wards" valueKey="id" labelKey="name" placeholder="All" [(value)]="parcelFilter.wards"></app-gis-multi-select>
-          </label>
-          <label>Parcel Category
-            <app-gis-multi-select [items]="options().parcelCategories" placeholder="All" [(value)]="parcelFilter.categories"></app-gis-multi-select>
-          </label>
-          <label>Parcel Status
-            <app-gis-multi-select [items]="options().parcelStatuses" placeholder="All" [(value)]="parcelFilter.statuses"></app-gis-multi-select>
-          </label>
-          <label>Survey Status
-            <select [(ngModel)]="parcelFilter.surveyStatus" disabled title="Survey status is not recorded for parcels yet">
-              <option value="">Not recorded yet</option>
-            </select>
-          </label>
-          <label>GIS Mapping Status
-            <select [(ngModel)]="parcelFilter.gisStatus">
-              <option value="mapped">Mapped</option>
-              <option value="unmapped">Unmapped</option>
-            </select>
-          </label>
-          <label>Parcel Data Source *
-            <select [(ngModel)]="parcelFilter.dataSource">
-              @for (o of options().dataSources; track o) { <option [value]="o">{{ o }}</option> }
-            </select>
-          </label>
-          <label>Parcel Layer *
-            <select [(ngModel)]="parcelFilter.layerId">
-              <option value="">Registered parcels</option>
-              @for (l of layersFor(parcelFilter.tenantId, 'Parcel'); track l.id) { <option [value]="l.id">{{ l.layerName }}</option> }
-            </select>
-          </label>
-          <label>Parcel Label Field
-            <select [(ngModel)]="parcelFilter.labelField">
-              <option value="ulpin">ULPIN</option>
-              <option value="surveyNumber">Survey Number</option>
-              <option value="address">Address</option>
-            </select>
-          </label>
-          <label>Search by Parcel ID
-            <input type="search" [(ngModel)]="parcelFilter.search" placeholder="ULPIN or survey number" />
-          </label>
-          <label class="toggle">Boundary Display <input class="switch" type="checkbox" [(ngModel)]="parcelFilter.boundaryDisplay" /></label>
-        </div>
-        <div class="actions"><button type="button" class="primary" (click)="showParcels()">Show on Map</button></div>
+        <app-gis-parcels-tab [options]="options()" [layers]="layers()" [filter]="parcelFilter" (show)="showParcels()" (addLayer)="layerDialog.set({ layer: null, category: 'Parcel' })" (tenantChange)="onTenantChange($event)"></app-gis-parcels-tab>
       }
 
       @if (activeTab() === 'utilities') {
-        <div class="form-grid">
-          <label>State Tenant *
-            <select [(ngModel)]="utilityFilter.state">
-              <option value="">All accessible states</option>
-              @for (s of options().states; track s.code) { <option [value]="s.code">{{ s.name }}</option> }
-            </select>
-          </label>
-          <label>ULB / City *
-            <select [(ngModel)]="utilityFilter.tenantId" (ngModelChange)="utilityFilter.tenantId = $event; utilityFilter.layerId = ''">
-              <option value="">Select</option>
-              @for (u of ulbsFor(utilityFilter.state); track u.code) { <option [value]="u.code">{{ u.name }}</option> }
-            </select>
-          </label>
-          <label>Utility Category *
-            <app-gis-multi-select [items]="options().utilityCategories" placeholder="All" [(value)]="utilityFilter.categories"></app-gis-multi-select>
-          </label>
-          <label>Utility Network Type *
-            <select [(ngModel)]="utilityFilter.networkType">
-              <option value="">Select</option>
-              @for (o of options().utilityNetworkTypes; track o) { <option [value]="o">{{ o }}</option> }
-            </select>
-          </label>
-          <label>Network Layer *
-            <select [(ngModel)]="utilityFilter.layerId">
-              <option value="">Select</option>
-              @for (l of layersFor(utilityFilter.tenantId, 'Utility'); track l.id) { <option [value]="l.id">{{ l.layerName }}</option> }
-            </select>
-          </label>
-          <label>Asset Status
-            <app-gis-multi-select [items]="options().assetStatuses" placeholder="All" [(value)]="utilityFilter.assetStatuses"></app-gis-multi-select>
-          </label>
-          <label>Department
-            <input [(ngModel)]="utilityFilter.department" />
-          </label>
-          <label>Data Source *
-            <select [(ngModel)]="utilityFilter.dataSource">
-              @for (o of options().dataSources; track o) { <option [value]="o">{{ o }}</option> }
-            </select>
-          </label>
-          <label>Network Style
-            <input type="color" [(ngModel)]="utilityFilter.color" />
-          </label>
-          <label class="toggle">Network Visibility <input class="switch" type="checkbox" [(ngModel)]="utilityFilter.visible" /></label>
-          <p class="read-only">Last Synchronisation: <strong>{{ (layersFor(utilityFilter.tenantId, 'Utility')[0]?.lastSyncedAt | date: 'dd MMM yyyy, HH:mm') || 'Never' }}</strong></p>
-        </div>
-        <div class="actions">
-          <button type="button" (click)="layerDialog.set({ layer: null, category: 'Utility' })">Add Network Layer</button>
-          <button type="button" class="primary" (click)="showUtilities()">Show on Map</button>
-        </div>
+        <app-gis-utilities-tab [options]="options()" [layers]="layers()" [filter]="utilityFilter" (show)="showUtilities()" (addLayer)="layerDialog.set({ layer: null, category: 'Utility' })" (tenantChange)="onTenantChange($event)"></app-gis-utilities-tab>
       }
 
       @if (activeTab() === 'roads') {
-        <div class="form-grid">
-          <label>State Tenant *
-            <select [(ngModel)]="roadFilter.state">
-              <option value="">All accessible states</option>
-              @for (s of options().states; track s.code) { <option [value]="s.code">{{ s.name }}</option> }
-            </select>
-          </label>
-          <label>ULB / City *
-            <select [(ngModel)]="roadFilter.tenantId" (ngModelChange)="roadFilter.tenantId = $event; roadFilter.zones = []; roadFilter.wards = []; onTenantChange($event)">
-              <option value="">Select</option>
-              @for (u of ulbsFor(roadFilter.state); track u.code) { <option [value]="u.code">{{ u.name }}</option> }
-            </select>
-          </label>
-          <label>Zone
-            <app-gis-multi-select [items]="options().zones" valueKey="name" labelKey="name" placeholder="All" [(value)]="roadFilter.zones"></app-gis-multi-select>
-          </label>
-          <label>Ward
-            <app-gis-multi-select [items]="options().wards" valueKey="name" labelKey="name" placeholder="All" [(value)]="roadFilter.wards"></app-gis-multi-select>
-          </label>
-          <label>Road Category
-            <app-gis-multi-select [items]="options().roadCategories" placeholder="All" [(value)]="roadFilter.categories"></app-gis-multi-select>
-          </label>
-          <label>Road Status
-            <select [(ngModel)]="roadFilter.status">
-              <option value="">All</option>
-              @for (o of options().roadStatuses; track o) { <option [value]="o">{{ o }}</option> }
-            </select>
-          </label>
-          <label>Road Layer *
-            <select [(ngModel)]="roadFilter.roadLayerId">
-              <option value="">Select</option>
-              @for (l of layersFor(roadFilter.tenantId, 'Road'); track l.id) { <option [value]="l.id">{{ l.layerName }}</option> }
-            </select>
-          </label>
-          <label>Zone Boundary Layer *
-            <select [(ngModel)]="roadFilter.zoneLayerId">
-              <option value="">Select</option>
-              @for (l of layersFor(roadFilter.tenantId, 'Zone'); track l.id) { <option [value]="l.id">{{ l.layerName }}</option> }
-            </select>
-          </label>
-          <label>Data Source *
-            <select [(ngModel)]="roadFilter.dataSource">
-              @for (o of options().dataSources; track o) { <option [value]="o">{{ o }}</option> }
-            </select>
-          </label>
-          <label>Road Width Range (metres)
-            <span class="range">
-              <input type="number" min="0" aria-label="Minimum width" placeholder="Min" [(ngModel)]="roadFilter.minWidth" />
-              <input type="number" min="0" aria-label="Maximum width" placeholder="Max" [(ngModel)]="roadFilter.maxWidth" />
-            </span>
-          </label>
-          <label>Road Surface Type
-            <app-gis-multi-select [items]="options().roadSurfaces" placeholder="All" [(value)]="roadFilter.surfaces"></app-gis-multi-select>
-          </label>
-          <label class="toggle">Layer Visibility <input class="switch" type="checkbox" [(ngModel)]="roadFilter.visible" /></label>
-        </div>
-        <div class="actions">
-          <button type="button" (click)="layerDialog.set({ layer: null, category: 'Road' })">Add Road or Zone Layer</button>
-          <button type="button" class="primary" (click)="showRoads()">Show on Map</button>
-        </div>
+        <app-gis-roads-tab [options]="options()" [layers]="layers()" [filter]="roadFilter" (show)="showRoads()" (addLayer)="layerDialog.set({ layer: null, category: 'Road' })" (tenantChange)="onTenantChange($event)"></app-gis-roads-tab>
       }
       </div>
     </section>
@@ -413,4 +282,10 @@
 }
 @if (importLayer(); as l) {
   <app-gis-import-dialog [options]="options()" [layer]="l" (imported)="onImported($event)" (closed)="importLayer.set(null)"></app-gis-import-dialog>
+}
+@if (serviceDialog(); as d) {
+  <app-gis-service-dialog [options]="options()" [service]="d.service" [tenantId]="cityFilter.tenantId" (saved)="onServiceSaved()" (closed)="serviceDialog.set(null)"></app-gis-service-dialog>
+}
+@if (boundaryDialog()) {
+  <app-gis-boundary-dialog [options]="options()" [tenantId]="cityFilter.tenantId" (imported)="onBoundariesImported($event)" (closed)="boundaryDialog.set(false)"></app-gis-boundary-dialog>
 }

@@ -118,7 +118,17 @@
   }
 
   <!-- SECTION 5: GLOBAL USER MANAGEMENT & INVITATIONS (ADM-R01) -->
-  @if (activeSection() === 'iam-users' || (activeSection() === 'iam' && (activeItemId() === 'IAM-07' || activeItemId() === 'IAM-08' || activeItemId() === 'IAM-09'))) {
+  @if (activeItemId() === 'IAM-10') {
+    <!-- ADM-R02: Cross-Tenant Access Management -->
+    <div class="section-content">
+      <app-cross-tenant-access></app-cross-tenant-access>
+    </div>
+  } @else if (activeItemId() === 'IAM-11') {
+    <!-- ADM-R04: Support Impersonation Hub -->
+    <div class="section-content">
+      <app-support-impersonation></app-support-impersonation>
+    </div>
+  } @else if (activeSection() === 'iam-users' || (activeSection() === 'iam' && (activeItemId() === 'IAM-07' || activeItemId() === 'IAM-08' || activeItemId() === 'IAM-09'))) {
     <div class="section-content">
       <app-user-management
         [defaultTab]="activeItemId() === 'IAM-08' ? 'invitations' : (activeItemId() === 'IAM-09' ? 'scopes' : 'directory')"

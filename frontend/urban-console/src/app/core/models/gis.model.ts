@@ -40,6 +40,7 @@ export interface GisOptions {
   roadSurfaces: string[];
   parcelCategories: string[];
   parcelStatuses: string[];
+  surveyStatuses: string[];
 }
 
 export interface GisLayerStyle {
@@ -71,6 +72,8 @@ export interface GisLayer {
   department?: string | null;
   featureCount?: number;
   lastSyncedAt?: string | null;
+  /** False when a remote layer's service is no longer approved. Its address is then withheld. */
+  serviceApproved?: boolean;
 }
 
 export interface GisScopeRow {
@@ -107,9 +110,68 @@ export interface GisFeatureCollection {
   features: GeoJSON.Feature[];
   truncated?: boolean;
   unmapped?: number;
+  crs?: string;
+  tenantCount?: number;
 }
 
 export interface GisImportResult {
   imported: number;
   rejected: number;
+}
+
+export interface GisPage<T> {
+  data: T[];
+  total: number;
+}
+
+export interface GisApprovedService {
+  id?: string;
+  tenantId: string;
+  serviceName: string;
+  baseUrl: string;
+  isActive: boolean;
+}
+
+export interface GisParcelFilter {
+  state: string;
+  tenantId: string;
+  wards: string[];
+  categories: string[];
+  statuses: string[];
+  surveyStatus: string;
+  gisStatus: string;
+  dataSource: string;
+  layerId: string;
+  boundaryDisplay: boolean;
+  labelField: string;
+  search: string;
+}
+
+export interface GisUtilityFilter {
+  state: string;
+  tenantId: string;
+  categories: string[];
+  networkType: string;
+  layerId: string;
+  assetStatuses: string[];
+  department: string;
+  dataSource: string;
+  visible: boolean;
+  color: string;
+}
+
+export interface GisRoadFilter {
+  state: string;
+  tenantId: string;
+  zones: string[];
+  wards: string[];
+  categories: string[];
+  status: string;
+  roadLayerId: string;
+  zoneLayerId: string;
+  dataSource: string;
+  minWidth: number | null;
+  maxWidth: number | null;
+  surfaces: string[];
+  visible: boolean;
 }

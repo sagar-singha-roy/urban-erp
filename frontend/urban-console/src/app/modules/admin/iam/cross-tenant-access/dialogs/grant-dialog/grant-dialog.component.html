@@ -1,0 +1,55 @@
+<div class="dialog-overlay" (click)="closed.emit()">
+  <div class="dialog-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="xt-grant-title">
+    <div class="dialog-header">
+      <div><h3 id="xt-grant-title">{{ record ? 'Edit Cross-Tenant Access' : 'Request Cross-Tenant Access' }}</h3><p>Access takes effect only after the approval authority approves it.</p></div>
+      <button type="button" class="close-btn" (click)="closed.emit()" title="Close dialog" aria-label="Close dialog"><app-icon name="ri-close-line" [size]="18"></app-icon></button>
+    </div>
+    <form class="dialog-form" (ngSubmit)="submit()">
+      <div class="dialog-body">
+        @if (record?.status === 'Active') {
+          <div class="wl-notice wide-notice">Saving changes sends this access back for approval. It stops working until it is approved again.</div>
+        }
+        @if (!authorities.length) {
+          <div class="wl-notice bad wide-notice">No one can approve this yet. Approval needs a second active platform super admin with a user profile.</div>
+        }
+        @if (record) {
+          <div class="field"><label for="recordNumber">Access Record ID</label><input id="recordNumber" type="text" [value]="record.recordNumber" readonly /></div>
+          <div class="field"><label for="userName">User</label><input id="userName" type="text" [value]="userName" readonly /></div>
+        } @else {
+          <div class="field wide"><label for="xt-grant-user-search">User <span class="required">*</span></label>
+            <app-xt-user-picker inputId="xt-grant-user-search" (selected)="onUser($event)"></app-xt-user-picker></div>
+        }
+        <div class="field"><label for="userEmail">User Email</label><input id="userEmail" type="text" [value]="userEmail" readonly placeholder="Filled in from the user" /></div>
+        <div class="field"><label for="userType">User Type <span class="required">*</span></label><select id="userType" name="userType" [(ngModel)]="form.userType"><option value="">Select</option>
+          @for (o of options.userTypes; track o) { <option [value]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="homeTenantId">Home Tenant <span class="required">*</span></label><select id="homeTenantId" name="homeTenantId" [ngModel]="form.homeTenantId" (ngModelChange)="onHome($event)"><option value="">Select</option>
+          @for (t of tenants; track t.tenantId) { <option [value]="t.tenantId">{{ t.name }} ({{ t.tenantLevel }})</option> }
+        </select></div>
+        <div class="field wide"><label>Target Tenants <span class="required">*</span></label>
+          <app-check-list [options]="targetOptions" [value]="form.targetTenantIds" (valueChange)="form.targetTenantIds = $event"></app-check-list>
+          <span class="hint">A state reaches all of its ULBs unless its scope leaves them out.</span></div>
+        <div class="field"><label for="accessLevel">Access Level <span class="required">*</span></label><select id="accessLevel" name="accessLevel" [(ngModel)]="form.accessLevel"><option value="">Select</option>
+          @for (o of options.accessLevels; track o) { <option [value]="o">{{ o }}</option> }
+        </select></div>
+        <div class="field"><label for="accessStatus">Access Status</label><input id="accessStatus" type="text" [value]="record ? record.status : 'Pending (set on save)'" readonly /></div>
+        <div class="field"><label for="effectiveFrom">Effective From <span class="required">*</span></label><input id="effectiveFrom" type="datetime-local" name="effectiveFrom" [(ngModel)]="effectiveFrom" /></div>
+        <div class="field"><label for="effectiveUntil">Effective Until</label><input id="effectiveUntil" type="datetime-local" name="effectiveUntil" [(ngModel)]="effectiveUntil" />
+          <span class="hint">Leave empty for no end date. Access-review campaigns still cover it.</span></div>
+        <div class="field wide"><label for="businessJustification">Business Justification <span class="required">*</span></label>
+          <textarea id="businessJustification" name="businessJustification" maxlength="2000" [(ngModel)]="form.businessJustification"></textarea></div>
+        <div class="field"><label for="approvalAuthorityId">Approval Authority <span class="required">*</span></label><select id="approvalAuthorityId" name="approvalAuthorityId" [(ngModel)]="form.approvalAuthorityId"><option value="">Select</option>
+          @for (a of authorityOptions; track a.id) { <option [value]="a.id">{{ a.fullName }} ({{ a.email }})</option> }
+        </select><span class="hint">Must be someone other than you and the user.</span></div>
+        <div class="field"><label for="approvalReference">Approval Reference</label><input id="approvalReference" type="text" name="approvalReference" maxlength="100" [(ngModel)]="form.approvalReference" placeholder="e.g. file or order number" /></div>
+        @if (record?.approvedAt) {
+          <div class="field"><label for="approvedAt">Approved At</label><input id="approvedAt" type="text" [value]="(asUtc(record?.approvedAt) | date: 'medium') + ' by ' + record?.approvedBy" readonly /></div>
+        }
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="closed.emit()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving()"><app-icon name="ri-send-plane-line" [size]="16"></app-icon><span>Send for Approval</span></button>
+      </div>
+    </form>
+  </div>
+</div>

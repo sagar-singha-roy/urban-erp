@@ -1,0 +1,60 @@
+<div class="wl-toolbar">
+  <input class="wl-search" type="search" placeholder="Search users, tenants or record IDs" aria-label="Search users, tenants or record IDs" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+  <select class="filter" aria-label="Filter by access status" [ngModel]="filters().status ?? ''" (ngModelChange)="setFilter('status', $event)">
+    <option value="">All statuses</option>
+    @for (s of options().accessStatuses; track s) { <option [value]="s">{{ s }}</option> }
+    <option value="Rejected">Rejected</option>
+  </select>
+  <select class="filter" aria-label="Filter by access level" [ngModel]="filters().accessLevel ?? ''" (ngModelChange)="setFilter('accessLevel', $event)">
+    <option value="">All access levels</option>
+    @for (l of options().accessLevels; track l) { <option [value]="l">{{ l }}</option> }
+  </select>
+  <button type="button" class="btn btn-primary" (click)="editing.set(null)">
+    <app-icon name="ri-add-line" [size]="16"></app-icon><span>Request Access</span>
+  </button>
+</div>
+
+<div class="wl-card">
+  <div class="wl-scroll">
+    <table class="wl-table">
+      <thead><tr><th>Record ID</th><th>User</th><th>User Type</th><th>Home Tenant</th><th>Target Tenants</th><th>Access Level</th><th>Status</th><th>Effective</th><th>Approval</th><th>Actions</th></tr></thead>
+      <tbody>
+        @for (g of items(); track g.id) {
+          <tr>
+            <td>{{ g.recordNumber }}</td>
+            <td>{{ g.userName }}<span class="wl-sub">{{ g.userEmail }}</span></td>
+            <td>{{ g.userType }}</td>
+            <td>{{ tenantName(g.homeTenantId) }}</td>
+            <td class="clip">@for (t of g.targetTenantIds; track t; let last = $last) { {{ tenantName(t) }}{{ last ? '' : ', ' }} }
+              @if (g.hasScope) { <span class="wl-sub">Scoped</span> }</td>
+            <td>{{ g.accessLevel }}</td>
+            <td><span class="wl-status" [ngClass]="statusClass2(g.status)">{{ g.status }}</span></td>
+            <td>{{ asUtc(g.effectiveFrom) | date: 'mediumDate' }}<span class="wl-sub">{{ g.effectiveUntil ? 'until ' + (asUtc(g.effectiveUntil) | date: 'mediumDate') : 'No end date' }}</span></td>
+            <td>{{ g.approvedBy ?? g.approvalAuthorityEmail }}<span class="wl-sub">{{ g.approvedAt ? (asUtc(g.approvedAt) | date: 'medium') : 'Awaiting approval' }}</span></td>
+            <td><div class="wl-actions">
+              @if (g.status === 'Pending') {
+                <button type="button" class="wl-link" (click)="deciding.set({ grant: g, mode: 'approve' })">Approve</button>
+                <button type="button" class="wl-link" (click)="deciding.set({ grant: g, mode: 'reject' })">Reject</button>
+              }
+              @if (g.status === 'Pending' || g.status === 'Active') {
+                <button type="button" class="wl-link" (click)="editing.set(g)">Edit</button>
+                <button type="button" class="wl-link" (click)="deciding.set({ grant: g, mode: 'revoke' })">Revoke</button>
+              }
+              @if (g.revokeReason) { <span class="wl-sub">Revoked: {{ g.revokeReason }}</span> }
+            </div></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="10" class="wl-empty">{{ isLoading() ? 'Loading...' : 'No cross-tenant access records yet.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-wl-pagination [page]="page()" [limit]="limit()" [total]="total()" (pageChange)="onPage($event)" (limitChange)="onLimit($event)"></app-wl-pagination>
+</div>
+
+@if (editing() !== undefined) {
+  <app-xt-grant-dialog [record]="editing() ?? null" [options]="options()" [tenants]="tenants()" [authorities]="authorities()" (saved)="onSaved()" (closed)="editing.set(undefined)"></app-xt-grant-dialog>
+}
+@if (deciding(); as d) {
+  <app-xt-grant-decision-dialog [grant]="d.grant" [mode]="d.mode" (saved)="onSaved()" (closed)="deciding.set(null)"></app-xt-grant-decision-dialog>
+}

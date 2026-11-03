@@ -1,0 +1,33 @@
+<div class="gis-backdrop">
+  <form class="gis-dialog" role="dialog" aria-modal="true" aria-label="Approved service" (ngSubmit)="submit()">
+    <header>
+      <h3>{{ service() ? 'Edit' : 'Approve' }} Service</h3>
+      <button type="button" class="close" aria-label="Close" (click)="closed.emit()">✕</button>
+    </header>
+    <div class="gis-dialog-body">
+      <p class="help">Only approve a service that holds this ULB's own data. WMS images are shown as the service sends them, so they cannot be cut to the ULB. WFS data is cut to the ULB's boundary when it is synchronised.</p>
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+      <div class="form-grid">
+        <label>ULB / City *
+          <select name="tenant" [(ngModel)]="form.tenantId" [disabled]="!!service()" required>
+            <option value="">Select</option>
+            @for (u of options().ulbs; track u.code) { <option [value]="u.code">{{ u.name }}</option> }
+          </select>
+        </label>
+        <label>Service Name *
+          <input name="name" [(ngModel)]="form.serviceName" maxlength="150" required />
+        </label>
+        <label>Service Address *
+          <input name="url" type="url" [(ngModel)]="form.baseUrl" maxlength="500" placeholder="https://gis.example.gov.in/geoserver" required />
+        </label>
+        <label class="toggle">Active <input class="switch" name="active" type="checkbox" [(ngModel)]="form.isActive" /></label>
+      </div>
+    </div>
+    <footer>
+      <button type="button" (click)="closed.emit()">Cancel</button>
+      <button type="submit" class="btn-primary" [disabled]="!form.tenantId || !form.serviceName.trim() || !form.baseUrl.trim() || isSaving()">{{ isSaving() ? 'Saving…' : 'Save Service' }}</button>
+    </footer>
+  </form>
+</div>

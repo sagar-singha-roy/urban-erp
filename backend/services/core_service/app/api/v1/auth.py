@@ -7,6 +7,7 @@ from app.db.session import get_read_db, get_write_db
 from app.db.models import User, StateTenant, Tenant, GlobalUserProfile
 from app.schemas.auth import (
     AuthorizeResponse,
+    SupportSessionRules,
     SignInRequest, SignUpRequest, AuthResponse, UserProfileResponse, ModuleMetadata,
     AccessibleTenant, AccessibleUlb
 )
@@ -15,6 +16,8 @@ from app.core.auth import BLOCKED_ACCOUNT_STATUSES
 from app.core.security import clear_session_cookie, hash_password, set_session_cookie, verify_password, create_access_token, decode_access_token
 from app.core.auth import PERMISSION_COLUMNS, get_current_sub_tenant, get_current_tenant, get_current_user, require_permission
 from app.core.config import PLATFORM_ULB_TYPE, settings
+from app.core.cross_tenant_access import load_active_grants
+from app.core.impersonation_rules import SENSITIVE_FIELD_PARTS
 
 router = APIRouter(prefix="/auth", tags=["Authentication & SSO"])
 
@@ -401,7 +404,10 @@ async def signin(payload: SignInRequest, request: Request, response: Response, d
         assignedWard=user.assigned_ward
     )
 
-    accessible_tenants = await _get_accessible_tenants(db, user.role, effective_tenant)
+    # Granted tenants join the switcher only. The token keeps the home scope, and each request adds live grants.
+    granted = await load_active_grants(db, user.email) if user.role != "super_admin" else {}
+    listed_tenants = ",".join(filter(None, [effective_tenant, *granted]))
+    accessible_tenants = await _get_accessible_tenants(db, user.role, listed_tenants)
     return AuthResponse(accessToken=accessToken, user=userProfile, accessibleTenants=accessible_tenants)
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -493,10 +499,18 @@ async def authorize(
     """Module services call this for every request, so identity rules stay in one place."""
     if action not in PERMISSION_COLUMNS:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown action")
-    await require_permission(component, action)(user, db)
+    await require_permission(component, action)(request, user, db)
     return AuthorizeResponse(
         tenantId=tenant_id, subTenantId=sub_tenant_id, userId=str(user.get("sub") or "") or None,
         # The tenant whose limits apply comes from the token. The service holds its concurrency slot with these.
         quotaTenantId=getattr(request.state, "quota_tenant", None),
         concurrentLimit=getattr(request.state, "quota_concurrent_limit", None),
+        impersonation=_support_rules(user.get("impersonation")),
     )
+
+
+def _support_rules(context: Optional[Dict]) -> Optional[SupportSessionRules]:
+    if not context:
+        return None
+    return SupportSessionRules(sessionId=context["sessionId"], maskSensitive=context["maskSensitive"], downloadDisabled=context["downloadDisabled"],
+                               sensitiveFieldParts=list(SENSITIVE_FIELD_PARTS))

@@ -5,7 +5,7 @@
 - `Urban-GWMC-Project-Plan.xlsx` (Hake Technologies | Version 0.1 draft | 23 October 2026)
 - `Urban-ERP-SRS_v2.docx` (Product SRS v0.35)
 - `Urban-Technical-Architecture_v2.docx` (Technical Architecture v0.1)
-- [MODULE_COMPONENTS_CATALOGUE.md](file:///Users/sagarsingharoy/Documents/urban/docs/MODULE_COMPONENTS_CATALOGUE.md)
+- [MODULE_COMPONENTS_CATALOGUE.md](MODULE_COMPONENTS_CATALOGUE.md)
 
 ---
 
@@ -537,9 +537,9 @@ Operates at the global multi-tenant control plane across all States (Tenants) an
 ### 0.4 Global Identity & RBAC (5 Components)
 
 - `ADM-R01`: **Global User Administration & Invitations** — Multi-tier user directory to provision, invite, and manage Level 0, Level 1, and Level 2 users.
-- `ADM-R02`: **Cross-Tenant Scope & Context Review** — Audit and manage users holding multi-jurisdiction scopes (e.g. regional state directors overseeing multiple ULBs).
+- `ADM-R02`: **Cross-Tenant Access Management** — Approved, time-limited access across states, ULBs and departments, with scope, Deny rules, certification campaigns and audit history. Enforced on every request.
 - `ADM-R03`: **415 Component RBAC Engine** — Granular permission matrix builder managing `{MODULE}-{ID}:{ACTION}` access rights and role templates.
-- `ADM-R04`: **Support Impersonation Hub** — Secure, time-limited, cryptographically audited "Log in as Tenant Officer" facility for Level 3 support.
+- `ADM-R04`: **Support Impersonation Hub** — Approved, time-limited support sessions that never expose the user's credentials, with masking, blocked downloads, a live session banner and a hash-chained audit trail.
 - `ADM-R05`: **Universal SSO & Keycloak Realms** — Keycloak identity broker managing MeriPehchan, Aadhaar e-Pramaan, SAML/OIDC federations, and MFA rules.
 
 ### 0.5 Integrations & Compliance (5 Components)

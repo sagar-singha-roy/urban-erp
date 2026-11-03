@@ -2,7 +2,8 @@
   <router-outlet></router-outlet>
 } @else {
   <div class="app-layout">
-    <!-- Top Navigation Header -->
+    <!-- ADM-R04: shown on every page while a support session is live -->
+    <app-support-session-banner></app-support-session-banner>
     <!-- Top Navigation Header -->
     <header class="app-header" [class.super-admin-header]="authService.isSuperAdmin()">
       @if (authService.isSuperAdmin()) {
@@ -312,6 +313,9 @@
             </div>
           </div>
 
+          @if (canUseSupportHub() && !supportSession()?.active) {
+            <a class="btn btn-sm btn-outline-light" routerLink="/support/impersonation" title="Support Impersonation Hub">Support Hub</a>
+          }
           <!-- Session Sign Out -->
           <button
             class="btn btn-sm btn-outline-light"

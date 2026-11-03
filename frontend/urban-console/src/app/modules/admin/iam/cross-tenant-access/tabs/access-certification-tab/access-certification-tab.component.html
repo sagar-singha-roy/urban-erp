@@ -1,0 +1,73 @@
+<div class="wl-toolbar">
+  <input class="wl-search" type="search" placeholder="Search campaigns, owners or status" aria-label="Search campaigns, owners or status" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+  <button type="button" class="btn btn-primary" (click)="isCreating.set(true)"><app-icon name="ri-add-line" [size]="16"></app-icon><span>New Campaign</span></button>
+</div>
+
+<div class="wl-card">
+  <div class="wl-scroll">
+    <table class="wl-table">
+      <thead><tr><th>Campaign</th><th>Review Period</th><th>Tenant Scope</th><th>User Types</th><th>Access Status</th><th>Review Owner</th><th>Deadline</th><th>Progress</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        @for (c of items(); track c.id) {
+          <tr [class.selected]="campaign()?.id === c.id">
+            <td>{{ c.campaignName }}<span class="wl-sub">By {{ c.createdBy }}</span></td>
+            <td>{{ asUtc(c.periodStart) | date: 'mediumDate' }}<span class="wl-sub">to {{ asUtc(c.periodEnd) | date: 'mediumDate' }}</span></td>
+            <td class="clip">{{ c.tenantScope.length ? names(c.tenantScope) : 'All tenants' }}</td>
+            <td>{{ c.userTypes.join(', ') }}</td>
+            <td>{{ c.accessStatuses.join(', ') }}</td>
+            <td>{{ c.reviewOwnerEmail }}</td>
+            <td>{{ asUtc(c.reviewDeadline) | date: 'mediumDate' }}</td>
+            <td>{{ c.decidedItems }} of {{ c.totalItems }}</td>
+            <td><span class="wl-status" [ngClass]="statusClass2(c.status)">{{ c.status }}</span></td>
+            <td><div class="wl-actions"><button type="button" class="wl-link" (click)="open(c)">Review</button></div></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="10" class="wl-empty">{{ isLoading() ? 'Loading...' : 'No review campaigns yet.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-wl-pagination [page]="page()" [limit]="limit()" [total]="total()" (pageChange)="onPage($event)" (limitChange)="onLimit($event)"></app-wl-pagination>
+</div>
+
+@if (campaign(); as c) {
+  <h2>{{ c.campaignName }}: Access to Review</h2>
+  <div class="wl-toolbar">
+    <input class="wl-search" type="search" placeholder="Search users or item status" aria-label="Search users or item status" [ngModel]="itemSearch()" (ngModelChange)="onItemSearch($event)" />
+  </div>
+  <div class="wl-card">
+    <div class="wl-scroll">
+      <table class="wl-table">
+        <thead><tr><th>Record ID</th><th>User</th><th>User Type</th><th>Home Tenant</th><th>Target Tenants</th><th>Access</th><th>Item Status</th><th>Review Decision</th><th>Reviewer Comments</th><th></th></tr></thead>
+        <tbody>
+          @for (i of reviewItems(); track i.id) {
+            <tr>
+              <td>{{ i.recordNumber }}</td>
+              <td>{{ i.userName }}<span class="wl-sub">{{ i.userEmail }}</span></td>
+              <td>{{ i.userType }}</td>
+              <td>{{ tenantName(i.homeTenantId) }}</td>
+              <td class="clip">{{ names(i.targetTenantIds) }}</td>
+              <td>{{ i.accessLevel }}<span class="wl-sub">{{ i.grantStatus }}</span></td>
+              <td><span class="wl-status" [ngClass]="statusClass2(i.status)">{{ i.status }}</span></td>
+              <td>{{ i.reviewDecision ?? '-' }}<span class="wl-sub">{{ i.decidedBy ? i.decidedBy + ', ' + (asUtc(i.decidedAt) | date: 'medium') : '' }}</span></td>
+              <td class="clip">{{ i.reviewerComments ?? '' }}</td>
+              <td><div class="wl-actions">
+                @if (i.status === 'Pending' && c.status === 'Open') { <button type="button" class="wl-link" (click)="deciding.set(i)">Decide</button> }
+              </div></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="10" class="wl-empty">No access records in this campaign match.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-wl-pagination [page]="itemPage()" [limit]="itemLimit()" [total]="itemTotal()" (pageChange)="onItemPage($event)" (limitChange)="onItemLimit($event)"></app-wl-pagination>
+  </div>
+}
+
+@if (isCreating()) {
+  <app-xt-campaign-dialog [options]="options()" [tenants]="tenants()" [authorities]="authorities()" (saved)="onCreated()" (closed)="isCreating.set(false)"></app-xt-campaign-dialog>
+}
+@if (deciding(); as item) {
+  <app-xt-review-decision-dialog [campaignId]="campaign()!.id" [item]="item" [decisions]="options().reviewDecisions" (saved)="onDecided()" (closed)="deciding.set(null)"></app-xt-review-decision-dialog>
+}

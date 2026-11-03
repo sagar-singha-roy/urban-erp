@@ -10,6 +10,8 @@ import { GlobalDialogsComponent } from './shared/components/dialogs/global-dialo
 import { GlobalLoaderComponent } from './shared/components/global-loader/global-loader.component';
 import { SuperAdminSidebarComponent } from './shared/components/super-admin-sidebar/super-admin-sidebar.component';
 import { TenantInfo } from './core/models/property.model';
+import { SupportSessionBannerComponent } from './shared/components/support-session-banner/support-session-banner.component';
+import { canUseSupportHub, supportSession } from './core/services/support-session.state';
 
 @Component({
   imports: [
@@ -22,6 +24,7 @@ import { TenantInfo } from './core/models/property.model';
     GlobalDialogsComponent,
     GlobalLoaderComponent,
     SuperAdminSidebarComponent,
+    SupportSessionBannerComponent,
   ],
   selector: 'app-root',
   styleUrl: './app.scss',
@@ -41,6 +44,8 @@ export class App {
   public showNewTenantModal = signal<boolean>(false);
   public isSubmittingTenant = signal<boolean>(false);
   public isSuperAdminView = signal<boolean>(false);
+  readonly canUseSupportHub = canUseSupportHub;
+  readonly supportSession = supportSession;
 
   toggleSidebarCollapse(): void {
     this.isSidebarCollapsed.update((v) => !v);

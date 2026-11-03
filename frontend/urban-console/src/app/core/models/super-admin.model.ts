@@ -32,7 +32,8 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         badge: 'Level 0',
         count: 'Pan-India',
         icon: 'ri-command-line',
-        description: 'Consolidated overview of all states and ULBs: revenue, registered properties, grievances, and citizen digital adoption',
+        description:
+          'Consolidated overview of all states and ULBs: revenue, registered properties, grievances, and citizen digital adoption',
       },
       {
         id: 'EXEC-02',
@@ -42,7 +43,8 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         badge: 'Analytics',
         count: 'Comparative',
         icon: 'ri-bar-chart-grouped-line',
-        description: 'Compare state and ULB performance using revenue recovery, grievance SLA compliance, and Swachh rankings',
+        description:
+          'Compare state and ULB performance using revenue recovery, grievance SLA compliance, and Swachh rankings',
       },
       {
         id: 'EXEC-03',
@@ -52,7 +54,8 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         badge: 'Finance',
         count: 'Treasury',
         icon: 'ri-book-read-line',
-        description: 'Track central grants, state and ULB allocations, expenditure, balances, and consolidated financial reporting',
+        description:
+          'Track central grants, state and ULB allocations, expenditure, balances, and consolidated financial reporting',
       },
       {
         id: 'EXEC-04',
@@ -62,7 +65,8 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         badge: 'GIS',
         count: 'PostGIS',
         icon: 'ri-map-2-line',
-        description: 'View parcels, utilities, administrative boundaries, zones and roads across multiple states and ULBs',
+        description:
+          'View parcels, utilities, administrative boundaries, zones and roads across multiple states and ULBs',
       },
     ],
   },
@@ -99,7 +103,8 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         badge: 'Lifecycle',
         count: 5,
         icon: 'ri-loop-right-line',
-        description: 'Manage lifecycle of State & ULB tenants: activation, suspension, locking, maintenance & archival',
+        description:
+          'Manage lifecycle of State & ULB tenants: activation, suspension, locking, maintenance & archival',
       },
       {
         id: 'TH-04',
@@ -109,7 +114,8 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         badge: 'Branding',
         count: 5,
         icon: 'ri-palette-line',
-        description: 'Configure tenant branding, official emblems, custom domains, SSL certificates and domain routing',
+        description:
+          'Configure tenant branding, official emblems, custom domains, SSL certificates and domain routing',
       },
     ],
   },
@@ -155,7 +161,8 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         badge: 'Level 1',
         count: '19 Modules',
         icon: 'ri-checkbox-multiple-line',
-        description: 'Allocate, activate, renew, and revoke the 19 standard ERP modules for state tenants',
+        description:
+          'Allocate, activate, renew, and revoke the 19 standard ERP modules for state tenants',
       },
       {
         id: 'MS-05',
@@ -165,7 +172,8 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         badge: 'Level 1→2',
         count: 'Guard',
         icon: 'ri-shield-keyhole-line',
-        description: 'Control how a state tenant delegates subscribed modules and component permissions to child ULBs',
+        description:
+          'Control how a state tenant delegates subscribed modules and component permissions to child ULBs',
       },
       {
         id: 'MS-06',
@@ -283,6 +291,23 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         icon: 'ri-node-tree',
         description: 'Hierarchical Level 0/1/2 tenancy and organizational scope assignments',
       },
+      {
+        id: 'IAM-10',
+        code: 'ADM-R02',
+        title: 'Cross-Tenant Access',
+        route: '/admin/iam/cross-tenant',
+        icon: 'ri-shield-user-line',
+        description:
+          'Approved access across states, ULBs and departments, with reviews and audit history',
+      },
+      {
+        id: 'IAM-11',
+        code: 'ADM-R04',
+        title: 'Support Impersonation',
+        route: '/admin/iam/impersonation',
+        icon: 'ri-user-shared-line',
+        description: 'Approved, time-limited support sessions with masking and a full audit trail',
+      },
     ],
   },
   {
@@ -337,7 +362,8 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         badge: 'Tamper-Evident',
         count: 'Hash-chained',
         icon: 'ri-file-shield-line',
-        description: 'Central tamper-evident repository: cryptographic hash chaining, retention, and verification',
+        description:
+          'Central tamper-evident repository: cryptographic hash chaining, retention, and verification',
       },
     ],
   },
@@ -355,7 +381,8 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         badge: 'Live K8s',
         count: '8 Svcs',
         icon: 'ri-pulse-line',
-        description: 'Monitor health, availability, performance, and resource consumption of all SUVIDHA microservices',
+        description:
+          'Monitor health, availability, performance, and resource consumption of all SUVIDHA microservices',
       },
       {
         id: 'FLEET-02',
@@ -365,7 +392,8 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         badge: 'Vault',
         count: 'PITR',
         icon: 'ri-shield-check-line',
-        description: 'Automated backups, PITR recovery replay, and regional disaster recovery drills',
+        description:
+          'Automated backups, PITR recovery replay, and regional disaster recovery drills',
       },
     ],
   },

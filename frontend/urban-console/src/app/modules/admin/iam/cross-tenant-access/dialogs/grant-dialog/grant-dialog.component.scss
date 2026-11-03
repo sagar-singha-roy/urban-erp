@@ -1,0 +1,14 @@
+@use '../../../../../../shared/styles/admin-table';
+
+.wide-notice { grid-column: 1 / -1; margin-bottom: 0; }
+.dialog-card.narrow { max-width: 520px; }
+.btn-primary.danger { background: #b91c1c; }
+
+// Small form inside a dialog, such as adding a department.
+.inline-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  input { flex: 1 1 7rem; min-width: 0; }
+}

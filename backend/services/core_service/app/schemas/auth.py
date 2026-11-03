@@ -66,9 +66,18 @@ class ModuleMetadata(CamelModel):
     route: str
 
 
+class SupportSessionRules(CamelModel):
+    sessionId: str
+    maskSensitive: bool
+    downloadDisabled: bool
+    sensitiveFieldParts: List[str]
+
+
 class AuthorizeResponse(CamelModel):
     tenantId: str
     subTenantId: Optional[str] = None
     userId: Optional[str] = None
     quotaTenantId: Optional[str] = None
     concurrentLimit: Optional[int] = None
+    # Set during a support session, so the module service masks and blocks the same way core does.
+    impersonation: Optional[SupportSessionRules] = None

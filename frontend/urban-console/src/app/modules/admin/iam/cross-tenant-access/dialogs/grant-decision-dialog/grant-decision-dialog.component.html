@@ -1,0 +1,20 @@
+<div class="dialog-overlay" (click)="closed.emit()">
+  <div class="dialog-card narrow" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="xt-decision-title">
+    <div class="dialog-header">
+      <div><h3 id="xt-decision-title">{{ copy.title }}</h3><p>{{ copy.intro }}</p></div>
+      <button type="button" class="close-btn" (click)="closed.emit()" title="Close dialog" aria-label="Close dialog"><app-icon name="ri-close-line" [size]="18"></app-icon></button>
+    </div>
+    <form class="dialog-form" (ngSubmit)="submit()">
+      <div class="dialog-body">
+        <div class="field wide"><label for="decisionRecord">Access Record</label>
+          <input id="decisionRecord" type="text" readonly [value]="grant.recordNumber + ': ' + grant.userName + ', ' + grant.accessLevel" /></div>
+        <div class="field wide"><label for="decisionReason">{{ copy.label }} @if (mode !== 'approve') { <span class="required">*</span> }</label>
+          <textarea id="decisionReason" name="reason" maxlength="2000" [(ngModel)]="reason"></textarea></div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="closed.emit()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [class.danger]="mode !== 'approve'" [disabled]="isSaving()"><span>{{ copy.button }}</span></button>
+      </div>
+    </form>
+  </div>
+</div>

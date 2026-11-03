@@ -1,18 +1,24 @@
 # Rule: Pre-Push Structural Validation & Code Quality Guard
 
 ## Purpose
-Enforces that changes committed to git cannot be pushed if:
-1. Backend directory structure deviates from established architecture (`app/api/v1`, `app/core`, `app/db`, `app/schemas`).
-2. Python files contain syntax errors or invalid imports.
-3. Frontend directory structure deviates from established architecture (`src/app/core/models`, `src/app/core/services`, `src/app/shared/components`).
-4. Frontend Angular build fails (`ng build`).
-5. Structural misalignment between backend CamelModels and frontend TypeScript interfaces occurs.
+A push is refused when any of these fails:
+1. The backend structure (`app/api/v1`, `app/core`, `app/db`, `app/schemas`).
+2. Python compilation.
+3. The frontend structure (`src/app/core/models`, `src/app/core/services`, `src/app/shared/components`).
+4. `ng build` and the frontend unit tests.
+5. The core-service tests, the `urban_common` tests and every module service's tests.
 
 ## Execution
-Run manually at any time:
+Run it yourself before reporting work as done:
 ```bash
 ./scripts/validate_structures.sh
 ```
 
-Automatically triggered on `git push` via `.git/hooks/pre-push`.
-If any test fails, `git push` terminates immediately with exit code `1`.
+The hook is `.githooks/pre-push`, which runs the same script. Run `./scripts/install_hooks.sh` once per clone so git uses `.githooks/`.
+
+To run only the core-service tests, use the same settings the validator does:
+```bash
+cd backend/services/core_service && ENVIRONMENT=test JWT_SECRET_KEY=hook-only AUDIT_SIGNING_KEY=hook-only .venv/bin/python -m unittest discover -s tests
+```
+
+Never bypass the hook with `--no-verify`. Fix the failure instead.

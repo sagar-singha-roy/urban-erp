@@ -11,6 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.db.rls import app_role_bypasses_rls, apply_rls
+from app.db.spatial import SPATIAL_STATEMENTS
 from app.db.session import engine, Base
 from app.api.v1.iam import _seed_standard_roles_if_empty
 from app.core.backup_runner import scheduler_loop
@@ -18,6 +19,9 @@ from app.core.request_metrics import record_response
 from app.core.white_label_worker import white_label_loop
 from app.core.api_quota import ApiMeteringMiddleware
 from app.core.quota_worker import ensure_default_levels, quota_loop
+from app.core.cross_tenant_worker import cross_tenant_loop
+from app.core.impersonation import ImpersonationGuardMiddleware
+from app.core.impersonation_worker import impersonation_loop
 from app.db.seed import seed_initial_data
 from app.api.v1.boundaries import router as boundaries_router
 from app.api.v1.auth import router as auth_router
@@ -40,6 +44,8 @@ async def lifespan(app: FastAPI):
             if settings.is_development:
                 await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
                 await conn.run_sync(Base.metadata.create_all)
+                for statement in SPATIAL_STATEMENTS:
+                    await conn.execute(text(statement))
             await apply_rls(conn)
         async with AsyncSession(admin_engine, expire_on_commit=False) as session:
             await seed_initial_data(session)
@@ -62,12 +68,16 @@ async def lifespan(app: FastAPI):
     scheduler = asyncio.create_task(scheduler_loop())
     white_label = asyncio.create_task(white_label_loop())
     quota = asyncio.create_task(quota_loop())
+    cross_tenant = asyncio.create_task(cross_tenant_loop())
+    support_sessions = asyncio.create_task(impersonation_loop())
 
     yield
 
     scheduler.cancel()
     white_label.cancel()
     quota.cancel()
+    cross_tenant.cancel()
+    support_sessions.cancel()
 
     # Cleanup
     await valkey_client.close()
@@ -113,6 +123,8 @@ class ServerErrorResponder:
 
 
 app.add_middleware(ServerErrorResponder)
+# Masks, blocks downloads and records activity for requests made in a support session.
+app.add_middleware(ImpersonationGuardMiddleware)
 app.add_middleware(ApiMeteringMiddleware)
 
 # CORS
@@ -137,10 +149,15 @@ from app.api.v1.fleet import router as fleet_router
 from app.api.v1.backup_dr import router as backup_dr_router
 from app.api.v1.executive import router as executive_router
 from app.api.v1.gis import router as gis_router
+from app.api.v1.gis_services import router as gis_services_router
 from app.api.v1.white_label import public_router as white_label_public_router, router as white_label_router
 from app.api.v1.white_label_domains import router as white_label_domains_router
 from app.api.v1.quotas import public_router as quotas_public_router, router as quotas_router
 from app.api.v1.quota_alerts import router as quota_alerts_router
+from app.api.v1.cross_tenant_access import router as cross_tenant_access_router
+from app.api.v1.cross_tenant_reviews import router as cross_tenant_reviews_router
+from app.api.v1.impersonation import router as impersonation_router
+from app.api.v1.impersonation_sessions import router as impersonation_sessions_router, session_router as impersonation_current_router
 
 # Include Routers
 app.include_router(auth_router, prefix=settings.API_V1_STR)
@@ -150,12 +167,18 @@ app.include_router(tenant_lifecycle_router, prefix=settings.API_V1_STR)
 app.include_router(subscriptions_router, prefix=settings.API_V1_STR)
 app.include_router(delegation_router, prefix=settings.API_V1_STR)
 app.include_router(modules_router, prefix=settings.API_V1_STR)
+app.include_router(cross_tenant_access_router, prefix=settings.API_V1_STR)
+app.include_router(cross_tenant_reviews_router, prefix=settings.API_V1_STR)
+app.include_router(impersonation_current_router, prefix=settings.API_V1_STR)
+app.include_router(impersonation_router, prefix=settings.API_V1_STR)
+app.include_router(impersonation_sessions_router, prefix=settings.API_V1_STR)
 app.include_router(iam_router, prefix=settings.API_V1_STR)
 app.include_router(security_router, prefix=settings.API_V1_STR)
 app.include_router(audit_vault_router, prefix=settings.API_V1_STR)
 app.include_router(fleet_router, prefix=settings.API_V1_STR)
 app.include_router(backup_dr_router, prefix=settings.API_V1_STR)
 app.include_router(gis_router, prefix=settings.API_V1_STR)
+app.include_router(gis_services_router, prefix=settings.API_V1_STR)
 app.include_router(white_label_public_router, prefix=settings.API_V1_STR)
 app.include_router(white_label_router, prefix=settings.API_V1_STR)
 app.include_router(white_label_domains_router, prefix=settings.API_V1_STR)

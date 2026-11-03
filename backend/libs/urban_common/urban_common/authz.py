@@ -78,6 +78,8 @@ def require_access(component_code: str, action: str):
             logger.error("Authorization service answered %s", response.status_code)
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Authorization is unavailable")
         body = response.json()
+        # Support session rules, applied to this response by SupportSessionGuard.
+        request.state.impersonation = body.get("impersonation")
         set_rls_context([body["tenantId"]])
         await _hold_concurrency_slot(request, body)
         return AccessContext(tenant_id=body["tenantId"], sub_tenant_id=body.get("subTenantId"), user_id=body.get("userId"))

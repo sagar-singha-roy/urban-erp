@@ -1,0 +1,45 @@
+<div class="gis-backdrop">
+  <form class="gis-dialog" role="dialog" aria-modal="true" aria-label="Import boundaries" (ngSubmit)="submit()">
+    <header>
+      <h3>Import Boundaries</h3>
+      <button type="button" class="close" aria-label="Close" (click)="closed.emit()">✕</button>
+    </header>
+    <div class="gis-dialog-body">
+      <p class="help">Polygons are attached to this ULB's existing wards, zones or parcels. The match property holds each feature's ward number, code or name, zone code or name, or parcel ULPIN or survey number.</p>
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+      <div class="form-grid">
+        <label>ULB / City *
+          <select name="tenant" [(ngModel)]="ulb" required>
+            <option value="">Select</option>
+            @for (u of options().ulbs; track u.code) { <option [value]="u.code">{{ u.name }}</option> }
+          </select>
+        </label>
+        <label>Boundary Level *
+          <select name="level" [(ngModel)]="level">
+            @for (o of levels; track o) { <option [value]="o">{{ o }}</option> }
+          </select>
+        </label>
+        <label>Match Property *
+          <input name="match" [(ngModel)]="matchField" maxlength="60" placeholder="ward_no" required />
+        </label>
+        <label>Source Coordinate Reference System *
+          <select name="crs" [(ngModel)]="sourceCrs" required>
+            @for (o of options().crsOptions; track o.code) { <option [value]="o.code">{{ o.code }} — {{ o.name }}</option> }
+          </select>
+        </label>
+        <label>GeoJSON File
+          <input type="file" accept=".json,.geojson,application/geo+json" (change)="readFile($event)" />
+        </label>
+      </div>
+      <label style="margin-top: 0.85rem">FeatureCollection
+        <textarea name="geojson" [(ngModel)]="geojson" required></textarea>
+      </label>
+    </div>
+    <footer>
+      <button type="button" (click)="closed.emit()">Cancel</button>
+      <button type="submit" class="btn-primary" [disabled]="!ulb || !matchField.trim() || !geojson.trim() || isSaving()">{{ isSaving() ? 'Importing…' : 'Import Boundaries' }}</button>
+    </footer>
+  </form>
+</div>
